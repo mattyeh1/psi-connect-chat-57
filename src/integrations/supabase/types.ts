@@ -9,6 +9,24 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admins: {
+        Row: {
+          created_at: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       appointments: {
         Row: {
           appointment_date: string
@@ -280,6 +298,18 @@ export type Database = {
       }
     }
     Functions: {
+      admin_update_subscription_status: {
+        Args: {
+          psychologist_id: string
+          new_status: string
+          subscription_days?: number
+        }
+        Returns: undefined
+      }
+      admin_update_trial_days: {
+        Args: { psychologist_id: string; additional_days: number }
+        Returns: undefined
+      }
       generate_professional_code: {
         Args: Record<PropertyKey, never>
         Returns: string
