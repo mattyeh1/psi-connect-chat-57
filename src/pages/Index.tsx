@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -17,7 +16,7 @@ type ViewType = "dashboard" | "patients" | "calendar" | "messages" | "portal";
 
 const Index = () => {
   const { user, loading: authLoading } = useAuth();
-  const { profile, psychologist, patient, loading: profileLoading } = useProfile();
+  const { profile, psychologist, patient, loading: profileLoading, refetch } = useProfile();
   const [currentView, setCurrentView] = useState<ViewType>("dashboard");
   const [isTrialExpired, setIsTrialExpired] = useState(false);
   const [checkingTrial, setCheckingTrial] = useState(false);
@@ -28,6 +27,17 @@ const Index = () => {
       checkTrialStatus();
     }
   }, [psychologist, profile]);
+
+  // Refetch profile data when user changes (for email confirmation flows)
+  useEffect(() => {
+    if (user && profile) {
+      const timer = setTimeout(() => {
+        console.log('Auto-refetching profile after user change');
+        refetch();
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [user?.id, profile?.user_type]);
 
   const checkTrialStatus = async () => {
     if (!psychologist) return;
@@ -73,14 +83,27 @@ const Index = () => {
     return <AuthPage />;
   }
 
-  // Show profile setup if user hasn't completed their profile
-  const needsProfileSetup = profile.user_type === 'psychologist' ? !psychologist : !patient;
+  // Check if user needs profile setup with more specific logic
+  const needsProfileSetup = () => {
+    if (!profile) return true;
+    
+    if (profile.user_type === 'psychologist') {
+      // Check if psychologist profile exists and has required fields
+      return !psychologist || !psychologist.first_name || !psychologist.last_name;
+    } else {
+      // Check if patient profile exists and has required fields
+      return !patient || !patient.first_name || !patient.last_name || !patient.psychologist_id;
+    }
+  };
   
-  if (needsProfileSetup) {
+  if (needsProfileSetup()) {
     return (
       <ProfileSetup 
         userType={profile.user_type} 
-        onComplete={() => window.location.reload()} 
+        onComplete={() => {
+          console.log('Profile setup completed, refetching data');
+          refetch();
+        }} 
       />
     );
   }

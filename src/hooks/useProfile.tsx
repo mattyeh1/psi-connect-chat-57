@@ -57,6 +57,8 @@ export const useProfile = () => {
     if (!user) return;
 
     try {
+      console.log('Fetching profile for user:', user.id);
+      
       // Fetch profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
@@ -73,23 +75,45 @@ export const useProfile = () => {
       };
       setProfile(typedProfile);
 
-      // Fetch specific role data
+      // Fetch specific role data with retry logic
       if (typedProfile.user_type === 'psychologist') {
-        const { data: psychData } = await supabase
-          .from('psychologists')
-          .select('*')
-          .eq('id', user.id)
-          .maybeSingle();
+        let attempts = 0;
+        const maxAttempts = 3;
         
-        setPsychologist(psychData);
+        while (attempts < maxAttempts) {
+          const { data: psychData } = await supabase
+            .from('psychologists')
+            .select('*')
+            .eq('id', user.id)
+            .maybeSingle();
+          
+          if (psychData || attempts === maxAttempts - 1) {
+            setPsychologist(psychData);
+            break;
+          }
+          
+          attempts++;
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retry
+        }
       } else if (typedProfile.user_type === 'patient') {
-        const { data: patientData } = await supabase
-          .from('patients')
-          .select('*')
-          .eq('id', user.id)
-          .maybeSingle();
+        let attempts = 0;
+        const maxAttempts = 3;
         
-        setPatient(patientData);
+        while (attempts < maxAttempts) {
+          const { data: patientData } = await supabase
+            .from('patients')
+            .select('*')
+            .eq('id', user.id)
+            .maybeSingle();
+          
+          if (patientData || attempts === maxAttempts - 1) {
+            setPatient(patientData);
+            break;
+          }
+          
+          attempts++;
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retry
+        }
       }
     } catch (error) {
       console.error('Error fetching profile:', error);

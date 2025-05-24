@@ -24,10 +24,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.id);
         setSession(session);
         setUser(session?.user ?? null);
+        
+        // When user confirms email, create their profile automatically
+        if (event === 'SIGNED_IN' && session?.user && session.user.user_metadata) {
+          setTimeout(async () => {
+            await handlePostSignInProfile(session.user);
+          }, 100);
+        }
+        
         setLoading(false);
       }
     );
@@ -42,6 +50,78 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const handlePostSignInProfile = async (user: User) => {
+    try {
+      console.log('Handling post sign-in profile creation for user:', user.id);
+      console.log('User metadata:', user.user_metadata);
+
+      // Check if profile already exists
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (existingProfile) {
+        console.log('Profile already exists, checking for specific role profile');
+        
+        // Check if we need to create psychologist or patient profile
+        const userType = user.user_metadata.user_type;
+        
+        if (userType === 'psychologist') {
+          const { data: existingPsych } = await supabase
+            .from('psychologists')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+            
+          if (!existingPsych && user.user_metadata.first_name) {
+            console.log('Creating psychologist profile from metadata');
+            const { data: codeData } = await supabase.rpc('generate_professional_code');
+            
+            await supabase.from('psychologists').insert({
+              id: user.id,
+              first_name: user.user_metadata.first_name,
+              last_name: user.user_metadata.last_name,
+              professional_code: codeData,
+              phone: user.user_metadata.phone,
+              specialization: user.user_metadata.specialization,
+              license_number: user.user_metadata.license_number
+            });
+          }
+        } else if (userType === 'patient') {
+          const { data: existingPatient } = await supabase
+            .from('patients')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+            
+          if (!existingPatient && user.user_metadata.first_name && user.user_metadata.professional_code) {
+            console.log('Creating patient profile from metadata');
+            
+            // Validate professional code and get psychologist ID
+            const { data: psychologistId } = await supabase.rpc('validate_professional_code', { 
+              code: user.user_metadata.professional_code 
+            });
+            
+            if (psychologistId) {
+              await supabase.from('patients').insert({
+                id: user.id,
+                first_name: user.user_metadata.first_name,
+                last_name: user.user_metadata.last_name,
+                psychologist_id: psychologistId,
+                phone: user.user_metadata.phone,
+                age: user.user_metadata.age
+              });
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error handling post sign-in profile:', error);
+    }
+  };
 
   const signIn = async (email: string, password: string) => {
     console.log('Attempting sign in for:', email);
