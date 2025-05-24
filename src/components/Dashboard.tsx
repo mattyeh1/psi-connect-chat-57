@@ -29,6 +29,8 @@ export const Dashboard = () => {
     if (!psychologist) return;
 
     try {
+      console.log('Fetching dashboard data for psychologist:', psychologist.id);
+
       // Fetch total patients
       const { data: patients, error: patientsError } = await supabase
         .from('patients')
@@ -36,8 +38,9 @@ export const Dashboard = () => {
         .eq('psychologist_id', psychologist.id);
 
       if (!patientsError) {
-        setStats(prev => ({ ...prev, totalPatients: patients.length }));
-        setRecentPatients(patients.slice(-5));
+        console.log('Found patients:', patients?.length || 0);
+        setStats(prev => ({ ...prev, totalPatients: patients?.length || 0 }));
+        setRecentPatients(patients?.slice(-5) || []);
       }
 
       // Fetch today's appointments
@@ -65,14 +68,17 @@ export const Dashboard = () => {
       }
 
       // Fetch pending appointment requests
-      const { data: pendingRequests } = await supabase
+      const { data: pendingRequests, error: requestsError } = await supabase
         .from('appointment_requests')
         .select('*')
         .eq('psychologist_id', psychologist.id)
         .eq('status', 'pending');
 
-      if (pendingRequests) {
-        setStats(prev => ({ ...prev, pendingRequests: pendingRequests.length }));
+      if (!requestsError) {
+        console.log('Found pending requests:', pendingRequests?.length || 0);
+        setStats(prev => ({ ...prev, pendingRequests: pendingRequests?.length || 0 }));
+      } else {
+        console.error('Error fetching pending requests:', requestsError);
       }
 
     } catch (error) {

@@ -21,7 +21,7 @@ interface AppointmentRequest {
     first_name: string;
     last_name: string;
     phone?: string;
-  };
+  } | null;
 }
 
 export const AppointmentRequests = () => {
@@ -40,6 +40,8 @@ export const AppointmentRequests = () => {
     if (!psychologist) return;
 
     try {
+      console.log('Fetching appointment requests for psychologist:', psychologist.id);
+      
       const { data, error } = await supabase
         .from('appointment_requests')
         .select(`
@@ -50,8 +52,22 @@ export const AppointmentRequests = () => {
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setRequests(data || []);
+      if (error) {
+        console.error('Error fetching appointment requests:', error);
+        throw error;
+      }
+
+      console.log('Fetched appointment requests:', data);
+      
+      // Type assertion to handle the Supabase response properly
+      const typedRequests = (data || []).map(request => ({
+        ...request,
+        patient: request.patient && typeof request.patient === 'object' && 'first_name' in request.patient 
+          ? request.patient as { first_name: string; last_name: string; phone?: string }
+          : null
+      }));
+
+      setRequests(typedRequests);
     } catch (error) {
       console.error('Error fetching appointment requests:', error);
       toast({
@@ -68,6 +84,8 @@ export const AppointmentRequests = () => {
     setProcessingId(requestId);
     
     try {
+      console.log(`${action === 'approved' ? 'Approving' : 'Rejecting'} request:`, requestId);
+      
       const { error } = await supabase
         .from('appointment_requests')
         .update({ 
@@ -153,7 +171,7 @@ export const AppointmentRequests = () => {
                       </div>
                       <div>
                         <h4 className="font-semibold text-slate-800">
-                          {request.patient?.first_name} {request.patient?.last_name}
+                          {request.patient?.first_name || 'Nombre'} {request.patient?.last_name || 'Apellido'}
                         </h4>
                         <p className="text-sm text-slate-600">
                           Solicitud enviada el {new Date(request.created_at).toLocaleDateString('es-ES')}
