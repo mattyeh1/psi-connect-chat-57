@@ -30,13 +30,19 @@ export const ProfileSetup = ({ userType, onComplete }: ProfileSetupProps) => {
   });
 
   useEffect(() => {
+    console.log('ProfileSetup mounted for:', userType);
     if (userType === 'patient') {
       // Get professional code from signup metadata if available
       const getSignupData = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user?.user_metadata?.professional_code) {
-          setProfessionalCode(user.user_metadata.professional_code);
-          validateAndSetPsychologist(user.user_metadata.professional_code);
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          console.log('User metadata:', user?.user_metadata);
+          if (user?.user_metadata?.professional_code) {
+            setProfessionalCode(user.user_metadata.professional_code);
+            validateAndSetPsychologist(user.user_metadata.professional_code);
+          }
+        } catch (error) {
+          console.error('Error getting signup data:', error);
         }
       };
       getSignupData();
@@ -45,9 +51,14 @@ export const ProfileSetup = ({ userType, onComplete }: ProfileSetupProps) => {
 
   const validateAndSetPsychologist = async (code: string) => {
     try {
+      console.log('Validating professional code for patient setup:', code);
       const { data } = await supabase.rpc('validate_professional_code', { code });
+      console.log('Validation result:', data);
       if (data) {
         setPsychologistId(data);
+        console.log('Psychologist ID set:', data);
+      } else {
+        console.warn('Invalid professional code:', code);
       }
     } catch (error) {
       console.error('Error validating code:', error);
@@ -59,8 +70,12 @@ export const ProfileSetup = ({ userType, onComplete }: ProfileSetupProps) => {
     setLoading(true);
     setError('');
 
+    console.log('Submitting profile setup for:', userType);
+    console.log('Form data:', formData);
+
     try {
       if (userType === 'psychologist') {
+        console.log('Creating psychologist profile');
         const result = await createPsychologistProfile({
           first_name: formData.firstName,
           last_name: formData.lastName,
@@ -69,14 +84,16 @@ export const ProfileSetup = ({ userType, onComplete }: ProfileSetupProps) => {
           license_number: formData.licenseNumber
         });
 
+        console.log('Psychologist profile creation result:', result);
         if (result.error) {
           throw new Error(result.error);
         }
       } else {
         if (!psychologistId) {
-          throw new Error('Invalid professional code');
+          throw new Error('Invalid professional code - no psychologist ID found');
         }
 
+        console.log('Creating patient profile with psychologist ID:', psychologistId);
         const result = await createPatientProfile({
           first_name: formData.firstName,
           last_name: formData.lastName,
@@ -86,14 +103,17 @@ export const ProfileSetup = ({ userType, onComplete }: ProfileSetupProps) => {
           notes: formData.notes
         });
 
+        console.log('Patient profile creation result:', result);
         if (result.error) {
           throw new Error(result.error);
         }
       }
 
+      console.log('Profile setup completed successfully');
       onComplete();
     } catch (error: any) {
-      setError(error.message);
+      console.error('Profile setup error:', error);
+      setError(error.message || 'An error occurred while setting up your profile');
     } finally {
       setLoading(false);
     }
@@ -154,6 +174,8 @@ export const ProfileSetup = ({ userType, onComplete }: ProfileSetupProps) => {
                     type="number"
                     value={formData.age}
                     onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+                    min="1"
+                    max="120"
                   />
                 </div>
 
@@ -166,6 +188,19 @@ export const ProfileSetup = ({ userType, onComplete }: ProfileSetupProps) => {
                     placeholder="Información relevante para el tratamiento"
                   />
                 </div>
+
+                {professionalCode && (
+                  <div className="bg-blue-50 p-3 rounded-lg">
+                    <p className="text-sm text-blue-700">
+                      <strong>Código del profesional:</strong> {professionalCode}
+                    </p>
+                    {psychologistId && (
+                      <p className="text-xs text-green-600 mt-1">
+                        ✓ Código validado correctamente
+                      </p>
+                    )}
+                  </div>
+                )}
               </>
             )}
 
@@ -193,7 +228,9 @@ export const ProfileSetup = ({ userType, onComplete }: ProfileSetupProps) => {
             )}
 
             {error && (
-              <div className="text-red-600 text-sm text-center">{error}</div>
+              <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-lg border border-red-200">
+                {error}
+              </div>
             )}
 
             <Button

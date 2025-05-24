@@ -36,19 +36,23 @@ export const AuthPage = () => {
     }
 
     try {
+      console.log('Validating professional code:', code);
       const { data, error } = await supabase.rpc('validate_professional_code', { code });
       
       if (error) {
+        console.error('Error validating code:', error);
         setCodeValidation({ valid: false, message: 'Error validating code' });
         return;
       }
 
+      console.log('Validation result:', data);
       if (data) {
         setCodeValidation({ valid: true, message: 'Valid professional code' });
       } else {
         setCodeValidation({ valid: false, message: 'Invalid professional code' });
       }
     } catch (error) {
+      console.error('Exception validating code:', error);
       setCodeValidation({ valid: false, message: 'Error validating code' });
     }
   };
@@ -65,33 +69,58 @@ export const AuthPage = () => {
 
     try {
       if (isLogin) {
+        console.log('Attempting login with:', formData.email);
         const { error } = await signIn(formData.email, formData.password);
-        if (error) throw error;
+        if (error) {
+          console.error('Login error:', error);
+          throw error;
+        }
+        console.log('Login successful');
       } else {
+        console.log('Attempting signup for:', userType, formData.email);
+        
         // Validate professional code for patients
         if (userType === 'patient' && (!professionalCode || !codeValidation?.valid)) {
           throw new Error('Please enter a valid professional code');
         }
 
-        const additionalData: any = {
+        // Basic user data
+        const userData = {
+          user_type: userType,
           first_name: formData.firstName,
           last_name: formData.lastName,
-          phone: formData.phone
+          phone: formData.phone || null
         };
 
+        // Add specific data based on user type
         if (userType === 'patient') {
-          additionalData.professional_code = professionalCode;
-          if (formData.age) additionalData.age = parseInt(formData.age);
-        } else {
-          additionalData.specialization = formData.specialization;
-          additionalData.license_number = formData.licenseNumber;
+          userData.professional_code = professionalCode;
+          if (formData.age) {
+            userData.age = parseInt(formData.age);
+          }
+        } else if (userType === 'psychologist') {
+          userData.specialization = formData.specialization || null;
+          userData.license_number = formData.licenseNumber || null;
         }
 
-        const { error } = await signUp(formData.email, formData.password, userType, additionalData);
-        if (error) throw error;
+        console.log('Signup data being sent:', userData);
+
+        const { data, error } = await signUp(formData.email, formData.password, userType, userData);
+        
+        if (error) {
+          console.error('Signup error:', error);
+          throw error;
+        }
+        
+        console.log('Signup successful:', data);
+        
+        // Show success message
+        setError('');
+        alert('Account created successfully! Please check your email to confirm your account.');
       }
     } catch (error: any) {
-      setError(error.message);
+      console.error('Form submission error:', error);
+      setError(error.message || 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -158,6 +187,7 @@ export const AuthPage = () => {
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   required
+                  minLength={6}
                 />
                 <button
                   type="button"
@@ -173,7 +203,7 @@ export const AuthPage = () => {
               <>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-2">
-                    <Label htmlFor="firstName">Nombre</Label>
+                    <Label htmlFor="firstName">Nombre *</Label>
                     <Input
                       id="firstName"
                       value={formData.firstName}
@@ -182,7 +212,7 @@ export const AuthPage = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="lastName">Apellido</Label>
+                    <Label htmlFor="lastName">Apellido *</Label>
                     <Input
                       id="lastName"
                       value={formData.lastName}
@@ -226,6 +256,8 @@ export const AuthPage = () => {
                         type="number"
                         value={formData.age}
                         onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+                        min="1"
+                        max="120"
                       />
                     </div>
                   </>
@@ -257,7 +289,9 @@ export const AuthPage = () => {
             )}
 
             {error && (
-              <div className="text-red-600 text-sm text-center">{error}</div>
+              <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-lg border border-red-200">
+                {error}
+              </div>
             )}
 
             <Button
@@ -271,7 +305,20 @@ export const AuthPage = () => {
             <div className="text-center">
               <button
                 type="button"
-                onClick={() => setIsLogin(!isLogin)}
+                onClick={() => {
+                  setIsLogin(!isLogin);
+                  setError('');
+                  setFormData({
+                    email: '',
+                    password: '',
+                    firstName: '',
+                    lastName: '',
+                    phone: '',
+                    age: '',
+                    specialization: '',
+                    licenseNumber: ''
+                  });
+                }}
                 className="text-blue-600 hover:text-blue-800 text-sm"
               >
                 {isLogin ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}
