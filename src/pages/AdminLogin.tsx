@@ -4,23 +4,35 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Shield, Eye, EyeOff } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Shield, Eye, EyeOff, UserPlus, LogIn } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useAdmin } from '@/hooks/useAdmin';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 export const AdminLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const [showCreatePassword, setShowCreatePassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
+  const [createFormData, setCreateFormData] = useState({
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
   const [loading, setLoading] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
   const [error, setError] = useState('');
+  const [createError, setCreateError] = useState('');
   const { signIn, user } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdmin();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   // Redirect if already logged in as admin
   useEffect(() => {
@@ -48,6 +60,65 @@ export const AdminLogin = () => {
     }
   };
 
+  const handleCreateAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreateLoading(true);
+    setCreateError('');
+
+    if (createFormData.password !== createFormData.confirmPassword) {
+      setCreateError('Las contraseñas no coinciden');
+      setCreateLoading(false);
+      return;
+    }
+
+    if (createFormData.password.length < 6) {
+      setCreateError('La contraseña debe tener al menos 6 caracteres');
+      setCreateLoading(false);
+      return;
+    }
+
+    try {
+      // Sign up the admin user
+      const { data, error } = await supabase.auth.signUp({
+        email: createFormData.email,
+        password: createFormData.password,
+        options: {
+          data: {
+            user_type: 'admin'
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        // Add to admins table
+        const { error: adminError } = await supabase
+          .from('admins')
+          .insert({ id: data.user.id });
+
+        if (adminError) throw adminError;
+
+        toast({
+          title: "Cuenta de administrador creada",
+          description: `Se ha creado la cuenta para ${createFormData.email}`,
+        });
+
+        // Reset form
+        setCreateFormData({
+          email: '',
+          password: '',
+          confirmPassword: ''
+        });
+      }
+    } catch (error: any) {
+      console.error('Create admin error:', error);
+      setCreateError(error.message || 'Error al crear la cuenta de administrador');
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 flex items-center justify-center p-4">
       <Card className="w-full max-w-md border-0 shadow-2xl bg-white/95 backdrop-blur">
@@ -59,62 +130,146 @@ export const AdminLogin = () => {
             Panel de Administración
           </CardTitle>
           <p className="text-gray-600">
-            Acceso exclusivo para administradores
+            Acceso y gestión de administradores
           </p>
         </CardHeader>
 
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email de Administrador</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                required
-                placeholder="admin@psiconnect.com"
-              />
-            </div>
+          <Tabs defaultValue="login" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="login" className="flex items-center gap-2">
+                <LogIn className="w-4 h-4" />
+                Iniciar Sesión
+              </TabsTrigger>
+              <TabsTrigger value="create" className="flex items-center gap-2">
+                <UserPlus className="w-4 h-4" />
+                Crear Admin
+              </TabsTrigger>
+            </TabsList>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Contraseña</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  required
-                  minLength={6}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            <TabsContent value="login" className="mt-6">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email de Administrador</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    required
+                    placeholder="admin@psiconnect.com"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password">Contraseña</Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      required
+                      minLength={6}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                    </button>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-lg border border-red-200">
+                    {error}
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:shadow-lg"
+                  disabled={loading}
                 >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
-            </div>
+                  {loading ? 'Verificando...' : 'Acceder'}
+                </Button>
+              </form>
+            </TabsContent>
 
-            {error && (
-              <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-lg border border-red-200">
-                {error}
-              </div>
-            )}
+            <TabsContent value="create" className="mt-6">
+              <form onSubmit={handleCreateAdmin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="createEmail">Email del Nuevo Administrador</Label>
+                  <Input
+                    id="createEmail"
+                    type="email"
+                    value={createFormData.email}
+                    onChange={(e) => setCreateFormData({ ...createFormData, email: e.target.value })}
+                    required
+                    placeholder="nuevo-admin@psiconnect.com"
+                  />
+                </div>
 
-            <Button
-              type="submit"
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:shadow-lg"
-              disabled={loading}
-            >
-              {loading ? 'Verificando...' : 'Acceder'}
-            </Button>
-          </form>
+                <div className="space-y-2">
+                  <Label htmlFor="createPassword">Contraseña</Label>
+                  <div className="relative">
+                    <Input
+                      id="createPassword"
+                      type={showCreatePassword ? 'text' : 'password'}
+                      value={createFormData.password}
+                      onChange={(e) => setCreateFormData({ ...createFormData, password: e.target.value })}
+                      required
+                      minLength={6}
+                      placeholder="Mínimo 6 caracteres"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCreatePassword(!showCreatePassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showCreatePassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={createFormData.confirmPassword}
+                    onChange={(e) => setCreateFormData({ ...createFormData, confirmPassword: e.target.value })}
+                    required
+                    minLength={6}
+                    placeholder="Repetir contraseña"
+                  />
+                </div>
+
+                {createError && (
+                  <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-lg border border-red-200">
+                    {createError}
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:shadow-lg"
+                  disabled={createLoading}
+                >
+                  {createLoading ? 'Creando cuenta...' : 'Crear Administrador'}
+                </Button>
+              </form>
+
+              <div className="mt-4 text-center text-sm text-gray-500">
+                <p>Solo para personal autorizado</p>
+              </div>
+            </TabsContent>
+          </Tabs>
 
           <div className="mt-6 text-center text-sm text-gray-500">
-            <p>Solo para personal autorizado</p>
+            <p>Acceso restringido al personal autorizado</p>
           </div>
         </CardContent>
       </Card>
