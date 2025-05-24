@@ -1,6 +1,7 @@
 
 import { cn } from "@/lib/utils";
-import { Calendar, MessageCircle, Users, BarChart3, Settings } from "lucide-react";
+import { Calendar, MessageCircle, Users, BarChart3, Settings, Home } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface SidebarProps {
   currentView: string;
@@ -50,7 +51,12 @@ export const Sidebar = ({ currentView, onViewChange }: SidebarProps) => {
         })}
       </nav>
 
-      <div className="absolute bottom-4 left-4 right-4">
+      <div className="absolute bottom-4 left-4 right-4 space-y-2">
+        <Link to="/" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors">
+          <Home size={20} />
+          <span className="font-medium">Inicio</span>
+        </Link>
+        
         <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors">
           <Settings size={20} />
           <span className="font-medium">Configuración</span>
