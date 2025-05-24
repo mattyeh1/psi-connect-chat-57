@@ -171,7 +171,7 @@ export const AppointmentRequests = () => {
                       </div>
                       <div>
                         <h4 className="font-semibold text-slate-800">
-                          {request.patient?.first_name || 'Nombre'} {request.patient?.last_name || 'Apellido'}
+                          {request.patient ? `${request.patient.first_name} ${request.patient.last_name}` : 'Nombre Apellido'}
                         </h4>
                         <p className="text-sm text-slate-600">
                           Solicitud enviada el {new Date(request.created_at).toLocaleDateString('es-ES')}
