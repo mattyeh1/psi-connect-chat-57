@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -78,7 +77,7 @@ export const AdminLogin = () => {
     }
 
     try {
-      // Sign up the admin user
+      // Sign up the admin user with admin-specific metadata
       const { data, error } = await supabase.auth.signUp({
         email: createFormData.email,
         password: createFormData.password,
