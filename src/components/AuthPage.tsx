@@ -84,8 +84,8 @@ export const AuthPage = () => {
           throw new Error('Please enter a valid professional code');
         }
 
-        // Basic user data
-        const userData = {
+        // Build user data object dynamically
+        const userData: Record<string, any> = {
           user_type: userType,
           first_name: formData.firstName,
           last_name: formData.lastName,
