@@ -4,12 +4,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { AuthPage } from "@/components/AuthPage";
 import { ProfileSetup } from "@/components/ProfileSetup";
+import { TrialExpiredModal } from "@/components/TrialExpiredModal";
 import { Sidebar } from "@/components/Sidebar";
 import { Dashboard } from "@/components/Dashboard";
 import { PatientManagement } from "@/components/PatientManagement";
 import { Calendar } from "@/components/CalendarView";
 import { MessagingHub } from "@/components/MessagingHub";
 import { PatientPortal } from "@/components/PatientPortal";
+import { supabase } from "@/integrations/supabase/client";
 
 type ViewType = "dashboard" | "patients" | "calendar" | "messages" | "portal";
 
@@ -17,9 +19,45 @@ const Index = () => {
   const { user, loading: authLoading } = useAuth();
   const { profile, psychologist, patient, loading: profileLoading } = useProfile();
   const [currentView, setCurrentView] = useState<ViewType>("dashboard");
+  const [isTrialExpired, setIsTrialExpired] = useState(false);
+  const [checkingTrial, setCheckingTrial] = useState(false);
+
+  // Check trial status for psychologists
+  useEffect(() => {
+    if (psychologist && profile?.user_type === 'psychologist') {
+      checkTrialStatus();
+    }
+  }, [psychologist, profile]);
+
+  const checkTrialStatus = async () => {
+    if (!psychologist) return;
+
+    setCheckingTrial(true);
+    try {
+      const { data: expired, error } = await supabase
+        .rpc('is_trial_expired', { psychologist_id: psychologist.id });
+
+      if (error) {
+        console.error('Error checking trial status:', error);
+      } else {
+        setIsTrialExpired(expired || false);
+      }
+    } catch (error) {
+      console.error('Error checking trial status:', error);
+    } finally {
+      setCheckingTrial(false);
+    }
+  };
+
+  const handleUpgrade = () => {
+    // Aquí iría la lógica para redirigir al sistema de pagos
+    console.log('Redirecting to payment system...');
+    // Por ahora, solo mostramos un alert
+    alert('Redirección al sistema de pagos (función pendiente de implementar)');
+  };
 
   // Show loading while checking authentication and profile
-  if (authLoading || profileLoading) {
+  if (authLoading || profileLoading || checkingTrial) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
@@ -52,6 +90,18 @@ const Index = () => {
       return <PatientPortal />;
     }
 
+    // Bloquear acceso si el trial ha expirado
+    if (isTrialExpired) {
+      return (
+        <div className="flex items-center justify-center min-h-96">
+          <div className="text-center p-8">
+            <h2 className="text-2xl font-bold text-slate-800 mb-4">Acceso Restringido</h2>
+            <p className="text-slate-600">Tu período de prueba ha expirado. Activa tu suscripción para continuar.</p>
+          </div>
+        </div>
+      );
+    }
+
     switch (currentView) {
       case "dashboard":
         return <Dashboard />;
@@ -68,6 +118,11 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex">
+      {/* Modal de trial expirado para psicólogos */}
+      {profile.user_type === "psychologist" && isTrialExpired && (
+        <TrialExpiredModal onUpgrade={handleUpgrade} />
+      )}
+
       {profile.user_type === "psychologist" && (
         <Sidebar currentView={currentView} onViewChange={setCurrentView} />
       )}

@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Users, MessageCircle, Clock } from "lucide-react";
 import { ProfessionalCodeDisplay } from "./ProfessionalCodeDisplay";
+import { TrialStatus } from "./TrialStatus";
 import { useProfile } from "@/hooks/useProfile";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -76,6 +77,9 @@ export const Dashboard = () => {
         <h2 className="text-3xl font-bold text-slate-800 mb-2">Dashboard</h2>
         <p className="text-slate-600">Bienvenido de vuelta, Dr. {psychologist.first_name}</p>
       </div>
+
+      {/* Trial Status - Prominente en la parte superior */}
+      <TrialStatus />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

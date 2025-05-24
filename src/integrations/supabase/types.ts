@@ -190,6 +190,10 @@ export type Database = {
           phone: string | null
           professional_code: string
           specialization: string | null
+          subscription_end_date: string | null
+          subscription_status: string | null
+          trial_end_date: string | null
+          trial_start_date: string | null
           updated_at: string
         }
         Insert: {
@@ -201,6 +205,10 @@ export type Database = {
           phone?: string | null
           professional_code: string
           specialization?: string | null
+          subscription_end_date?: string | null
+          subscription_status?: string | null
+          trial_end_date?: string | null
+          trial_start_date?: string | null
           updated_at?: string
         }
         Update: {
@@ -212,6 +220,10 @@ export type Database = {
           phone?: string | null
           professional_code?: string
           specialization?: string | null
+          subscription_end_date?: string | null
+          subscription_status?: string | null
+          trial_end_date?: string | null
+          trial_start_date?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -232,6 +244,14 @@ export type Database = {
       generate_professional_code: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_trial_days_remaining: {
+        Args: { psychologist_id: string }
+        Returns: number
+      }
+      is_trial_expired: {
+        Args: { psychologist_id: string }
+        Returns: boolean
       }
       validate_professional_code: {
         Args: { code: string }
