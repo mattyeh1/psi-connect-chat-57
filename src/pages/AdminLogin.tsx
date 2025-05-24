@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -28,7 +29,7 @@ export const AdminLogin = () => {
   const [createLoading, setCreateLoading] = useState(false);
   const [error, setError] = useState('');
   const [createError, setCreateError] = useState('');
-  const { signIn, user } = useAuth();
+  const { user } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdmin();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -46,11 +47,48 @@ export const AdminLogin = () => {
     setError('');
 
     try {
-      const { error } = await signIn(formData.email, formData.password);
+      console.log('Attempting admin login for:', formData.email);
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      });
+      
       if (error) {
+        console.error('Login error:', error);
         throw error;
       }
-      // Navigation will be handled by useEffect after admin check
+
+      if (data.user) {
+        console.log('Login successful, checking admin status...');
+        
+        // Check if user is admin
+        const { data: adminData, error: adminError } = await supabase
+          .from('admins')
+          .select('id')
+          .eq('id', data.user.id)
+          .maybeSingle();
+
+        if (adminError) {
+          console.error('Error checking admin status:', adminError);
+          throw new Error('Error verificando permisos de administrador');
+        }
+
+        if (!adminData) {
+          console.log('User is not an admin');
+          await supabase.auth.signOut();
+          throw new Error('No tienes permisos de administrador');
+        }
+
+        console.log('Admin verification successful, redirecting...');
+        toast({
+          title: "Acceso exitoso",
+          description: "Bienvenido al panel de administración",
+        });
+
+        // Navigate to dashboard
+        navigate('/admin/dashboard');
+      }
     } catch (error: any) {
       console.error('Admin login error:', error);
       setError(error.message || 'Error de autenticación');
