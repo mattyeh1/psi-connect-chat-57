@@ -27,6 +27,45 @@ export type Database = {
         }
         Relationships: []
       }
+      appointment_requests: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          patient_id: string
+          preferred_date: string
+          preferred_time: string
+          psychologist_id: string
+          status: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          patient_id: string
+          preferred_date: string
+          preferred_time: string
+          psychologist_id: string
+          status?: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          patient_id?: string
+          preferred_date?: string
+          preferred_time?: string
+          psychologist_id?: string
+          status?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       appointments: {
         Row: {
           appointment_date: string

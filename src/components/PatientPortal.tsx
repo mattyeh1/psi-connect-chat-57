@@ -1,9 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, MessageCircle, FileText, Clock, Plus } from "lucide-react";
+import { Calendar, MessageCircle, FileText, Clock } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
 import { supabase } from "@/integrations/supabase/client";
+import { AppointmentRequestForm } from "./AppointmentRequestForm";
 
 export const PatientPortal = () => {
   const { patient } = useProfile();
@@ -203,13 +203,10 @@ export const PatientPortal = () => {
                 <div className="text-center py-8 text-slate-500">
                   <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
                   <p>No tienes citas programadas</p>
-                  <p className="text-sm">Contacta a tu psicólogo para agendar una nueva cita</p>
+                  <p className="text-sm">Solicita una nueva cita usando el botón de abajo</p>
                 </div>
               )}
-              <button className="w-full p-3 border-2 border-dashed border-slate-300 rounded-lg text-slate-600 hover:border-blue-400 hover:text-blue-600 transition-colors flex items-center justify-center gap-2">
-                <Plus className="w-4 h-4" />
-                Solicitar nueva cita
-              </button>
+              <AppointmentRequestForm onSuccess={fetchPatientData} />
             </div>
           </CardContent>
         </Card>
