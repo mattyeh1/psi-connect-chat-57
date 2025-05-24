@@ -61,10 +61,16 @@ export const useProfile = () => {
         .single();
 
       if (profileError) throw profileError;
-      setProfile(profileData);
+      
+      // Type assertion to ensure user_type is the correct type
+      const typedProfile: Profile = {
+        ...profileData,
+        user_type: profileData.user_type as 'psychologist' | 'patient'
+      };
+      setProfile(typedProfile);
 
       // Fetch specific role data
-      if (profileData.user_type === 'psychologist') {
+      if (typedProfile.user_type === 'psychologist') {
         const { data: psychData } = await supabase
           .from('psychologists')
           .select('*')
@@ -72,7 +78,7 @@ export const useProfile = () => {
           .maybeSingle();
         
         setPsychologist(psychData);
-      } else if (profileData.user_type === 'patient') {
+      } else if (typedProfile.user_type === 'patient') {
         const { data: patientData } = await supabase
           .from('patients')
           .select('*')
@@ -91,45 +97,51 @@ export const useProfile = () => {
   const createPsychologistProfile = async (data: Omit<Psychologist, 'id' | 'professional_code'>) => {
     if (!user) return { error: 'No user logged in' };
 
-    // Generate professional code
-    const { data: codeData, error: codeError } = await supabase.rpc('generate_professional_code');
-    
-    if (codeError) return { error: codeError.message };
+    try {
+      // Generate professional code
+      const { data: codeData, error: codeError } = await supabase.rpc('generate_professional_code');
+      
+      if (codeError) return { error: codeError.message };
 
-    const { data: result, error } = await supabase
-      .from('psychologists')
-      .insert({
-        id: user.id,
-        professional_code: codeData,
-        ...data
-      })
-      .select()
-      .single();
+      const { data: result, error } = await supabase
+        .from('psychologists')
+        .insert({
+          id: user.id,
+          professional_code: codeData,
+          ...data
+        })
+        .select()
+        .single();
 
-    if (!error) {
+      if (error) return { error: error.message };
+
       setPsychologist(result);
+      return { data: result, error: null };
+    } catch (error: any) {
+      return { error: error.message };
     }
-
-    return { data: result, error };
   };
 
   const createPatientProfile = async (data: Omit<Patient, 'id'>) => {
     if (!user) return { error: 'No user logged in' };
 
-    const { data: result, error } = await supabase
-      .from('patients')
-      .insert({
-        id: user.id,
-        ...data
-      })
-      .select()
-      .single();
+    try {
+      const { data: result, error } = await supabase
+        .from('patients')
+        .insert({
+          id: user.id,
+          ...data
+        })
+        .select()
+        .single();
 
-    if (!error) {
+      if (error) return { error: error.message };
+
       setPatient(result);
+      return { data: result, error: null };
+    } catch (error: any) {
+      return { error: error.message };
     }
-
-    return { data: result, error };
   };
 
   return {

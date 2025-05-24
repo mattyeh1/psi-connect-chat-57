@@ -61,7 +61,7 @@ export const ProfileSetup = ({ userType, onComplete }: ProfileSetupProps) => {
 
     try {
       if (userType === 'psychologist') {
-        const { error } = await createPsychologistProfile({
+        const result = await createPsychologistProfile({
           first_name: formData.firstName,
           last_name: formData.lastName,
           phone: formData.phone,
@@ -69,13 +69,15 @@ export const ProfileSetup = ({ userType, onComplete }: ProfileSetupProps) => {
           license_number: formData.licenseNumber
         });
 
-        if (error) throw new Error(error);
+        if (result.error) {
+          throw new Error(result.error);
+        }
       } else {
         if (!psychologistId) {
           throw new Error('Invalid professional code');
         }
 
-        const { error } = await createPatientProfile({
+        const result = await createPatientProfile({
           first_name: formData.firstName,
           last_name: formData.lastName,
           psychologist_id: psychologistId,
@@ -84,7 +86,9 @@ export const ProfileSetup = ({ userType, onComplete }: ProfileSetupProps) => {
           notes: formData.notes
         });
 
-        if (error) throw new Error(error);
+        if (result.error) {
+          throw new Error(result.error);
+        }
       }
 
       onComplete();
