@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Heart, Shield, Users, MessageCircle, Calendar, Star, CheckCircle, Award, TrendingUp, Clock, Globe, Zap } from "lucide-react";
@@ -211,59 +212,59 @@ export const LandingPage = () => {
           <div className="absolute top-10 right-10 w-32 h-32 bg-blue-200/20 rounded-full blur-2xl animate-pulse"></div>
           <div className="absolute bottom-10 left-10 w-24 h-24 bg-emerald-200/20 rounded-full blur-2xl animate-bounce"></div>
         
-        <div className="max-w-7xl mx-auto px-6 relative z-10">
-          <ScrollAnimationWrapper animation="fade-up">
-            <div className="text-center mb-16">
-              <h3 className="text-3xl font-bold text-slate-800 mb-4 hover:text-blue-600 transition-colors duration-300">
-                ¿Cómo funciona PsiConnect?
-              </h3>
-              <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-                Simplificamos el proceso para que puedas enfocarte en lo que realmente importa: 
-                brindar la mejor atención a tus pacientes.
-              </p>
-            </div>
-          </ScrollAnimationWrapper>
+          <div className="max-w-7xl mx-auto px-6 relative z-10">
+            <ScrollAnimationWrapper animation="fade-up">
+              <div className="text-center mb-16">
+                <h3 className="text-3xl font-bold text-slate-800 mb-4 hover:text-blue-600 transition-colors duration-300">
+                  ¿Cómo funciona PsiConnect?
+                </h3>
+                <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+                  Simplificamos el proceso para que puedas enfocarte en lo que realmente importa: 
+                  brindar la mejor atención a tus pacientes.
+                </p>
+              </div>
+            </ScrollAnimationWrapper>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-            {[
-              {
-                step: "1",
-                title: "Regístrate",
-                description: "Crea tu perfil profesional en minutos. Verifica tu identidad y comienza a configurar tu espacio de trabajo digital.",
-                color: "blue",
-                delay: 200
-              },
-              {
-                step: "2",
-                title: "Conecta",
-                description: "Los pacientes pueden encontrarte y agendar citas según tu disponibilidad. Recibe notificaciones y confirma automáticamente.",
-                color: "emerald",
-                delay: 400
-              },
-              {
-                step: "3",
-                title: "Atiende",
-                description: "Utiliza nuestras herramientas integradas para realizar sesiones, llevar registros y dar seguimiento a tus pacientes.",
-                color: "purple",
-                delay: 600
-              }
-            ].map((step, index) => (
-              <ScrollAnimationWrapper key={index} animation="fade-up" delay={step.delay}>
-                <div className="text-center group hover:scale-105 transition-all duration-500">
-                  <div className={`w-20 h-20 bg-gradient-to-r from-${step.color}-500 to-${step.color}-600 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300 group-hover:shadow-xl`}>
-                    <span className="text-2xl font-bold text-white group-hover:animate-pulse">{step.step}</span>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+              {[
+                {
+                  step: "1",
+                  title: "Regístrate",
+                  description: "Crea tu perfil profesional en minutos. Verifica tu identidad y comienza a configurar tu espacio de trabajo digital.",
+                  color: "blue",
+                  delay: 200
+                },
+                {
+                  step: "2",
+                  title: "Conecta",
+                  description: "Los pacientes pueden encontrarte y agendar citas según tu disponibilidad. Recibe notificaciones y confirma automáticamente.",
+                  color: "emerald",
+                  delay: 400
+                },
+                {
+                  step: "3",
+                  title: "Atiende",
+                  description: "Utiliza nuestras herramientas integradas para realizar sesiones, llevar registros y dar seguimiento a tus pacientes.",
+                  color: "purple",
+                  delay: 600
+                }
+              ].map((step, index) => (
+                <ScrollAnimationWrapper key={index} animation="fade-up" delay={step.delay}>
+                  <div className="text-center group hover:scale-105 transition-all duration-500">
+                    <div className={`w-20 h-20 bg-gradient-to-r from-${step.color}-500 to-${step.color}-600 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300 group-hover:shadow-xl`}>
+                      <span className="text-2xl font-bold text-white group-hover:animate-pulse">{step.step}</span>
+                    </div>
+                    <h4 className={`text-xl font-semibold text-slate-800 mb-4 group-hover:text-${step.color}-600 transition-colors duration-300`}>{step.title}</h4>
+                    <p className="text-slate-600 group-hover:text-slate-700 transition-colors duration-300">
+                      {step.description}
+                    </p>
                   </div>
-                  <h4 className={`text-xl font-semibold text-slate-800 mb-4 group-hover:text-${step.color}-600 transition-colors duration-300`}>{step.title}</h4>
-                  <p className="text-slate-600 group-hover:text-slate-700 transition-colors duration-300">
-                    {step.description}
-                  </p>
-                </div>
-              </ScrollAnimationWrapper>
-            ))}
+                </ScrollAnimationWrapper>
+              ))}
+            </div>
           </div>
-        </div>
+        </section>
       </ScrollAnimationWrapper>
-      </section>
 
       {/* Testimonials Section */}
       <ScrollAnimationWrapper animation="fade-up">
@@ -366,62 +367,63 @@ export const LandingPage = () => {
             <div className="absolute bottom-20 right-20 w-32 h-32 bg-white/10 rounded-full blur-2xl animate-bounce"></div>
           </div>
         
-        <div className="max-w-7xl mx-auto px-6 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div className="group">
-              <h3 className="text-4xl font-bold text-white mb-6 group-hover:scale-105 transition-transform duration-300">
-                Beneficios únicos para profesionales
-              </h3>
-              <div className="space-y-6">
-                <div className="flex items-start gap-4 group hover:scale-105 transition-all duration-300">
-                  <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1 group-hover:bg-white/30 group-hover:scale-110 transition-all duration-300">
-                    <CheckCircle className="w-5 h-5 text-white group-hover:animate-pulse" />
+          <div className="max-w-7xl mx-auto px-6 relative z-10">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+              <div className="group">
+                <h3 className="text-4xl font-bold text-white mb-6 group-hover:scale-105 transition-transform duration-300">
+                  Beneficios únicos para profesionales
+                </h3>
+                <div className="space-y-6">
+                  <div className="flex items-start gap-4 group hover:scale-105 transition-all duration-300">
+                    <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1 group-hover:bg-white/30 group-hover:scale-110 transition-all duration-300">
+                      <CheckCircle className="w-5 h-5 text-white group-hover:animate-pulse" />
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-semibold text-white mb-2">Aumenta tu productividad</h4>
+                      <p className="text-blue-100">
+                        Automatiza tareas administrativas y enfócate en lo que sabes hacer mejor: ayudar a tus pacientes.
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-xl font-semibold text-white mb-2">Aumenta tu productividad</h4>
-                    <p className="text-blue-100">
-                      Automatiza tareas administrativas y enfócate en lo que sabes hacer mejor: ayudar a tus pacientes.
-                    </p>
+                  
+                  <div className="flex items-start gap-4 group hover:scale-105 transition-all duration-300">
+                    <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1 group-hover:bg-white/30 group-hover:scale-110 transition-all duration-300">
+                      <TrendingUp className="w-5 h-5 text-white group-hover:animate-pulse" />
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-semibold text-white mb-2">Expande tu alcance</h4>
+                      <p className="text-blue-100">
+                        Conecta con pacientes de toda tu región y ofrece consultas presenciales o virtuales.
+                      </p>
+                    </div>
                   </div>
-                </div>
-                
-                <div className="flex items-start gap-4 group hover:scale-105 transition-all duration-300">
-                  <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1 group-hover:bg-white/30 group-hover:scale-110 transition-all duration-300">
-                    <TrendingUp className="w-5 h-5 text-white group-hover:animate-pulse" />
-                  </div>
-                  <div>
-                    <h4 className="text-xl font-semibold text-white mb-2">Expande tu alcance</h4>
-                    <p className="text-blue-100">
-                      Conecta con pacientes de toda tu región y ofrece consultas presenciales o virtuales.
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-4 group hover:scale-105 transition-all duration-300">
-                  <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1 group-hover:bg-white/30 group-hover:scale-110 transition-all duration-300">
-                    <Award className="w-5 h-5 text-white group-hover:animate-pulse" />
-                  </div>
-                  <div>
-                    <h4 className="text-xl font-semibold text-white mb-2">Mejora la calidad de atención</h4>
-                    <p className="text-blue-100">
-                      Herramientas avanzadas para seguimiento, análisis y personalización del tratamiento.
-                    </p>
+                  
+                  <div className="flex items-start gap-4 group hover:scale-105 transition-all duration-300">
+                    <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1 group-hover:bg-white/30 group-hover:scale-110 transition-all duration-300">
+                      <Award className="w-5 h-5 text-white group-hover:animate-pulse" />
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-semibold text-white mb-2">Mejora la calidad de atención</h4>
+                      <p className="text-blue-100">
+                        Herramientas avanzadas para seguimiento, análisis y personalización del tratamiento.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-            
-            <div className="relative group">
-              <img 
-                src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
-                alt="Profesional usando PsiConnect"
-                className="rounded-2xl shadow-2xl group-hover:scale-105 group-hover:shadow-3xl transition-all duration-500"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-2xl group-hover:from-black/10 transition-all duration-500"></div>
-              <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              
+              <div className="relative group">
+                <img 
+                  src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
+                  alt="Profesional usando PsiConnect"
+                  className="rounded-2xl shadow-2xl group-hover:scale-105 group-hover:shadow-3xl transition-all duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-2xl group-hover:from-black/10 transition-all duration-500"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
       </ScrollAnimationWrapper>
 
       {/* Pricing Section */}
