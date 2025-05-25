@@ -20,19 +20,18 @@ const Index = () => {
   const { profile, psychologist, patient, loading: profileLoading, refetch } = useProfile();
   const [currentView, setCurrentView] = useState<ViewType>("dashboard");
   const [isTrialExpired, setIsTrialExpired] = useState(false);
-  const [checkingTrial, setCheckingTrial] = useState(false);
+  const [trialChecked, setTrialChecked] = useState(false);
 
-  // Check trial status for psychologists
+  // Check trial status for psychologists only once
   useEffect(() => {
-    if (psychologist && profile?.user_type === 'psychologist') {
+    if (psychologist && profile?.user_type === 'psychologist' && !trialChecked) {
       checkTrialStatus();
     }
-  }, [psychologist, profile]);
+  }, [psychologist, profile, trialChecked]);
 
   const checkTrialStatus = async () => {
     if (!psychologist) return;
 
-    setCheckingTrial(true);
     try {
       const { data: expired, error } = await supabase
         .rpc('is_trial_expired', { psychologist_id: psychologist.id });
@@ -45,7 +44,7 @@ const Index = () => {
     } catch (error) {
       console.error('Error checking trial status:', error);
     } finally {
-      setCheckingTrial(false);
+      setTrialChecked(true);
     }
   };
 
@@ -54,10 +53,8 @@ const Index = () => {
     alert('Redirección al sistema de pagos (función pendiente de implementar)');
   };
 
-  // Solo mostrar loading si realmente estamos en un estado de carga inicial
-  const isInitialLoading = authLoading || (user && profileLoading && !profile);
-
-  if (isInitialLoading || checkingTrial) {
+  // Only show loading during initial authentication check
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
@@ -69,14 +66,29 @@ const Index = () => {
   }
 
   // Show auth page if not logged in
-  if (!user || !profile) {
+  if (!user) {
+    return <AuthPage />;
+  }
+
+  // Show loading only if we're still loading profile data for the first time
+  if (!profile && profileLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600">Cargando perfil...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If no profile exists, show auth page
+  if (!profile) {
     return <AuthPage />;
   }
 
   // Check if user needs profile setup with more specific logic
   const needsProfileSetup = () => {
-    if (!profile) return true;
-    
     if (profile.user_type === 'psychologist') {
       // Check if psychologist profile exists and has required fields
       return !psychologist || !psychologist.first_name || !psychologist.last_name;
