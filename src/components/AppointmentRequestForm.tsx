@@ -1,7 +1,6 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar, Plus } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { useProfile } from "@/hooks/useProfile";
 
 interface AppointmentRequestFormData {
@@ -19,7 +18,11 @@ interface AppointmentRequestFormData {
   notes: string;
 }
 
-export const AppointmentRequestForm = ({ onSuccess }: { onSuccess?: () => void }) => {
+interface AppointmentRequestFormProps {
+  onSuccess?: () => void;
+}
+
+export const AppointmentRequestForm = ({ onSuccess }: AppointmentRequestFormProps) => {
   const { patient } = useProfile();
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,10 +37,24 @@ export const AppointmentRequestForm = ({ onSuccess }: { onSuccess?: () => void }
   });
 
   const onSubmit = async (data: AppointmentRequestFormData) => {
-    if (!patient) {
+    if (!patient?.id || !patient?.psychologist_id) {
       toast({
         title: "Error",
-        description: "No se pudo identificar al paciente",
+        description: "No se pudo identificar al paciente o al psicólogo asignado",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validar que la fecha sea futura
+    const selectedDate = new Date(data.preferred_date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (selectedDate < today) {
+      toast({
+        title: "Error",
+        description: "La fecha seleccionada debe ser futura",
         variant: "destructive"
       });
       return;
@@ -54,10 +71,14 @@ export const AppointmentRequestForm = ({ onSuccess }: { onSuccess?: () => void }
           preferred_date: data.preferred_date,
           preferred_time: data.preferred_time,
           type: data.type,
-          notes: data.notes
+          notes: data.notes || null,
+          status: 'pending'
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating appointment request:', error);
+        throw new Error('No se pudo enviar la solicitud');
+      }
 
       toast({
         title: "¡Solicitud enviada!",
@@ -69,9 +90,10 @@ export const AppointmentRequestForm = ({ onSuccess }: { onSuccess?: () => void }
       onSuccess?.();
     } catch (error) {
       console.error('Error creating appointment request:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       toast({
         title: "Error",
-        description: "No se pudo enviar la solicitud. Inténtalo de nuevo.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -80,18 +102,40 @@ export const AppointmentRequestForm = ({ onSuccess }: { onSuccess?: () => void }
   };
 
   // Generate time slots from 8:00 to 19:00
-  const timeSlots = [];
-  for (let hour = 8; hour <= 19; hour++) {
-    for (let minute = 0; minute < 60; minute += 30) {
-      const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-      timeSlots.push(timeString);
+  const generateTimeSlots = () => {
+    const slots = [];
+    for (let hour = 8; hour <= 19; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        slots.push(timeString);
+      }
     }
-  }
+    return slots;
+  };
+
+  const timeSlots = generateTimeSlots();
 
   // Get tomorrow's date as minimum selectable date
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const minDate = tomorrow.toISOString().split('T')[0];
+  const getMinDate = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split('T')[0];
+  };
+
+  // Get max date (6 months from now)
+  const getMaxDate = () => {
+    const maxDate = new Date();
+    maxDate.setMonth(maxDate.getMonth() + 6);
+    return maxDate.toISOString().split('T')[0];
+  };
+
+  const appointmentTypes = [
+    { value: "individual", label: "Terapia Individual" },
+    { value: "couple", label: "Terapia de Pareja" },
+    { value: "family", label: "Terapia Familiar" },
+    { value: "evaluation", label: "Evaluación" },
+    { value: "follow_up", label: "Seguimiento" }
+  ];
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -104,7 +148,7 @@ export const AppointmentRequestForm = ({ onSuccess }: { onSuccess?: () => void }
           Solicitar nueva cita
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-full sm:max-w-md">
+      <SheetContent className="w-full sm:max-w-md overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Calendar className="w-5 h-5" />
@@ -127,8 +171,9 @@ export const AppointmentRequestForm = ({ onSuccess }: { onSuccess?: () => void }
                   <FormControl>
                     <input
                       type="date"
-                      min={minDate}
-                      className="w-full px-3 py-2 border border-input rounded-md bg-background"
+                      min={getMinDate()}
+                      max={getMaxDate()}
+                      className="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-blue-500"
                       {...field}
                     />
                   </FormControl>
@@ -144,7 +189,7 @@ export const AppointmentRequestForm = ({ onSuccess }: { onSuccess?: () => void }
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Hora Preferida</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecciona una hora" />
@@ -166,21 +211,22 @@ export const AppointmentRequestForm = ({ onSuccess }: { onSuccess?: () => void }
             <FormField
               control={form.control}
               name="type"
+              rules={{ required: "Selecciona el tipo de sesión" }}
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Tipo de Sesión</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecciona el tipo" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="individual">Terapia Individual</SelectItem>
-                      <SelectItem value="couple">Terapia de Pareja</SelectItem>
-                      <SelectItem value="family">Terapia Familiar</SelectItem>
-                      <SelectItem value="evaluation">Evaluación</SelectItem>
-                      <SelectItem value="follow_up">Seguimiento</SelectItem>
+                      {appointmentTypes.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -197,7 +243,8 @@ export const AppointmentRequestForm = ({ onSuccess }: { onSuccess?: () => void }
                   <FormControl>
                     <Textarea
                       placeholder="Comparte cualquier información adicional sobre la cita..."
-                      className="min-h-[80px]"
+                      className="min-h-[80px] resize-none"
+                      maxLength={500}
                       {...field}
                     />
                   </FormControl>
@@ -212,6 +259,7 @@ export const AppointmentRequestForm = ({ onSuccess }: { onSuccess?: () => void }
                 variant="outline"
                 onClick={() => setIsOpen(false)}
                 className="flex-1"
+                disabled={isSubmitting}
               >
                 Cancelar
               </Button>

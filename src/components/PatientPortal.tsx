@@ -5,45 +5,88 @@ import { Calendar, MessageCircle, FileText, Clock } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { AppointmentRequestForm } from "./AppointmentRequestForm";
+import { toast } from "@/hooks/use-toast";
+
+interface Appointment {
+  id: string;
+  patient_id: string;
+  psychologist_id: string;
+  appointment_date: string;
+  duration_minutes: number;
+  type: string;
+  status: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface Message {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  content: string;
+  read_at?: string;
+  created_at: string;
+}
+
+interface Stats {
+  nextAppointment: Appointment | null;
+  unreadMessages: number;
+  totalSessions: number;
+}
 
 export const PatientPortal = () => {
   const { patient } = useProfile();
-  const [appointments, setAppointments] = useState<any[]>([]);
-  const [messages, setMessages] = useState<any[]>([]);
-  const [stats, setStats] = useState({
-    nextAppointment: null as any,
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [stats, setStats] = useState<Stats>({
+    nextAppointment: null,
     unreadMessages: 0,
     totalSessions: 0
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (patient) {
+    if (patient?.id) {
       fetchPatientData();
     }
   }, [patient]);
 
   const fetchPatientData = async () => {
-    if (!patient) return;
+    if (!patient?.id) {
+      setError("No se pudo identificar al paciente");
+      setLoading(false);
+      return;
+    }
 
     try {
+      setLoading(true);
+      setError(null);
+      
       console.log('Fetching patient data for:', patient.id);
       
-      // Fetch upcoming appointments - incluir más estados para citas confirmadas
+      // Crear fecha actual en formato ISO para comparación
+      const now = new Date();
+      const currentDateTime = now.toISOString();
+      
+      // Fetch upcoming appointments con mejor filtrado
       const { data: appointmentsData, error: appointmentsError } = await supabase
         .from('appointments')
         .select('*')
         .eq('patient_id', patient.id)
-        .gte('appointment_date', new Date().toISOString())
-        .in('status', ['scheduled', 'confirmed', 'accepted']) // Agregar más estados válidos
+        .gte('appointment_date', currentDateTime)
+        .in('status', ['scheduled', 'confirmed', 'accepted'])
         .order('appointment_date', { ascending: true });
 
       if (appointmentsError) {
         console.error('Error fetching appointments:', appointmentsError);
-      } else {
-        console.log('Fetched appointments:', appointmentsData);
-        setAppointments(appointmentsData || []);
+        throw new Error('Error al cargar las citas');
       }
+
+      console.log('Fetched appointments:', appointmentsData);
+      const validAppointments = appointmentsData || [];
+      setAppointments(validAppointments);
 
       // Fetch recent messages
       const { data: messagesData, error: messagesError } = await supabase
@@ -55,13 +98,15 @@ export const PatientPortal = () => {
 
       if (messagesError) {
         console.error('Error fetching messages:', messagesError);
-      } else {
-        setMessages(messagesData || []);
+        // No lanzar error para mensajes, solo log
       }
 
+      const validMessages = messagesData || [];
+      setMessages(validMessages);
+
       // Calculate stats
-      const nextAppointment = appointmentsData && appointmentsData.length > 0 ? appointmentsData[0] : null;
-      const unreadMessages = messagesData ? messagesData.filter(msg => !msg.read_at).length : 0;
+      const nextAppointment = validAppointments.length > 0 ? validAppointments[0] : null;
+      const unreadMessages = validMessages.filter(msg => !msg.read_at).length;
 
       console.log('Next appointment:', nextAppointment);
 
@@ -84,13 +129,112 @@ export const PatientPortal = () => {
 
     } catch (error) {
       console.error('Error fetching patient data:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      setError(errorMessage);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleDateString('es-ES', { 
+        day: 'numeric', 
+        month: 'short',
+        year: 'numeric'
+      });
+    } catch {
+      return 'Fecha inválida';
+    }
+  };
+
+  const formatTime = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleTimeString('es-ES', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+    } catch {
+      return 'Hora inválida';
+    }
+  };
+
+  const formatDateLong = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleDateString('es-ES');
+    } catch {
+      return 'Fecha inválida';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      "confirmed": "Confirmada",
+      "accepted": "Confirmada",
+      "scheduled": "Programada",
+      "pending": "Pendiente",
+      "completed": "Completada",
+      "cancelled": "Cancelada"
+    };
+    return labels[status] || status;
+  };
+
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      "confirmed": "bg-green-100 text-green-700",
+      "accepted": "bg-green-100 text-green-700",
+      "scheduled": "bg-blue-100 text-blue-700",
+      "pending": "bg-yellow-100 text-yellow-700",
+      "completed": "bg-gray-100 text-gray-700",
+      "cancelled": "bg-red-100 text-red-700"
+    };
+    return colors[status] || "bg-gray-100 text-gray-700";
+  };
+
+  const getTypeLabel = (type: string) => {
+    const types: Record<string, string> = {
+      "individual": "Terapia Individual",
+      "couple": "Terapia de Pareja", 
+      "family": "Terapia Familiar",
+      "evaluation": "Evaluación",
+      "follow_up": "Seguimiento"
+    };
+    return types[type] || type;
+  };
+
   if (!patient) {
-    return <div>Cargando...</div>;
+    return (
+      <div className="max-w-6xl mx-auto space-y-6">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600">Cargando perfil de paciente...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-6xl mx-auto space-y-6">
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-6 text-center">
+            <p className="text-red-700 font-medium mb-2">Error al cargar datos</p>
+            <p className="text-red-600 text-sm mb-4">{error}</p>
+            <button 
+              onClick={fetchPatientData}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Reintentar
+            </button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   if (loading) {
@@ -104,39 +248,13 @@ export const PatientPortal = () => {
     );
   }
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case "confirmed": 
-      case "accepted":
-        return "Confirmada";
-      case "scheduled":
-        return "Programada";
-      case "pending":
-        return "Pendiente";
-      default:
-        return status;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "confirmed":
-      case "accepted":
-        return "bg-green-100 text-green-700";
-      case "scheduled":
-        return "bg-blue-100 text-blue-700";
-      case "pending":
-        return "bg-yellow-100 text-yellow-700";
-      default:
-        return "bg-gray-100 text-gray-700";
-    }
-  };
-
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold text-slate-800 mb-2">Portal del Paciente</h2>
-        <p className="text-slate-600">Bienvenida, {patient.first_name} {patient.last_name}</p>
+        <p className="text-slate-600">
+          Bienvenida, {patient.first_name} {patient.last_name}
+        </p>
       </div>
 
       {/* Stats Cards */}
@@ -149,16 +267,10 @@ export const PatientPortal = () => {
                 {stats.nextAppointment ? (
                   <>
                     <p className="text-2xl font-bold text-slate-800">
-                      {new Date(stats.nextAppointment.appointment_date).toLocaleDateString('es-ES', { 
-                        day: 'numeric', 
-                        month: 'short' 
-                      })}
+                      {formatDate(stats.nextAppointment.appointment_date)}
                     </p>
                     <p className="text-sm text-slate-600">
-                      {new Date(stats.nextAppointment.appointment_date).toLocaleTimeString('es-ES', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                      })}
+                      {formatTime(stats.nextAppointment.appointment_date)}
                     </p>
                   </>
                 ) : (
@@ -218,19 +330,18 @@ export const PatientPortal = () => {
           <CardContent>
             <div className="space-y-4">
               {appointments.length > 0 ? (
-                appointments.slice(0, 3).map((appointment, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
+                appointments.slice(0, 3).map((appointment) => (
+                  <div key={appointment.id} className="flex items-center justify-between p-4 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-emerald-500 rounded-lg flex items-center justify-center text-white font-semibold text-sm">
                         {new Date(appointment.appointment_date).getDate()}
                       </div>
                       <div>
-                        <p className="font-semibold text-slate-800 capitalize">{appointment.type}</p>
+                        <p className="font-semibold text-slate-800 capitalize">
+                          {getTypeLabel(appointment.type)}
+                        </p>
                         <p className="text-sm text-slate-600">
-                          {new Date(appointment.appointment_date).toLocaleTimeString('es-ES', { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })} - {appointment.duration_minutes} min
+                          {formatTime(appointment.appointment_date)} - {appointment.duration_minutes} min
                         </p>
                       </div>
                     </div>
@@ -262,13 +373,13 @@ export const PatientPortal = () => {
           <CardContent>
             <div className="space-y-4">
               {messages.length > 0 ? (
-                messages.map((message, index) => (
-                  <div key={index} className="p-4 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer">
+                messages.map((message) => (
+                  <div key={message.id} className="p-4 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer">
                     <div className="flex justify-between items-start mb-2">
                       <p className="font-semibold text-slate-800 text-sm">Tu psicólogo</p>
                       <div className="flex items-center gap-2">
                         <p className="text-xs text-slate-500">
-                          {new Date(message.created_at).toLocaleDateString('es-ES')}
+                          {formatDateLong(message.created_at)}
                         </p>
                         {!message.read_at && (
                           <div className="w-2 h-2 bg-blue-500 rounded-full"></div>

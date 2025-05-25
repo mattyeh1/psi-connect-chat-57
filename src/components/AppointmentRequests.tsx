@@ -8,20 +8,22 @@ import { useProfile } from "@/hooks/useProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
+interface Patient {
+  first_name: string;
+  last_name: string;
+  phone?: string;
+}
+
 interface AppointmentRequest {
   id: string;
   patient_id: string;
   preferred_date: string;
   preferred_time: string;
   type: string;
-  notes: string;
+  notes?: string;
   status: string;
   created_at: string;
-  patient?: {
-    first_name: string;
-    last_name: string;
-    phone?: string;
-  } | null;
+  patient?: Patient | null;
 }
 
 export const AppointmentRequests = () => {
@@ -31,13 +33,16 @@ export const AppointmentRequests = () => {
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (psychologist) {
+    if (psychologist?.id) {
       fetchRequests();
     }
   }, [psychologist]);
 
   const fetchRequests = async () => {
-    if (!psychologist) return;
+    if (!psychologist?.id) {
+      setLoading(false);
+      return;
+    }
 
     try {
       console.log('Fetching appointment requests for psychologist:', psychologist.id);
@@ -59,11 +64,11 @@ export const AppointmentRequests = () => {
 
       console.log('Fetched appointment requests:', data);
       
-      // Type assertion to handle the Supabase response properly
+      // Type assertion para manejar la respuesta de Supabase
       const typedRequests = (data || []).map(request => ({
         ...request,
         patient: request.patient && typeof request.patient === 'object' && 'first_name' in request.patient 
-          ? request.patient as { first_name: string; last_name: string; phone?: string }
+          ? request.patient as Patient
           : null
       }));
 
@@ -81,6 +86,15 @@ export const AppointmentRequests = () => {
   };
 
   const handleRequestAction = async (requestId: string, action: 'approved' | 'rejected') => {
+    if (!requestId) {
+      toast({
+        title: "Error",
+        description: "ID de solicitud inválido",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setProcessingId(requestId);
     
     try {
@@ -94,15 +108,19 @@ export const AppointmentRequests = () => {
         })
         .eq('id', requestId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating request:', error);
+        throw error;
+      }
 
+      const actionLabel = action === 'approved' ? 'aprobada' : 'rechazada';
       toast({
-        title: action === 'approved' ? "Solicitud Aprobada" : "Solicitud Rechazada",
-        description: `La solicitud de cita ha sido ${action === 'approved' ? 'aprobada' : 'rechazada'} exitosamente.`,
+        title: `Solicitud ${actionLabel}`,
+        description: `La solicitud de cita ha sido ${actionLabel} exitosamente.`,
       });
 
       // Refresh the requests list
-      fetchRequests();
+      await fetchRequests();
     } catch (error) {
       console.error('Error updating request:', error);
       toast({
@@ -116,7 +134,7 @@ export const AppointmentRequests = () => {
   };
 
   const getTypeLabel = (type: string) => {
-    const labels: { [key: string]: string } = {
+    const labels: Record<string, string> = {
       individual: "Terapia Individual",
       couple: "Terapia de Pareja",
       family: "Terapia Familiar",
@@ -124,6 +142,27 @@ export const AppointmentRequests = () => {
       follow_up: "Seguimiento"
     };
     return labels[type] || type;
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleDateString('es-ES', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch {
+      return 'Fecha inválida';
+    }
+  };
+
+  const formatCreatedDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleDateString('es-ES');
+    } catch {
+      return 'Fecha inválida';
+    }
   };
 
   if (loading) {
@@ -171,10 +210,13 @@ export const AppointmentRequests = () => {
                       </div>
                       <div>
                         <h4 className="font-semibold text-slate-800">
-                          {request.patient ? `${request.patient.first_name} ${request.patient.last_name}` : 'Nombre Apellido'}
+                          {request.patient 
+                            ? `${request.patient.first_name} ${request.patient.last_name}` 
+                            : 'Paciente Desconocido'
+                          }
                         </h4>
                         <p className="text-sm text-slate-600">
-                          Solicitud enviada el {new Date(request.created_at).toLocaleDateString('es-ES')}
+                          Solicitud enviada el {formatCreatedDate(request.created_at)}
                         </p>
                       </div>
                     </div>
@@ -182,14 +224,7 @@ export const AppointmentRequests = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
                       <div className="flex items-center gap-2 text-sm text-slate-600">
                         <Calendar className="w-4 h-4" />
-                        <span>
-                          {new Date(request.preferred_date).toLocaleDateString('es-ES', {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
-                        </span>
+                        <span>{formatDate(request.preferred_date)}</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-slate-600">
                         <Clock className="w-4 h-4" />
@@ -234,7 +269,7 @@ export const AppointmentRequests = () => {
                       className="bg-emerald-600 hover:bg-emerald-700"
                     >
                       <Check className="w-4 h-4 mr-1" />
-                      Aprobar
+                      {processingId === request.id ? "Procesando..." : "Aprobar"}
                     </Button>
                   </div>
                 </div>
