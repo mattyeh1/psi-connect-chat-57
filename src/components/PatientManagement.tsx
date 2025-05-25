@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Users, Search, Calendar, MessageCircle, Phone, RefreshCw } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
+import { useConversations } from "@/hooks/useConversations";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -19,8 +20,13 @@ interface Patient {
   psychologist_id: string;
 }
 
-export const PatientManagement = () => {
+interface PatientManagementProps {
+  onNavigateToMessages?: (patientId?: string) => void;
+}
+
+export const PatientManagement = ({ onNavigateToMessages }: PatientManagementProps = {}) => {
   const { psychologist } = useProfile();
+  const { createOrGetConversation } = useConversations();
   const [searchTerm, setSearchTerm] = useState("");
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,6 +81,41 @@ export const PatientManagement = () => {
   const handleRefresh = async () => {
     setRefreshing(true);
     await fetchPatients();
+  };
+
+  const handleStartConversation = async (patient: Patient) => {
+    if (!psychologist?.id) {
+      toast({
+        title: "Error",
+        description: "No se pudo identificar al psicólogo",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      console.log('Creating conversation for patient:', patient.id);
+      const conversation = await createOrGetConversation(psychologist.id, patient.id);
+      
+      if (conversation) {
+        toast({
+          title: "Conversación iniciada",
+          description: `Conversación con ${patient.first_name} ${patient.last_name} lista`,
+        });
+        
+        // Navigate to messages if callback provided
+        if (onNavigateToMessages) {
+          onNavigateToMessages(patient.id);
+        }
+      }
+    } catch (error) {
+      console.error('Error starting conversation:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo iniciar la conversación",
+        variant: "destructive"
+      });
+    }
   };
 
   const filteredPatients = patients.filter(patient =>
@@ -176,7 +217,10 @@ export const PatientManagement = () => {
                     <Calendar className="w-4 h-4" />
                     Ver Citas
                   </button>
-                  <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors text-sm">
+                  <button 
+                    onClick={() => handleStartConversation(patient)}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors text-sm"
+                  >
                     <MessageCircle className="w-4 h-4" />
                     Mensaje
                   </button>

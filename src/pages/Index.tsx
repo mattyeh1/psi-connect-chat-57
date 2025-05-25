@@ -53,6 +53,12 @@ const Index = () => {
     alert('Redirección al sistema de pagos (función pendiente de implementar)');
   };
 
+  const handleNavigateToMessages = (patientId?: string) => {
+    setCurrentView("messages");
+    // You could add logic here to select the specific patient's conversation
+    console.log('Navigating to messages for patient:', patientId);
+  };
+
   // Only show loading during initial authentication check
   if (authLoading) {
     return (
@@ -131,7 +137,7 @@ const Index = () => {
       case "dashboard":
         return <Dashboard />;
       case "patients":
-        return <PatientManagement />;
+        return <PatientManagement onNavigateToMessages={handleNavigateToMessages} />;
       case "calendar":
         return <Calendar />;
       case "messages":

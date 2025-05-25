@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { MessageCircle, Send, Search } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
+import { useConversations } from "@/hooks/useConversations";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -31,6 +32,7 @@ interface Message {
 
 export const MessagingHub = () => {
   const { psychologist } = useProfile();
+  const { createOrGetConversation, sendMessage } = useConversations();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -74,7 +76,8 @@ export const MessagingHub = () => {
             content,
             created_at,
             read_at,
-            sender_id
+            sender_id,
+            conversation_id
           )
         `)
         .eq('psychologist_id', psychologist.id)
@@ -101,7 +104,15 @@ export const MessagingHub = () => {
           first_name: conv.patients.first_name,
           last_name: conv.patients.last_name
         },
-        messages: conv.messages || []
+        messages: (conv.messages || []).map(msg => ({
+          id: msg.id,
+          sender_id: msg.sender_id,
+          conversation_id: msg.conversation_id || conv.id,
+          content: msg.content,
+          message_type: 'text',
+          read_at: msg.read_at || undefined,
+          created_at: msg.created_at
+        }))
       }));
 
       setConversations(formattedConversations);
@@ -163,44 +174,15 @@ export const MessagingHub = () => {
     }
   };
 
-  const sendMessage = async () => {
+  const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation || !psychologist?.id) return;
 
-    try {
-      const messageData = {
-        conversation_id: selectedConversation,
-        sender_id: psychologist.id,
-        content: newMessage.trim(),
-        message_type: 'text'
-      };
-
-      const { data, error } = await supabase
-        .from('messages')
-        .insert(messageData)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error sending message:', error);
-        toast({
-          title: "Error",
-          description: "Error al enviar el mensaje",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      console.log('Message sent:', data);
-
+    const messageData = await sendMessage(selectedConversation, psychologist.id, newMessage);
+    
+    if (messageData) {
       // Update local state
-      setMessages(prev => [...prev, data]);
+      setMessages(prev => [...prev, messageData]);
       setNewMessage("");
-
-      // Update conversation's last_message_at
-      await supabase
-        .from('conversations')
-        .update({ last_message_at: new Date().toISOString() })
-        .eq('id', selectedConversation);
 
       // Refresh conversations to update order
       fetchConversations();
@@ -209,21 +191,13 @@ export const MessagingHub = () => {
         title: "Mensaje enviado",
         description: "Tu mensaje ha sido enviado correctamente",
       });
-
-    } catch (error) {
-      console.error('Error sending message:', error);
-      toast({
-        title: "Error",
-        description: "Error inesperado al enviar el mensaje",
-        variant: "destructive"
-      });
     }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      handleSendMessage();
     }
   };
 
@@ -421,7 +395,7 @@ export const MessagingHub = () => {
                       className="flex-1"
                     />
                     <button
-                      onClick={sendMessage}
+                      onClick={handleSendMessage}
                       disabled={!newMessage.trim()}
                       className="px-4 py-2 bg-gradient-to-r from-blue-500 to-emerald-500 text-white rounded-lg hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
