@@ -5,6 +5,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { AppointmentRequestForm } from "./AppointmentRequestForm";
 import { MeetingLinksCard } from "./MeetingLinksCard";
+import { PatientMessaging } from "./PatientMessaging";
 import { toast } from "@/hooks/use-toast";
 
 interface Appointment {
@@ -36,8 +37,11 @@ interface Stats {
   totalSessions: number;
 }
 
+type PatientView = "dashboard" | "messages";
+
 export const PatientPortal = () => {
   const { patient } = useProfile();
+  const [currentView, setCurrentView] = useState<PatientView>("dashboard");
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [stats, setStats] = useState<Stats>({
@@ -224,6 +228,14 @@ export const PatientPortal = () => {
     return types[type] || type;
   };
 
+  const handleNavigateToMessages = () => {
+    setCurrentView("messages");
+  };
+
+  const handleBackToDashboard = () => {
+    setCurrentView("dashboard");
+  };
+
   if (!patient) {
     return (
       <div className="max-w-6xl mx-auto space-y-6">
@@ -263,6 +275,10 @@ export const PatientPortal = () => {
         </div>
       </div>
     );
+  }
+
+  if (currentView === "messages") {
+    return <PatientMessaging onBack={handleBackToDashboard} />;
   }
 
   return (
@@ -419,10 +435,7 @@ export const PatientPortal = () => {
                 </div>
               )}
               <button 
-                onClick={() => {
-                  // Aquí iríamos a la vista de mensajes completa
-                  console.log('Navigate to messages view');
-                }}
+                onClick={handleNavigateToMessages}
                 className="w-full p-3 bg-gradient-to-r from-blue-500 to-emerald-500 text-white rounded-lg hover:shadow-lg transition-all duration-200"
               >
                 Ver todos los mensajes
