@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -158,7 +159,7 @@ export const ProgressReportModal = ({ isOpen, onClose, psychologistId }: Progres
                 <SelectItem value="excellent">Excelente (90-100%)</SelectItem>
                 <SelectItem value="good">Buena (70-89%)</SelectItem>
                 <SelectItem value="fair">Regular (50-69%)</SelectItem>
-                <SelectItem value="poor">Deficiente (<50%)</SelectItem>
+                <SelectItem value="poor">Deficiente (&lt;50%)</SelectItem>
               </SelectContent>
             </Select>
           </div>
