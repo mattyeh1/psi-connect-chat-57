@@ -36,16 +36,19 @@ interface Patient {
   notes?: string;
 }
 
+// Cache global que persiste entre navegación
 let profileCache: {
   profile: Profile | null;
   psychologist: Psychologist | null;
   patient: Patient | null;
   userId: string | null;
+  dataFetched: boolean;
 } = {
   profile: null,
   psychologist: null,
   patient: null,
-  userId: null
+  userId: null,
+  dataFetched: false
 };
 
 export const useProfile = () => {
@@ -53,39 +56,42 @@ export const useProfile = () => {
   const [profile, setProfile] = useState<Profile | null>(profileCache.profile);
   const [psychologist, setPsychologist] = useState<Psychologist | null>(profileCache.psychologist);
   const [patient, setPatient] = useState<Patient | null>(profileCache.patient);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(!profileCache.dataFetched);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user) {
-      // Si tenemos datos en cache para este usuario, usarlos inmediatamente
-      if (profileCache.userId === user.id && profileCache.profile) {
-        console.log('Using cached profile data for user:', user.id);
-        setProfile(profileCache.profile);
-        setPsychologist(profileCache.psychologist);
-        setPatient(profileCache.patient);
-        setLoading(false);
-        return;
-      }
-      
-      // Solo hacer fetch si no tenemos datos en cache
-      fetchProfile();
-    } else {
+    if (!user) {
       // Limpiar estado cuando no hay usuario
       setProfile(null);
       setPsychologist(null);
       setPatient(null);
       setLoading(false);
       setError(null);
-      // Limpiar cache
       profileCache = {
         profile: null,
         psychologist: null,
         patient: null,
-        userId: null
+        userId: null,
+        dataFetched: false
       };
+      return;
     }
-  }, [user]);
+
+    // Si ya tenemos datos para este usuario, usarlos inmediatamente
+    if (profileCache.userId === user.id && profileCache.dataFetched) {
+      console.log('Using cached profile data for user:', user.id);
+      setProfile(profileCache.profile);
+      setPsychologist(profileCache.psychologist);
+      setPatient(profileCache.patient);
+      setLoading(false);
+      return;
+    }
+
+    // Solo hacer fetch si no tenemos datos en cache
+    if (!profileCache.dataFetched || profileCache.userId !== user.id) {
+      fetchProfile();
+    }
+  }, [user?.id]); // Solo depender del ID del usuario
 
   const fetchProfile = async () => {
     if (!user) {
@@ -110,7 +116,6 @@ export const useProfile = () => {
         throw new Error('No se pudo cargar el perfil');
       }
       
-      // Type assertion to ensure user_type is the correct type
       const typedProfile: Profile = {
         ...profileData,
         user_type: profileData.user_type as 'psychologist' | 'patient'
@@ -120,7 +125,7 @@ export const useProfile = () => {
       let psychData = null;
       let patientData = null;
 
-      // Fetch specific role data with more reliable approach
+      // Fetch specific role data
       if (typedProfile.user_type === 'psychologist') {
         const { data: psychResult, error: psychError } = await supabase
           .from('psychologists')
@@ -151,12 +156,13 @@ export const useProfile = () => {
         }
       }
 
-      // Guardar en cache
+      // Guardar en cache y marcar como completado
       profileCache = {
         profile: typedProfile,
         psychologist: psychData,
         patient: patientData,
-        userId: user.id
+        userId: user.id,
+        dataFetched: true
       };
 
     } catch (error) {
@@ -179,7 +185,6 @@ export const useProfile = () => {
     try {
       setLoading(true);
       
-      // Generate professional code
       const { data: codeData, error: codeError } = await supabase.rpc('generate_professional_code');
       
       if (codeError) {
@@ -203,8 +208,6 @@ export const useProfile = () => {
       }
 
       setPsychologist(result);
-      
-      // Actualizar cache
       profileCache.psychologist = result;
       
       toast({
@@ -248,8 +251,6 @@ export const useProfile = () => {
       }
 
       setPatient(result);
-      
-      // Actualizar cache
       profileCache.patient = result;
       
       toast({
@@ -277,8 +278,14 @@ export const useProfile = () => {
       profile: null,
       psychologist: null,
       patient: null,
-      userId: null
+      userId: null,
+      dataFetched: false
     };
+  };
+
+  const refetch = () => {
+    profileCache.dataFetched = false;
+    fetchProfile();
   };
 
   return {
@@ -289,7 +296,7 @@ export const useProfile = () => {
     error,
     createPsychologistProfile,
     createPatientProfile,
-    refetch: fetchProfile,
+    refetch,
     clearCache
   };
 };
