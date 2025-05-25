@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -74,7 +73,6 @@ export const AppointmentRequests = ({ onRequestProcessed }: AppointmentRequestsP
 
       console.log('Fetched appointment requests:', data);
       
-      // Type assertion para manejar la respuesta de Supabase
       const typedRequests = (data || []).map(request => ({
         ...request,
         patient: request.patient && typeof request.patient === 'object' && 'first_name' in request.patient 
@@ -116,7 +114,49 @@ export const AppointmentRequests = ({ onRequestProcessed }: AppointmentRequestsP
     try {
       console.log(`${action === 'approved' ? 'Approving' : 'Rejecting'} request:`, requestId);
       
-      const { error } = await supabase
+      if (action === 'approved') {
+        // Find the request to get details for creating the appointment
+        const request = requests.find(r => r.id === requestId);
+        if (!request) {
+          throw new Error('Solicitud no encontrada');
+        }
+
+        // Create datetime from preferred_date and preferred_time
+        const appointmentDateTime = new Date(`${request.preferred_date}T${request.preferred_time}`);
+        
+        console.log('Creating appointment with data:', {
+          patient_id: request.patient_id,
+          psychologist_id: psychologist.id,
+          appointment_date: appointmentDateTime.toISOString(),
+          type: request.type,
+          notes: request.notes
+        });
+
+        // First, create the actual appointment
+        const { data: appointmentData, error: appointmentError } = await supabase
+          .from('appointments')
+          .insert({
+            patient_id: request.patient_id,
+            psychologist_id: psychologist.id,
+            appointment_date: appointmentDateTime.toISOString(),
+            type: request.type,
+            status: 'confirmed',
+            notes: request.notes,
+            duration_minutes: 60 // Default duration
+          })
+          .select()
+          .single();
+
+        if (appointmentError) {
+          console.error('Error creating appointment:', appointmentError);
+          throw new Error('No se pudo crear la cita');
+        }
+
+        console.log('Appointment created successfully:', appointmentData);
+      }
+
+      // Update the request status
+      const { error: updateError } = await supabase
         .from('appointment_requests')
         .update({ 
           status: action,
@@ -124,22 +164,24 @@ export const AppointmentRequests = ({ onRequestProcessed }: AppointmentRequestsP
         })
         .eq('id', requestId);
 
-      if (error) {
-        console.error('Error updating request:', error);
+      if (updateError) {
+        console.error('Error updating request:', updateError);
         throw new Error('No se pudo actualizar la solicitud');
       }
 
-      const actionLabel = action === 'approved' ? 'aprobada' : 'rechazada';
+      const actionLabel = action === 'approved' ? 'aprobada y programada' : 'rechazada';
       toast({
         title: `Solicitud ${actionLabel}`,
-        description: `La solicitud de cita ha sido ${actionLabel} exitosamente.`,
+        description: action === 'approved' 
+          ? 'La cita ha sido creada y confirmada exitosamente.'
+          : 'La solicitud de cita ha sido rechazada.',
       });
 
       // Refresh the requests list and notify parent component
       await fetchRequests();
       onRequestProcessed?.();
     } catch (error) {
-      console.error('Error updating request:', error);
+      console.error('Error processing request:', error);
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       toast({
         title: "Error",
