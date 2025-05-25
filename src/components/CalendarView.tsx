@@ -1,18 +1,29 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar as CalendarIcon, Clock, User, ChevronLeft, ChevronRight } from "lucide-react";
+import { useProfile } from "@/hooks/useProfile";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+
+interface Appointment {
+  id: string;
+  appointment_date: string;
+  type: string;
+  duration_minutes: number;
+  status: string;
+  notes?: string;
+  patient?: {
+    first_name: string;
+    last_name: string;
+  };
+}
 
 export const Calendar = () => {
+  const { psychologist } = useProfile();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
-
-  const appointments = [
-    { id: 1, time: "09:00", patient: "Ana Martínez", type: "Terapia Individual", duration: "50 min" },
-    { id: 2, time: "10:30", patient: "Carlos López", type: "Evaluación Inicial", duration: "90 min" },
-    { id: 3, time: "14:00", patient: "María Rodriguez", type: "Seguimiento", duration: "50 min" },
-    { id: 4, time: "15:30", patient: "Pedro Sánchez", type: "Terapia Familiar", duration: "60 min" },
-  ];
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const timeSlots = [
     "08:00", "09:00", "10:00", "11:00", "12:00", "13:00",
@@ -25,6 +36,82 @@ export const Calendar = () => {
   ];
 
   const dayNames = ["L", "M", "X", "J", "V", "S", "D"];
+
+  useEffect(() => {
+    if (psychologist?.id) {
+      fetchAppointments();
+    }
+  }, [psychologist, selectedDate]);
+
+  const fetchAppointments = async () => {
+    if (!psychologist?.id) return;
+
+    try {
+      setLoading(true);
+      console.log('Fetching appointments for psychologist:', psychologist.id);
+      console.log('Selected date:', selectedDate.toISOString());
+
+      // Get appointments for the selected date
+      const startOfDay = new Date(selectedDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      
+      const endOfDay = new Date(selectedDate);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const { data, error } = await supabase
+        .from('appointments')
+        .select(`
+          *,
+          patient:patients(first_name, last_name)
+        `)
+        .eq('psychologist_id', psychologist.id)
+        .gte('appointment_date', startOfDay.toISOString())
+        .lte('appointment_date', endOfDay.toISOString())
+        .in('status', ['scheduled', 'confirmed', 'accepted'])
+        .order('appointment_date', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching appointments:', error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar las citas",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('Fetched appointments:', data);
+      setAppointments(data || []);
+    } catch (error) {
+      console.error('Error fetching appointments:', error);
+      toast({
+        title: "Error",
+        description: "Error inesperado al cargar las citas",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      individual: "Terapia Individual",
+      couple: "Terapia de Pareja", 
+      family: "Terapia Familiar",
+      evaluation: "Evaluación",
+      follow_up: "Seguimiento"
+    };
+    return labels[type] || type;
+  };
+
+  const getAppointmentForTime = (time: string) => {
+    return appointments.find(apt => {
+      const aptDate = new Date(apt.appointment_date);
+      const aptTime = aptDate.toTimeString().substring(0, 5);
+      return aptTime === time;
+    });
+  };
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -170,36 +257,50 @@ export const Calendar = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {timeSlots.map((time) => {
-                  const appointment = appointments.find(apt => apt.time === time);
-                  return (
-                    <div key={time} className="flex items-center gap-4 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">
-                      <div className="w-16 text-sm font-medium text-slate-600 text-center">
-                        {time}
-                      </div>
-                      {appointment ? (
-                        <div className="flex-1 flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full flex items-center justify-center">
-                              <User className="w-4 h-4 text-white" />
+              {loading ? (
+                <div className="text-center py-8">
+                  <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-slate-600">Cargando citas...</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {timeSlots.map((time) => {
+                    const appointment = getAppointmentForTime(time);
+                    return (
+                      <div key={time} className="flex items-center gap-4 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">
+                        <div className="w-16 text-sm font-medium text-slate-600 text-center">
+                          {time}
+                        </div>
+                        {appointment ? (
+                          <div className="flex-1 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full flex items-center justify-center">
+                                <User className="w-4 h-4 text-white" />
+                              </div>
+                              <div>
+                                <p className="font-semibold text-slate-800">
+                                  {appointment.patient 
+                                    ? `${appointment.patient.first_name} ${appointment.patient.last_name}` 
+                                    : 'Paciente'
+                                  }
+                                </p>
+                                <p className="text-sm text-slate-600">{getTypeLabel(appointment.type)}</p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-semibold text-slate-800">{appointment.patient}</p>
-                              <p className="text-sm text-slate-600">{appointment.type}</p>
-                            </div>
+                            <span className="text-sm text-slate-500">
+                              {appointment.duration_minutes ? `${appointment.duration_minutes} min` : '60 min'}
+                            </span>
                           </div>
-                          <span className="text-sm text-slate-500">{appointment.duration}</span>
-                        </div>
-                      ) : (
-                        <div className="flex-1 text-slate-400 text-sm">
-                          Disponible
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                        ) : (
+                          <div className="flex-1 text-slate-400 text-sm">
+                            Disponible
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
