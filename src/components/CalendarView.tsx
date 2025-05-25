@@ -77,6 +77,7 @@ export const Calendar = () => {
           description: "No se pudieron cargar las citas",
           variant: "destructive"
         });
+        setAppointments([]);
         return;
       }
 
@@ -89,6 +90,7 @@ export const Calendar = () => {
         description: "Error inesperado al cargar las citas",
         variant: "destructive"
       });
+      setAppointments([]);
     } finally {
       setLoading(false);
     }
@@ -299,6 +301,13 @@ export const Calendar = () => {
                       </div>
                     );
                   })}
+                </div>
+              )}
+              {!loading && appointments.length === 0 && (
+                <div className="text-center py-8 text-slate-500">
+                  <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p>No hay citas programadas para este día</p>
+                  <p className="text-sm">Las citas aparecerán aquí cuando sean confirmadas</p>
                 </div>
               )}
             </CardContent>
