@@ -36,23 +36,54 @@ interface Patient {
   notes?: string;
 }
 
+let profileCache: {
+  profile: Profile | null;
+  psychologist: Psychologist | null;
+  patient: Patient | null;
+  userId: string | null;
+} = {
+  profile: null,
+  psychologist: null,
+  patient: null,
+  userId: null
+};
+
 export const useProfile = () => {
   const { user } = useAuth();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [psychologist, setPsychologist] = useState<Psychologist | null>(null);
-  const [patient, setPatient] = useState<Patient | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<Profile | null>(profileCache.profile);
+  const [psychologist, setPsychologist] = useState<Psychologist | null>(profileCache.psychologist);
+  const [patient, setPatient] = useState<Patient | null>(profileCache.patient);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
+      // Si tenemos datos en cache para este usuario, usarlos inmediatamente
+      if (profileCache.userId === user.id && profileCache.profile) {
+        console.log('Using cached profile data for user:', user.id);
+        setProfile(profileCache.profile);
+        setPsychologist(profileCache.psychologist);
+        setPatient(profileCache.patient);
+        setLoading(false);
+        return;
+      }
+      
+      // Solo hacer fetch si no tenemos datos en cache
       fetchProfile();
     } else {
+      // Limpiar estado cuando no hay usuario
       setProfile(null);
       setPsychologist(null);
       setPatient(null);
       setLoading(false);
       setError(null);
+      // Limpiar cache
+      profileCache = {
+        profile: null,
+        psychologist: null,
+        patient: null,
+        userId: null
+      };
     }
   }, [user]);
 
@@ -86,9 +117,12 @@ export const useProfile = () => {
       };
       setProfile(typedProfile);
 
+      let psychData = null;
+      let patientData = null;
+
       // Fetch specific role data with more reliable approach
       if (typedProfile.user_type === 'psychologist') {
-        const { data: psychData, error: psychError } = await supabase
+        const { data: psychResult, error: psychError } = await supabase
           .from('psychologists')
           .select('*')
           .eq('id', user.id)
@@ -98,10 +132,11 @@ export const useProfile = () => {
           console.error('Error fetching psychologist data:', psychError);
           setError('Error al cargar datos del psicólogo');
         } else {
-          setPsychologist(psychData);
+          psychData = psychResult;
+          setPsychologist(psychResult);
         }
       } else if (typedProfile.user_type === 'patient') {
-        const { data: patientData, error: patientError } = await supabase
+        const { data: patientResult, error: patientError } = await supabase
           .from('patients')
           .select('*')
           .eq('id', user.id)
@@ -111,9 +146,19 @@ export const useProfile = () => {
           console.error('Error fetching patient data:', patientError);
           setError('Error al cargar datos del paciente');
         } else {
-          setPatient(patientData);
+          patientData = patientResult;
+          setPatient(patientResult);
         }
       }
+
+      // Guardar en cache
+      profileCache = {
+        profile: typedProfile,
+        psychologist: psychData,
+        patient: patientData,
+        userId: user.id
+      };
+
     } catch (error) {
       console.error('Error fetching profile:', error);
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
@@ -158,6 +203,10 @@ export const useProfile = () => {
       }
 
       setPsychologist(result);
+      
+      // Actualizar cache
+      profileCache.psychologist = result;
+      
       toast({
         title: "Perfil creado",
         description: "Perfil de psicólogo creado exitosamente",
@@ -199,6 +248,10 @@ export const useProfile = () => {
       }
 
       setPatient(result);
+      
+      // Actualizar cache
+      profileCache.patient = result;
+      
       toast({
         title: "Perfil creado",
         description: "Perfil de paciente creado exitosamente",
@@ -219,6 +272,15 @@ export const useProfile = () => {
     }
   };
 
+  const clearCache = () => {
+    profileCache = {
+      profile: null,
+      psychologist: null,
+      patient: null,
+      userId: null
+    };
+  };
+
   return {
     profile,
     psychologist,
@@ -227,6 +289,7 @@ export const useProfile = () => {
     error,
     createPsychologistProfile,
     createPatientProfile,
-    refetch: fetchProfile
+    refetch: fetchProfile,
+    clearCache
   };
 };

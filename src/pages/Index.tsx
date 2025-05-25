@@ -21,7 +21,6 @@ const Index = () => {
   const [currentView, setCurrentView] = useState<ViewType>("dashboard");
   const [isTrialExpired, setIsTrialExpired] = useState(false);
   const [checkingTrial, setCheckingTrial] = useState(false);
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   // Check trial status for psychologists
   useEffect(() => {
@@ -29,17 +28,6 @@ const Index = () => {
       checkTrialStatus();
     }
   }, [psychologist, profile]);
-
-  // Mark initial load as complete only when we have all necessary data
-  useEffect(() => {
-    if (!authLoading && !profileLoading) {
-      // Add a small delay to prevent flashing
-      const timer = setTimeout(() => {
-        setInitialLoadComplete(true);
-      }, 200);
-      return () => clearTimeout(timer);
-    }
-  }, [authLoading, profileLoading]);
 
   const checkTrialStatus = async () => {
     if (!psychologist) return;
@@ -66,8 +54,10 @@ const Index = () => {
     alert('Redirección al sistema de pagos (función pendiente de implementar)');
   };
 
-  // Show loading while checking authentication and profile
-  if (!initialLoadComplete || authLoading || profileLoading || checkingTrial) {
+  // Solo mostrar loading si realmente estamos en un estado de carga inicial
+  const isInitialLoading = authLoading || (user && profileLoading && !profile);
+
+  if (isInitialLoading || checkingTrial) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
