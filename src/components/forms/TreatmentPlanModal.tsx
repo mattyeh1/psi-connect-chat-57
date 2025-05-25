@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { PatientSelector } from "./PatientSelector";
 
 interface TreatmentPlanModalProps {
   isOpen: boolean;
@@ -53,6 +53,14 @@ export const TreatmentPlanModal = ({ isOpen, onClose, psychologistId }: Treatmen
   const [interventions, setInterventions] = useState<Intervention[]>([
     { id: '1', technique: '', frequency: '', duration: '' }
   ]);
+
+  const handlePatientSelect = (patientId: string, patientName: string) => {
+    setFormData(prev => ({
+      ...prev,
+      patientId,
+      patientName
+    }));
+  };
 
   const addGoal = () => {
     const newGoal: Goal = {
@@ -109,6 +117,15 @@ export const TreatmentPlanModal = ({ isOpen, onClose, psychologistId }: Treatmen
       return;
     }
 
+    if (!formData.patientId) {
+      toast({
+        title: "Error",
+        description: "Debe seleccionar un paciente",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -125,7 +142,7 @@ export const TreatmentPlanModal = ({ isOpen, onClose, psychologistId }: Treatmen
           patient_id: formData.patientId,
           title: `Plan de Tratamiento - ${formData.patientName}`,
           type: 'treatment_plan',
-          content: treatmentPlanData,
+          content: treatmentPlanData as any,
           status: 'draft'
         });
 
@@ -160,26 +177,11 @@ export const TreatmentPlanModal = ({ isOpen, onClose, psychologistId }: Treatmen
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="patientName">Nombre del Paciente</Label>
-              <Input
-                id="patientName"
-                value={formData.patientName}
-                onChange={(e) => setFormData(prev => ({ ...prev, patientName: e.target.value }))}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="patientId">ID del Paciente</Label>
-              <Input
-                id="patientId"
-                value={formData.patientId}
-                onChange={(e) => setFormData(prev => ({ ...prev, patientId: e.target.value }))}
-                required
-              />
-            </div>
-          </div>
+          <PatientSelector
+            selectedPatientId={formData.patientId}
+            onPatientSelect={handlePatientSelect}
+            required
+          />
 
           <div>
             <Label htmlFor="diagnosis">Diagnóstico Principal</Label>

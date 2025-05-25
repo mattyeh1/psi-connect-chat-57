@@ -10,6 +10,7 @@ import { AssessmentFormModal } from "./forms/AssessmentFormModal";
 import { ConsentFormModal } from "./forms/ConsentFormModal";
 import { TreatmentPlanModal } from "./forms/TreatmentPlanModal";
 import { ProgressReportModal } from "./forms/ProgressReportModal";
+import { DocumentViewer } from "./DocumentViewer";
 
 interface Document {
   id: string;
@@ -26,6 +27,8 @@ export const DocumentsSection = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedModal, setSelectedModal] = useState<string | null>(null);
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
 
   useEffect(() => {
     if (profile?.id) {
@@ -110,6 +113,29 @@ export const DocumentsSection = () => {
   const handleCloseModal = () => {
     setSelectedModal(null);
     fetchDocuments();
+  };
+
+  const handleViewDocument = (document: Document) => {
+    setSelectedDocument(document);
+    setIsViewerOpen(true);
+  };
+
+  const handleDownloadDocument = (document: Document) => {
+    const content = JSON.stringify(document.content, null, 2);
+    const blob = new Blob([content], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${document.title}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Documento descargado",
+      description: `${document.title} se ha descargado correctamente`,
+    });
   };
 
   const formatDate = (dateString: string) => {
@@ -203,10 +229,18 @@ export const DocumentsSection = () => {
                     </span>
                     
                     <div className="flex gap-2">
-                      <Button size="sm" variant="outline">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleViewDocument(document)}
+                      >
                         <Eye className="w-4 h-4" />
                       </Button>
-                      <Button size="sm" variant="outline">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleDownloadDocument(document)}
+                      >
                         <Download className="w-4 h-4" />
                       </Button>
                     </div>
@@ -260,6 +294,16 @@ export const DocumentsSection = () => {
           psychologistId={psychologist?.id}
         />
       )}
+
+      {/* Visor de documentos */}
+      <DocumentViewer
+        document={selectedDocument}
+        isOpen={isViewerOpen}
+        onClose={() => {
+          setIsViewerOpen(false);
+          setSelectedDocument(null);
+        }}
+      />
     </>
   );
 };
