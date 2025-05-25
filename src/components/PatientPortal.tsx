@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, MessageCircle, FileText, Clock } from "lucide-react";
@@ -26,36 +27,54 @@ export const PatientPortal = () => {
     if (!patient) return;
 
     try {
-      // Fetch upcoming appointments
-      const { data: appointmentsData } = await supabase
+      console.log('Fetching patient data for:', patient.id);
+      
+      // Fetch upcoming appointments - incluir más estados para citas confirmadas
+      const { data: appointmentsData, error: appointmentsError } = await supabase
         .from('appointments')
         .select('*')
         .eq('patient_id', patient.id)
         .gte('appointment_date', new Date().toISOString())
+        .in('status', ['scheduled', 'confirmed', 'accepted']) // Agregar más estados válidos
         .order('appointment_date', { ascending: true });
 
-      setAppointments(appointmentsData || []);
+      if (appointmentsError) {
+        console.error('Error fetching appointments:', appointmentsError);
+      } else {
+        console.log('Fetched appointments:', appointmentsData);
+        setAppointments(appointmentsData || []);
+      }
 
       // Fetch recent messages
-      const { data: messagesData } = await supabase
+      const { data: messagesData, error: messagesError } = await supabase
         .from('messages')
         .select('*')
         .eq('receiver_id', patient.id)
         .order('created_at', { ascending: false })
         .limit(5);
 
-      setMessages(messagesData || []);
+      if (messagesError) {
+        console.error('Error fetching messages:', messagesError);
+      } else {
+        setMessages(messagesData || []);
+      }
 
       // Calculate stats
       const nextAppointment = appointmentsData && appointmentsData.length > 0 ? appointmentsData[0] : null;
       const unreadMessages = messagesData ? messagesData.filter(msg => !msg.read_at).length : 0;
 
+      console.log('Next appointment:', nextAppointment);
+
       // Fetch total completed sessions
-      const { data: completedSessions } = await supabase
+      const { data: completedSessions, error: completedError } = await supabase
         .from('appointments')
         .select('*', { count: 'exact' })
         .eq('patient_id', patient.id)
         .eq('status', 'completed');
+
+      if (completedError) {
+        console.error('Error fetching completed sessions:', completedError);
+      }
 
       setStats({
         nextAppointment,
@@ -84,6 +103,34 @@ export const PatientPortal = () => {
       </div>
     );
   }
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "confirmed": 
+      case "accepted":
+        return "Confirmada";
+      case "scheduled":
+        return "Programada";
+      case "pending":
+        return "Pendiente";
+      default:
+        return status;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "confirmed":
+      case "accepted":
+        return "bg-green-100 text-green-700";
+      case "scheduled":
+        return "bg-blue-100 text-blue-700";
+      case "pending":
+        return "bg-yellow-100 text-yellow-700";
+      default:
+        return "bg-gray-100 text-gray-700";
+    }
+  };
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -187,15 +234,8 @@ export const PatientPortal = () => {
                         </p>
                       </div>
                     </div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      appointment.status === "confirmed" 
-                        ? "bg-green-100 text-green-700" 
-                        : appointment.status === "scheduled"
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-yellow-100 text-yellow-700"
-                    }`}>
-                      {appointment.status === "confirmed" ? "Confirmada" : 
-                       appointment.status === "scheduled" ? "Programada" : "Pendiente"}
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}>
+                      {getStatusLabel(appointment.status)}
                     </span>
                   </div>
                 ))
@@ -253,7 +293,7 @@ export const PatientPortal = () => {
         </Card>
       </div>
 
-      {/* Documents - Simplified for now since we don't have a documents table */}
+      {/* Documents */}
       <Card className="border-0 shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-slate-800">
