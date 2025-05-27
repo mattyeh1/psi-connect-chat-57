@@ -541,6 +541,10 @@ export type Database = {
         Args: { code: string }
         Returns: string
       }
+      verify_user_email: {
+        Args: { user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

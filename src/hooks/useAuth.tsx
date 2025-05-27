@@ -190,7 +190,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     console.log('Additional data:', additionalData);
     
     try {
-      // Usar signUp normal pero SIN confirmación automática por email
+      // Usar signUp normal pero deshabilitando confirmación automática
       const { data, error } = await supabase.auth.signUp({
         email,
         password,

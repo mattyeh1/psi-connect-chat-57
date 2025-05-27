@@ -53,7 +53,7 @@ export const useEmailVerification = () => {
         // Verificar el usuario manualmente
         console.log('Attempting to verify user manually...');
         
-        // Primero intentar hacer login con el email para obtener el usuario
+        // Primero verificar que el usuario existe en profiles
         const { data: userData, error: userError } = await supabase
           .from('profiles')
           .select('*')
@@ -70,8 +70,8 @@ export const useEmailVerification = () => {
           return;
         }
 
-        // Marcar el email como verificado usando una función RPC personalizada
-        const { error: verifyError } = await supabase.rpc('verify_user_email', {
+        // Marcar el email como verificado usando nuestra función RPC personalizada
+        const { error: verifyError } = await supabase.rpc('verify_user_email' as any, {
           user_id: verificationData.userId
         });
 
