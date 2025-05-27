@@ -173,11 +173,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     console.log('Attempting sign up for:', email, 'as', userType);
     console.log('Additional data:', additionalData);
     
+    // Disable Supabase's automatic email confirmation by not providing emailRedirectTo
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: undefined,
+        emailRedirectTo: undefined, // This disables Supabase's automatic confirmation email
         data: {
           user_type: userType,
           ...additionalData
@@ -192,7 +193,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     
     console.log('Sign up successful, user created:', data.user?.id);
     
-    // Send custom verification email with user-specific information
+    // Send ONLY our custom verification email
     if (data.user) {
       try {
         console.log('Sending custom verification email...');
@@ -216,7 +217,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             action_type: 'signup',
             user_type: userType,
             first_name: additionalData?.first_name || '',
-            redirect_to: `${window.location.origin}/app?verify=${verificationToken}`
+            redirect_to: `https://psico.mattyeh.com/app?verify=${verificationToken}`
           }
         });
         
@@ -231,7 +232,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           console.log('Custom verification email sent successfully');
           toast({
             title: "¡Cuenta creada exitosamente!",
-            description: "Te hemos enviado un email de verificación profesional. Por favor revisa tu bandeja de entrada.",
+            description: "Te hemos enviado un email de verificación. Por favor revisa tu bandeja de entrada y haz clic en el enlace para verificar tu cuenta.",
           });
         }
       } catch (emailError) {

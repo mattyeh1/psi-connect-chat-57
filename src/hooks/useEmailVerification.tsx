@@ -31,45 +31,58 @@ export const useEmailVerification = () => {
           return;
         }
 
-        // Verify the user's email
-        const { data, error } = await supabase.auth.verifyOtp({
-          token_hash: verifyToken,
-          type: 'email'
+        // Since we're using custom verification emails, we'll directly update the user's email_verified status
+        // instead of trying to use Supabase's OTP verification which expects a different token format
+        console.log('Attempting to verify email for user:', verificationData.userId);
+        
+        // Try to sign in the user first to get a session
+        const { data: sessionData } = await supabase.auth.getSession();
+        
+        if (!sessionData.session) {
+          // If no session, we need to tell the user to login first
+          toast({
+            title: "Verificación pendiente",
+            description: "Por favor inicia sesión para completar la verificación de tu email",
+            variant: "default"
+          });
+          
+          // Remove the verify parameter from URL
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.delete('verify');
+          window.history.replaceState({}, '', newUrl.toString());
+          return;
+        }
+
+        // Check if the token is for the current user
+        if (sessionData.session.user.id !== verificationData.userId) {
+          toast({
+            title: "Error de verificación",
+            description: "Este enlace de verificación no corresponde al usuario actual",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        // Update the user's metadata to mark email as verified
+        const { error: updateError } = await supabase.auth.updateUser({
+          data: { 
+            email_verified: true,
+            verification_completed_at: new Date().toISOString()
+          }
         });
 
-        if (error) {
-          console.error('Email verification error:', error);
-          
-          // Try alternative verification method
-          const { error: updateError } = await supabase.auth.updateUser({
-            email: verificationData.email,
-            data: { email_verified: true }
+        if (updateError) {
+          console.error('Error updating user verification status:', updateError);
+          toast({
+            title: "Error de verificación",
+            description: "No se pudo completar la verificación. Intenta más tarde.",
+            variant: "destructive"
           });
-
-          if (updateError) {
-            console.error('Alternative verification failed:', updateError);
-            toast({
-              title: "Error de verificación",
-              description: "No se pudo verificar el email. Intenta iniciar sesión normalmente.",
-              variant: "destructive"
-            });
-          } else {
-            console.log('Email verified successfully via alternative method');
-            toast({
-              title: "¡Email verificado!",
-              description: "Tu cuenta ha sido verificada exitosamente",
-            });
-            
-            // Remove the verify parameter from URL
-            const newUrl = new URL(window.location.href);
-            newUrl.searchParams.delete('verify');
-            window.history.replaceState({}, '', newUrl.toString());
-          }
         } else {
-          console.log('Email verified successfully:', data);
+          console.log('Email verified successfully for user:', verificationData.userId);
           toast({
             title: "¡Email verificado!",
-            description: "Tu cuenta ha sido verificada exitosamente",
+            description: `¡Hola ${verificationData.firstName}! Tu cuenta ha sido verificada exitosamente`,
           });
           
           // Remove the verify parameter from URL
