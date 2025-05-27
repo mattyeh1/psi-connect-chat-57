@@ -103,8 +103,13 @@ const Index = () => {
       // Check if psychologist profile exists and has required fields
       const hasCompleteProfile = psychologist && psychologist.first_name && psychologist.last_name;
       
-      // If profile is complete but trial is expired, don't ask for profile setup
-      if (hasCompleteProfile && (psychologist?.subscription_status === 'trial' || psychologist?.subscription_status === 'expired')) {
+      // If profile is complete and account is expired or trial expired, don't ask for profile setup
+      if (hasCompleteProfile && (
+        psychologist?.subscription_status === 'expired' || 
+        psychologist?.subscription_status === 'cancelled' ||
+        (psychologist?.subscription_status === 'trial' && isTrialExpired)
+      )) {
+        console.log('Psychologist has complete profile but is expired/cancelled, skipping profile setup');
         return false;
       }
       
