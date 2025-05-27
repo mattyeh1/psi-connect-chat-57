@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, MessageCircle, FileText, Clock, Video } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calendar, MessageCircle, FileText, Clock, Video, LogOut } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
+import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { AppointmentRequestForm } from "./AppointmentRequestForm";
 import { MeetingLinksCard } from "./MeetingLinksCard";
@@ -41,6 +43,7 @@ type PatientView = "dashboard" | "messages";
 
 export const PatientPortal = () => {
   const { patient } = useProfile();
+  const { signOut } = useAuth();
   const [currentView, setCurrentView] = useState<PatientView>("dashboard");
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -51,6 +54,7 @@ export const PatientPortal = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     if (patient?.id) {
@@ -159,6 +163,23 @@ export const PatientPortal = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      console.log('Logging out patient');
+      await signOut();
+    } catch (error) {
+      console.error('Error logging out:', error);
+      toast({
+        title: "Error",
+        description: "Hubo un problema al cerrar sesión",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoggingOut(false);
     }
   };
 
@@ -283,11 +304,22 @@ export const PatientPortal = () => {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold text-slate-800 mb-2">Portal del Paciente</h2>
-        <p className="text-slate-600">
-          Bienvenida, {patient.first_name} {patient.last_name}
-        </p>
+      <div className="flex justify-between items-center mb-8">
+        <div className="text-center flex-1">
+          <h2 className="text-3xl font-bold text-slate-800 mb-2">Portal del Paciente</h2>
+          <p className="text-slate-600">
+            Bienvenida, {patient.first_name} {patient.last_name}
+          </p>
+        </div>
+        <Button 
+          variant="outline" 
+          onClick={handleLogout}
+          disabled={isLoggingOut}
+          className="flex items-center gap-2"
+        >
+          <LogOut className="w-4 h-4" />
+          {isLoggingOut ? "Cerrando..." : "Cerrar Sesión"}
+        </Button>
       </div>
 
       {/* Meeting Links Card */}
