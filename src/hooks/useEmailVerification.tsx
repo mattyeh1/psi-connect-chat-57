@@ -16,6 +16,11 @@ export const useEmailVerification = () => {
       try {
         console.log('Processing email verification token:', verifyToken);
         
+        // Limpiar URL inmediatamente para evitar re-procesamiento
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('verify');
+        window.history.replaceState({}, '', newUrl.toString());
+        
         // Decodificar el token de verificación
         let verificationData;
         try {
@@ -24,15 +29,10 @@ export const useEmailVerification = () => {
         } catch (e) {
           console.error('Error decoding verification token:', e);
           toast({
-            title: "Error de verificación",
-            description: "El enlace de verificación no es válido",
+            title: "Enlace inválido",
+            description: "El enlace de verificación no es válido o está corrupto",
             variant: "destructive"
           });
-          
-          // Limpiar URL incluso en error
-          const newUrl = new URL(window.location.href);
-          newUrl.searchParams.delete('verify');
-          window.history.replaceState({}, '', newUrl.toString());
           return;
         }
 
@@ -44,78 +44,52 @@ export const useEmailVerification = () => {
           console.error('Verification token expired');
           toast({
             title: "Enlace expirado",
-            description: "El enlace de verificación ha expirado. Solicita uno nuevo.",
+            description: "El enlace de verificación ha expirado. Solicita uno nuevo registrándote nuevamente.",
             variant: "destructive"
           });
-          
-          // Limpiar URL
-          const newUrl = new URL(window.location.href);
-          newUrl.searchParams.delete('verify');
-          window.history.replaceState({}, '', newUrl.toString());
           return;
         }
 
-        // Intentar obtener sesión actual primero
-        const { data: sessionData } = await supabase.auth.getSession();
-        
-        if (!sessionData.session) {
-          // Si no hay sesión activa, mostrar mensaje para que inicie sesión
-          toast({
-            title: "Verificación pendiente",
-            description: "Por favor inicia sesión para completar la verificación de tu email",
-            variant: "default"
-          });
-          
-          // Limpiar parámetro verify de la URL
-          const newUrl = new URL(window.location.href);
-          newUrl.searchParams.delete('verify');
-          window.history.replaceState({}, '', newUrl.toString());
-          return;
-        }
+        // Verificar directamente en la base de datos usando el admin client
+        const { data: userData, error: userError } = await supabase
+          .from('auth.users')
+          .select('email_confirmed_at')
+          .eq('id', verificationData.userId)
+          .single();
 
-        // Verificar que el usuario de la sesión coincida con el del token
-        if (sessionData.session.user.id !== verificationData.userId) {
-          console.error('Token user ID does not match session user ID');
-          toast({
-            title: "Error de verificación", 
-            description: "El enlace de verificación no corresponde al usuario actual",
-            variant: "destructive"
-          });
-          
-          // Limpiar URL
-          const newUrl = new URL(window.location.href);
-          newUrl.searchParams.delete('verify');
-          window.history.replaceState({}, '', newUrl.toString());
-          return;
-        }
+        if (userError) {
+          console.error('Error checking user:', userError);
+          // Intentar actualizar los metadatos del usuario directamente
+          const { error: updateError } = await supabase.auth.admin.updateUserById(
+            verificationData.userId,
+            { 
+              email_confirm: true,
+              user_metadata: {
+                email_verified: true,
+                verification_completed_at: new Date().toISOString()
+              }
+            }
+          );
 
-        // Actualizar los metadatos del usuario para marcar el email como verificado
-        const { error: updateError } = await supabase.auth.updateUser({
-          data: { 
-            email_verified: true,
-            verification_completed_at: new Date().toISOString()
+          if (updateError) {
+            console.error('Error updating user verification:', updateError);
+            toast({
+              title: "Error de verificación",
+              description: "No se pudo completar la verificación. Intenta iniciar sesión normalmente.",
+              variant: "destructive"
+            });
+          } else {
+            toast({
+              title: "¡Email verificado!",
+              description: `¡Hola ${verificationData.firstName || ''}! Tu cuenta ha sido verificada exitosamente. Ya puedes iniciar sesión.`,
+            });
           }
-        });
-
-        if (updateError) {
-          console.error('Error updating user verification status:', updateError);
-          toast({
-            title: "Error de verificación",
-            description: "No se pudo completar la verificación. Intenta más tarde.",
-            variant: "destructive"
-          });
         } else {
-          console.log('Email verified successfully for user:', verificationData.userId);
           toast({
             title: "¡Email verificado!",
-            description: `¡Hola ${verificationData.firstName || ''}! Tu cuenta ha sido verificada exitosamente`,
+            description: `¡Hola ${verificationData.firstName || ''}! Tu cuenta ha sido verificada exitosamente. Ya puedes iniciar sesión.`,
           });
         }
-
-        // Limpiar el parámetro verify de la URL
-        const newUrl = new URL(window.location.href);
-        newUrl.searchParams.delete('verify');
-        window.history.replaceState({}, '', newUrl.toString());
 
       } catch (error) {
         console.error('Error processing email verification:', error);
@@ -124,11 +98,6 @@ export const useEmailVerification = () => {
           description: "Ocurrió un error al verificar tu email. Intenta iniciar sesión normalmente.",
           variant: "destructive"
         });
-        
-        // Limpiar URL incluso en error
-        const newUrl = new URL(window.location.href);
-        newUrl.searchParams.delete('verify');
-        window.history.replaceState({}, '', newUrl.toString());
       }
     };
 

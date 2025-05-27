@@ -163,11 +163,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     
     if (error) {
       console.error('Sign in error:', error);
-      toast({
-        title: "Error al iniciar sesión",
-        description: error.message,
-        variant: "destructive"
-      });
+      
+      // Manejar específicamente el error de email no confirmado
+      if (error.message.includes('Email not confirmed')) {
+        toast({
+          title: "Email no verificado",
+          description: "Tu email aún no ha sido verificado. Por favor revisa tu bandeja de entrada y haz clic en el enlace de verificación que te enviamos.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Error al iniciar sesión",
+          description: error.message,
+          variant: "destructive"
+        });
+      }
     } else {
       console.log('Sign in successful');
     }
@@ -180,17 +190,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     console.log('Additional data:', additionalData);
     
     try {
-      // Deshabilitar COMPLETAMENTE las confirmaciones automáticas de email de Supabase
+      // CRÍTICO: Deshabilitar COMPLETAMENTE las confirmaciones de Supabase
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          // NO enviar email de confirmación automático
+          // NO enviar email de confirmación de Supabase
           emailRedirectTo: undefined,
-          // NO requerir confirmación de email
           data: {
             user_type: userType,
-            email_confirmed: true, // Marcar como confirmado desde el inicio
+            // NO marcar como confirmado automáticamente
             ...additionalData
           }
         }
@@ -207,6 +216,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
       
       console.log('Sign up successful, user created:', data.user?.id);
+      
+      // Cerrar sesión inmediatamente para prevenir auto-login
+      await supabase.auth.signOut();
       
       // Enviar SOLO nuestro email personalizado de verificación
       if (data.user) {
@@ -243,21 +255,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             console.error('Error sending verification email:', emailError);
             toast({
               title: "Cuenta creada",
-              description: "Tu cuenta fue creada pero hubo un error enviando el email de verificación. Intenta iniciar sesión.",
+              description: "Tu cuenta fue creada pero hubo un error enviando el email de verificación. Contacta con soporte.",
               variant: "destructive"
             });
           } else {
             console.log('Custom verification email sent successfully');
             toast({
               title: "¡Cuenta creada exitosamente!",
-              description: "Te hemos enviado un email de verificación. Por favor revisa tu bandeja de entrada y haz clic en el enlace para verificar tu cuenta.",
+              description: "Te hemos enviado un email de verificación. Por favor revisa tu bandeja de entrada y haz clic en el enlace para verificar tu cuenta antes de iniciar sesión.",
             });
           }
         } catch (emailError) {
           console.error('Exception sending verification email:', emailError);
           toast({
             title: "Cuenta creada",
-            description: "Tu cuenta fue creada pero hubo un error enviando el email de verificación. Intenta iniciar sesión.",
+            description: "Tu cuenta fue creada pero hubo un error enviando el email de verificación. Contacta con soporte.",
             variant: "destructive"
           });
         }
