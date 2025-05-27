@@ -2,6 +2,7 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: User | null;
@@ -156,8 +157,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     
     if (error) {
       console.error('Sign up error:', error);
+      return { data, error };
     } else {
       console.log('Sign up successful, user created:', data.user?.id);
+      
+      // Send custom verification email
+      if (data.user && !data.user.email_confirmed_at) {
+        try {
+          console.log('Sending custom verification email...');
+          const { error: emailError } = await supabase.functions.invoke('send-verification-email', {
+            body: {
+              email: email,
+              token: data.user.id, // Using user ID as token for now
+              action_type: 'signup',
+              redirect_to: `${window.location.origin}/app`
+            }
+          });
+          
+          if (emailError) {
+            console.error('Error sending verification email:', emailError);
+          } else {
+            console.log('Verification email sent successfully');
+            toast({
+              title: "¡Cuenta creada exitosamente!",
+              description: "Te hemos enviado un email de verificación. Por favor revisa tu bandeja de entrada.",
+            });
+          }
+        } catch (emailError) {
+          console.error('Exception sending verification email:', emailError);
+        }
+      }
     }
     
     return { data, error };
