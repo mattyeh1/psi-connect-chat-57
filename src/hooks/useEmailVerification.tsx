@@ -16,7 +16,7 @@ export const useEmailVerification = () => {
       try {
         console.log('Processing email verification token:', verifyToken);
         
-        // Decode the verification token
+        // Decodificar el token de verificación
         let verificationData;
         try {
           verificationData = JSON.parse(atob(verifyToken));
@@ -28,28 +28,68 @@ export const useEmailVerification = () => {
             description: "El enlace de verificación no es válido",
             variant: "destructive"
           });
-          return;
-        }
-
-        // Try to get current session first
-        const { data: sessionData } = await supabase.auth.getSession();
-        
-        if (!sessionData.session) {
-          // If no active session, we need to update the URL and tell the user to login
-          toast({
-            title: "Verificación pendiente",
-            description: "Por favor inicia sesión para completar la verificación de tu email",
-            variant: "default"
-          });
           
-          // Remove the verify parameter from URL
+          // Limpiar URL incluso en error
           const newUrl = new URL(window.location.href);
           newUrl.searchParams.delete('verify');
           window.history.replaceState({}, '', newUrl.toString());
           return;
         }
 
-        // Update the user's metadata to mark email as verified
+        // Verificar que el token no sea muy antiguo (24 horas)
+        const tokenAge = Date.now() - verificationData.timestamp;
+        const maxAge = 24 * 60 * 60 * 1000; // 24 horas en milisegundos
+        
+        if (tokenAge > maxAge) {
+          console.error('Verification token expired');
+          toast({
+            title: "Enlace expirado",
+            description: "El enlace de verificación ha expirado. Solicita uno nuevo.",
+            variant: "destructive"
+          });
+          
+          // Limpiar URL
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.delete('verify');
+          window.history.replaceState({}, '', newUrl.toString());
+          return;
+        }
+
+        // Intentar obtener sesión actual primero
+        const { data: sessionData } = await supabase.auth.getSession();
+        
+        if (!sessionData.session) {
+          // Si no hay sesión activa, mostrar mensaje para que inicie sesión
+          toast({
+            title: "Verificación pendiente",
+            description: "Por favor inicia sesión para completar la verificación de tu email",
+            variant: "default"
+          });
+          
+          // Limpiar parámetro verify de la URL
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.delete('verify');
+          window.history.replaceState({}, '', newUrl.toString());
+          return;
+        }
+
+        // Verificar que el usuario de la sesión coincida con el del token
+        if (sessionData.session.user.id !== verificationData.userId) {
+          console.error('Token user ID does not match session user ID');
+          toast({
+            title: "Error de verificación", 
+            description: "El enlace de verificación no corresponde al usuario actual",
+            variant: "destructive"
+          });
+          
+          // Limpiar URL
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.delete('verify');
+          window.history.replaceState({}, '', newUrl.toString());
+          return;
+        }
+
+        // Actualizar los metadatos del usuario para marcar el email como verificado
         const { error: updateError } = await supabase.auth.updateUser({
           data: { 
             email_verified: true,
@@ -70,12 +110,12 @@ export const useEmailVerification = () => {
             title: "¡Email verificado!",
             description: `¡Hola ${verificationData.firstName || ''}! Tu cuenta ha sido verificada exitosamente`,
           });
-          
-          // Remove the verify parameter from URL
-          const newUrl = new URL(window.location.href);
-          newUrl.searchParams.delete('verify');
-          window.history.replaceState({}, '', newUrl.toString());
         }
+
+        // Limpiar el parámetro verify de la URL
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('verify');
+        window.history.replaceState({}, '', newUrl.toString());
 
       } catch (error) {
         console.error('Error processing email verification:', error);
@@ -85,7 +125,7 @@ export const useEmailVerification = () => {
           variant: "destructive"
         });
         
-        // Clean up URL even on error
+        // Limpiar URL incluso en error
         const newUrl = new URL(window.location.href);
         newUrl.searchParams.delete('verify');
         window.history.replaceState({}, '', newUrl.toString());

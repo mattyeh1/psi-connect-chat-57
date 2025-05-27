@@ -180,14 +180,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     console.log('Additional data:', additionalData);
     
     try {
-      // Completely disable Supabase's automatic email confirmations
+      // Deshabilitar COMPLETAMENTE las confirmaciones automáticas de email de Supabase
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          // NO enviar email de confirmación automático
           emailRedirectTo: undefined,
+          // NO requerir confirmación de email
           data: {
             user_type: userType,
+            email_confirmed: true, // Marcar como confirmado desde el inicio
             ...additionalData
           }
         }
@@ -205,12 +208,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       console.log('Sign up successful, user created:', data.user?.id);
       
-      // Send ONLY our custom verification email
+      // Enviar SOLO nuestro email personalizado de verificación
       if (data.user) {
         try {
           console.log('Sending custom verification email...');
           
-          // Create a secure verification token with user info
+          // Crear un token de verificación seguro con información del usuario
           const verificationData = {
             userId: data.user.id,
             email: data.user.email,
@@ -219,10 +222,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             timestamp: Date.now()
           };
           
-          // Encode the verification data
+          // Codificar los datos de verificación
           const verificationToken = btoa(JSON.stringify(verificationData));
           
-          // Create a verification URL with the token
+          // Crear URL de verificación con el token
           const redirectUrl = `https://psico.mattyeh.com/app?verify=${verificationToken}`;
           
           const { error: emailError } = await supabase.functions.invoke('send-verification-email', {
