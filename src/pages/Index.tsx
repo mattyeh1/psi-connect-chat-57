@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
+import { useEmailVerification } from "@/hooks/useEmailVerification";
 import { AuthPage } from "@/components/AuthPage";
 import { ProfileSetup } from "@/components/ProfileSetup";
 import { TrialExpiredModal } from "@/components/TrialExpiredModal";
@@ -24,6 +25,9 @@ const Index = () => {
   const [isTrialExpired, setIsTrialExpired] = useState(false);
   const [trialChecked, setTrialChecked] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  // Handle email verification from URL
+  useEmailVerification();
 
   // Check trial status for psychologists only once
   useEffect(() => {
