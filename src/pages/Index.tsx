@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -11,16 +10,20 @@ import { PatientManagement } from "@/components/PatientManagement";
 import { Calendar } from "@/components/CalendarView";
 import { MessagingHub } from "@/components/MessagingHub";
 import { PatientPortal } from "@/components/PatientPortal";
+import { Button } from "@/components/ui/button";
+import { LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 type ViewType = "dashboard" | "patients" | "calendar" | "messages" | "portal";
 
 const Index = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const { profile, psychologist, patient, loading: profileLoading, refetch } = useProfile();
   const [currentView, setCurrentView] = useState<ViewType>("dashboard");
   const [isTrialExpired, setIsTrialExpired] = useState(false);
   const [trialChecked, setTrialChecked] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Check trial status for psychologists only once
   useEffect(() => {
@@ -57,6 +60,23 @@ const Index = () => {
     setCurrentView("messages");
     // You could add logic here to select the specific patient's conversation
     console.log('Navigating to messages for patient:', patientId);
+  };
+
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      console.log('Logging out user');
+      await signOut();
+    } catch (error) {
+      console.error('Error logging out:', error);
+      toast({
+        title: "Error",
+        description: "Hubo un problema al cerrar sesión",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   // Show loading during initial authentication check
@@ -232,6 +252,16 @@ const Index = () => {
               <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full flex items-center justify-center text-white font-semibold">
                 {profile.user_type === "psychologist" ? "Dr" : "P"}
               </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="flex items-center gap-2"
+              >
+                <LogOut className="w-4 h-4" />
+                {isLoggingOut ? "Cerrando..." : "Cerrar Sesión"}
+              </Button>
             </div>
           </div>
         </header>

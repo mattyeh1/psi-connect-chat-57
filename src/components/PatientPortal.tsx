@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, MessageCircle, FileText, Clock, Video, LogOut } from "lucide-react";
+import { Calendar, MessageCircle, FileText, Clock } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -304,24 +304,6 @@ export const PatientPortal = () => {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <div className="flex justify-between items-center mb-8">
-        <div className="text-center flex-1">
-          <h2 className="text-3xl font-bold text-slate-800 mb-2">Portal del Paciente</h2>
-          <p className="text-slate-600">
-            Bienvenida, {patient.first_name} {patient.last_name}
-          </p>
-        </div>
-        <Button 
-          variant="outline" 
-          onClick={handleLogout}
-          disabled={isLoggingOut}
-          className="flex items-center gap-2"
-        >
-          <LogOut className="w-4 h-4" />
-          {isLoggingOut ? "Cerrando..." : "Cerrar Sesión"}
-        </Button>
-      </div>
-
       {/* Meeting Links Card */}
       <MeetingLinksCard />
 
