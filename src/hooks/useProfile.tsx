@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -7,7 +6,7 @@ import { toast } from '@/hooks/use-toast';
 interface Profile {
   id: string;
   email: string;
-  user_type: 'psychologist' | 'patient';
+  user_type: 'psychologist' | 'patient' | 'admin';
   created_at: string;
   updated_at: string;
 }
@@ -118,7 +117,7 @@ export const useProfile = () => {
       
       const typedProfile: Profile = {
         ...profileData,
-        user_type: profileData.user_type as 'psychologist' | 'patient'
+        user_type: profileData.user_type as 'psychologist' | 'patient' | 'admin'
       };
       setProfile(typedProfile);
 
