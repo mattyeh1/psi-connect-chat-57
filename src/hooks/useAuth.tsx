@@ -190,7 +190,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     console.log('Additional data:', additionalData);
     
     try {
-      // Usar signUp normal pero deshabilitando confirmación automática
+      // Crear el usuario primero
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -215,11 +215,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       console.log('User created successfully:', data.user?.id);
       
-      // Cerrar sesión inmediatamente para evitar auto-login
-      await supabase.auth.signOut();
-      
-      // Enviar SOLO nuestro email personalizado de verificación
       if (data.user) {
+        // Crear el perfil manualmente si el trigger no funcionó
+        try {
+          console.log('Creating profile manually...');
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: data.user.id,
+              email: data.user.email!,
+              user_type: userType
+            });
+          
+          if (profileError) {
+            console.log('Profile creation error (might already exist):', profileError);
+          } else {
+            console.log('Profile created successfully');
+          }
+        } catch (profileCreationError) {
+          console.error('Exception creating profile:', profileCreationError);
+        }
+        
+        // Cerrar sesión inmediatamente para evitar auto-login
+        await supabase.auth.signOut();
+        
+        // Enviar SOLO nuestro email personalizado de verificación
         try {
           console.log('Sending custom verification email...');
           
@@ -235,8 +255,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           // Codificar los datos de verificación
           const verificationToken = btoa(JSON.stringify(verificationData));
           
-          // Crear URL de verificación con el token - USAR TU DOMINIO
-          const redirectUrl = `https://psico.mattyeh.com/app?verify=${verificationToken}`;
+          // Crear URL de verificación con el token
+          const redirectUrl = `${window.location.origin}/app?verify=${verificationToken}`;
           
           const { error: emailError } = await supabase.functions.invoke('send-verification-email', {
             body: {
@@ -260,7 +280,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             console.log('Custom verification email sent successfully');
             toast({
               title: "¡Cuenta creada exitosamente!",
-              description: "Te hemos enviado UN SOLO email de verificación. Por favor revisa tu bandeja de entrada y haz clic en el enlace para verificar tu cuenta.",
+              description: "Te hemos enviado un email de verificación. Por favor revisa tu bandeja de entrada y haz clic en el enlace para verificar tu cuenta.",
             });
           }
         } catch (emailError) {
