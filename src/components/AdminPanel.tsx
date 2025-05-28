@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,10 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Shield, Users, Clock, Calendar, AlertTriangle, CheckCircle, Settings, Plus } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Shield, Users, Clock, Calendar, AlertTriangle, CheckCircle, Settings, Plus, DollarSign } from 'lucide-react';
 import { useAdmin } from '@/hooks/useAdmin';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { AffiliateAdminPanel } from './AffiliateAdminPanel';
 
 export const AdminPanel = () => {
   const { isAdmin, psychologistStats, loading, refetch } = useAdmin();
@@ -198,7 +199,7 @@ export const AdminPanel = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-800">Panel de Administración</h1>
-          <p className="text-slate-600">Gestiona psicólogos y monitorea suscripciones</p>
+          <p className="text-slate-600">Gestiona psicólogos, suscripciones y sistema de afiliados</p>
         </div>
         <div className="flex gap-2">
           <Button onClick={createAdminUser} variant="outline" size="sm">
@@ -211,207 +212,223 @@ export const AdminPanel = () => {
         </div>
       </div>
 
-      {/* Estadísticas generales */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Psicólogos</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalPsychologists}</div>
-          </CardContent>
-        </Card>
+      <Tabs defaultValue="psychologists" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="psychologists">Psicólogos</TabsTrigger>
+          <TabsTrigger value="affiliates">
+            <DollarSign className="w-4 h-4 mr-2" />
+            Sistema de Afiliados
+          </TabsTrigger>
+        </TabsList>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Suscripciones Activas</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{activePsychologists}</div>
-          </CardContent>
-        </Card>
+        <TabsContent value="psychologists">
+          {/* Estadísticas generales */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Psicólogos</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalPsychologists}</div>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">En Trial</CardTitle>
-            <Clock className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{trialPsychologists}</div>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Suscripciones Activas</CardTitle>
+                <CheckCircle className="h-4 w-4 text-green-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">{activePsychologists}</div>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Expirados</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{expiredPsychologists}</div>
-          </CardContent>
-        </Card>
-      </div>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">En Trial</CardTitle>
+                <Clock className="h-4 w-4 text-blue-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-600">{trialPsychologists}</div>
+              </CardContent>
+            </Card>
 
-      {/* Tabla de psicólogos */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de Psicólogos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Días Trial</TableHead>
-                <TableHead>Días Suscripción</TableHead>
-                <TableHead>Registro</TableHead>
-                <TableHead>Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {psychologistStats.map((psychologist) => (
-                <TableRow key={psychologist.id}>
-                  <TableCell className="font-medium">
-                    {psychologist.first_name} {psychologist.last_name}
-                  </TableCell>
-                  <TableCell>{psychologist.email}</TableCell>
-                  <TableCell>
-                    {getStatusBadge(psychologist.subscription_status, psychologist.is_expired)}
-                  </TableCell>
-                  <TableCell>
-                    {psychologist.subscription_status === 'trial' ? (
-                      <span className={psychologist.trial_days_remaining <= 2 ? 'text-red-600 font-bold' : 'text-blue-600'}>
-                        {psychologist.trial_days_remaining} días
-                      </span>
-                    ) : (
-                      '-'
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {psychologist.subscription_status === 'active' ? (
-                      <span className={psychologist.subscription_days_remaining <= 7 ? 'text-orange-600 font-bold' : 'text-green-600'}>
-                        {psychologist.subscription_days_remaining} días
-                      </span>
-                    ) : (
-                      '-'
-                    )}
-                  </TableCell>
-                  <TableCell>{formatDate(psychologist.created_at)}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => openManageDialog(psychologist, 'trial')}
-                      >
-                        + Días
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => openManageDialog(psychologist, 'subscription')}
-                      >
-                        <Settings className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          
-          {psychologistStats.length === 0 && (
-            <div className="text-center py-8 text-slate-500">
-              No hay psicólogos registrados
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Expirados</CardTitle>
+                <AlertTriangle className="h-4 w-4 text-red-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-600">{expiredPsychologists}</div>
+              </CardContent>
+            </Card>
+          </div>
 
-      {/* Dialog para gestionar usuarios */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {actionType === 'trial' ? 'Agregar Días de Trial' : 'Cambiar Plan de Suscripción'}
-            </DialogTitle>
-          </DialogHeader>
-          
-          {selectedPsychologist && (
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm text-slate-600">Usuario seleccionado:</p>
-                <p className="font-medium">{selectedPsychologist.first_name} {selectedPsychologist.last_name}</p>
-                <p className="text-sm text-slate-500">{selectedPsychologist.email}</p>
-              </div>
-
-              {actionType === 'trial' ? (
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="additionalDays">Días adicionales de trial</Label>
-                    <Input
-                      id="additionalDays"
-                      type="number"
-                      value={additionalDays}
-                      onChange={(e) => setAdditionalDays(e.target.value)}
-                      placeholder="Ej: 7"
-                    />
-                  </div>
-                  <Button 
-                    onClick={handleUpdateTrialDays} 
-                    disabled={!additionalDays || isProcessing}
-                    className="w-full"
-                  >
-                    {isProcessing ? 'Procesando...' : 'Agregar Días'}
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="newStatus">Nuevo estado</Label>
-                    <Select value={newStatus} onValueChange={setNewStatus}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar estado" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="trial">Trial</SelectItem>
-                        <SelectItem value="active">Activo</SelectItem>
-                        <SelectItem value="expired">Expirado</SelectItem>
-                        <SelectItem value="cancelled">Cancelado</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  {newStatus === 'active' && (
-                    <div>
-                      <Label htmlFor="subscriptionDays">Días de suscripción</Label>
-                      <Input
-                        id="subscriptionDays"
-                        type="number"
-                        value={subscriptionDays}
-                        onChange={(e) => setSubscriptionDays(e.target.value)}
-                        placeholder="Ej: 30"
-                      />
-                    </div>
-                  )}
-                  
-                  <Button 
-                    onClick={handleUpdateSubscriptionStatus} 
-                    disabled={!newStatus || isProcessing}
-                    className="w-full"
-                  >
-                    {isProcessing ? 'Procesando...' : 'Actualizar Estado'}
-                  </Button>
+          {/* Tabla de psicólogos */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Lista de Psicólogos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Días Trial</TableHead>
+                    <TableHead>Días Suscripción</TableHead>
+                    <TableHead>Registro</TableHead>
+                    <TableHead>Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {psychologistStats.map((psychologist) => (
+                    <TableRow key={psychologist.id}>
+                      <TableCell className="font-medium">
+                        {psychologist.first_name} {psychologist.last_name}
+                      </TableCell>
+                      <TableCell>{psychologist.email}</TableCell>
+                      <TableCell>
+                        {getStatusBadge(psychologist.subscription_status, psychologist.is_expired)}
+                      </TableCell>
+                      <TableCell>
+                        {psychologist.subscription_status === 'trial' ? (
+                          <span className={psychologist.trial_days_remaining <= 2 ? 'text-red-600 font-bold' : 'text-blue-600'}>
+                            {psychologist.trial_days_remaining} días
+                          </span>
+                        ) : (
+                          '-'
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {psychologist.subscription_status === 'active' ? (
+                          <span className={psychologist.subscription_days_remaining <= 7 ? 'text-orange-600 font-bold' : 'text-green-600'}>
+                            {psychologist.subscription_days_remaining} días
+                          </span>
+                        ) : (
+                          '-'
+                        )}
+                      </TableCell>
+                      <TableCell>{formatDate(psychologist.created_at)}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openManageDialog(psychologist, 'trial')}
+                          >
+                            + Días
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openManageDialog(psychologist, 'subscription')}
+                          >
+                            <Settings className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              
+              {psychologistStats.length === 0 && (
+                <div className="text-center py-8 text-slate-500">
+                  No hay psicólogos registrados
                 </div>
               )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+            </CardContent>
+          </Card>
+
+          {/* Dialog para gestionar usuarios */}
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>
+                  {actionType === 'trial' ? 'Agregar Días de Trial' : 'Cambiar Plan de Suscripción'}
+                </DialogTitle>
+              </DialogHeader>
+              
+              {selectedPsychologist && (
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-slate-600">Usuario seleccionado:</p>
+                    <p className="font-medium">{selectedPsychologist.first_name} {selectedPsychologist.last_name}</p>
+                    <p className="text-sm text-slate-500">{selectedPsychologist.email}</p>
+                  </div>
+
+                  {actionType === 'trial' ? (
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="additionalDays">Días adicionales de trial</Label>
+                        <Input
+                          id="additionalDays"
+                          type="number"
+                          value={additionalDays}
+                          onChange={(e) => setAdditionalDays(e.target.value)}
+                          placeholder="Ej: 7"
+                        />
+                      </div>
+                      <Button 
+                        onClick={handleUpdateTrialDays} 
+                        disabled={!additionalDays || isProcessing}
+                        className="w-full"
+                      >
+                        {isProcessing ? 'Procesando...' : 'Agregar Días'}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="newStatus">Nuevo estado</Label>
+                        <Select value={newStatus} onValueChange={setNewStatus}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar estado" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="trial">Trial</SelectItem>
+                            <SelectItem value="active">Activo</SelectItem>
+                            <SelectItem value="expired">Expirado</SelectItem>
+                            <SelectItem value="cancelled">Cancelado</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      {newStatus === 'active' && (
+                        <div>
+                          <Label htmlFor="subscriptionDays">Días de suscripción</Label>
+                          <Input
+                            id="subscriptionDays"
+                            type="number"
+                            value={subscriptionDays}
+                            onChange={(e) => setSubscriptionDays(e.target.value)}
+                            placeholder="Ej: 30"
+                          />
+                        </div>
+                      )}
+                      
+                      <Button 
+                        onClick={handleUpdateSubscriptionStatus} 
+                        disabled={!newStatus || isProcessing}
+                        className="w-full"
+                      >
+                        {isProcessing ? 'Procesando...' : 'Actualizar Estado'}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+        </TabsContent>
+
+        <TabsContent value="affiliates">
+          <AffiliateAdminPanel />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

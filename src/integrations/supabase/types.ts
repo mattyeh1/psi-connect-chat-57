@@ -66,6 +66,13 @@ export type Database = {
             foreignKeyName: "affiliate_codes_psychologist_id_fkey"
             columns: ["psychologist_id"]
             isOneToOne: false
+            referencedRelation: "affiliate_admin_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_codes_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
             referencedRelation: "psychologist_stats"
             referencedColumns: ["id"]
           },
@@ -113,6 +120,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "affiliate_payments_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_admin_stats"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "affiliate_payments_psychologist_id_fkey"
             columns: ["psychologist_id"]
@@ -178,6 +192,13 @@ export type Database = {
             foreignKeyName: "affiliate_referrals_referred_psychologist_id_fkey"
             columns: ["referred_psychologist_id"]
             isOneToOne: true
+            referencedRelation: "affiliate_admin_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_referrals_referred_psychologist_id_fkey"
+            columns: ["referred_psychologist_id"]
+            isOneToOne: true
             referencedRelation: "psychologist_stats"
             referencedColumns: ["id"]
           },
@@ -186,6 +207,13 @@ export type Database = {
             columns: ["referred_psychologist_id"]
             isOneToOne: true
             referencedRelation: "psychologists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_referrals_referrer_psychologist_id_fkey"
+            columns: ["referrer_psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_admin_stats"
             referencedColumns: ["id"]
           },
           {
@@ -247,6 +275,13 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_appointment_requests_psychologist"
+            columns: ["psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_admin_stats"
             referencedColumns: ["id"]
           },
           {
@@ -317,6 +352,13 @@ export type Database = {
             foreignKeyName: "appointments_psychologist_id_fkey"
             columns: ["psychologist_id"]
             isOneToOne: false
+            referencedRelation: "affiliate_admin_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
             referencedRelation: "psychologist_stats"
             referencedColumns: ["id"]
           },
@@ -360,6 +402,13 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_admin_stats"
             referencedColumns: ["id"]
           },
           {
@@ -498,6 +547,13 @@ export type Database = {
             foreignKeyName: "fk_patients_psychologist"
             columns: ["psychologist_id"]
             isOneToOne: false
+            referencedRelation: "affiliate_admin_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_patients_psychologist"
+            columns: ["psychologist_id"]
+            isOneToOne: false
             referencedRelation: "psychologist_stats"
             referencedColumns: ["id"]
           },
@@ -513,6 +569,13 @@ export type Database = {
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patients_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_admin_stats"
             referencedColumns: ["id"]
           },
           {
@@ -674,6 +737,31 @@ export type Database = {
       }
     }
     Views: {
+      affiliate_admin_stats: {
+        Row: {
+          active_referrals: number | null
+          affiliate_code: string | null
+          affiliate_earnings: number | null
+          commission_rate: number | null
+          discount_rate: number | null
+          first_name: string | null
+          id: string | null
+          last_name: string | null
+          paid_amount: number | null
+          pending_payments: number | null
+          professional_code: string | null
+          total_referrals: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "psychologists_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       psychologist_stats: {
         Row: {
           created_at: string | null
@@ -737,6 +825,14 @@ export type Database = {
       is_trial_expired: {
         Args: { psychologist_id: string }
         Returns: boolean
+      }
+      process_affiliate_commission: {
+        Args: { referred_psychologist_id: string; subscription_amount: number }
+        Returns: undefined
+      }
+      process_affiliate_referral: {
+        Args: { new_psychologist_id: string; affiliate_code_param: string }
+        Returns: undefined
       }
       validate_affiliate_code: {
         Args: { input_code: string }
