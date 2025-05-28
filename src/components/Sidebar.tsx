@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { Calendar, MessageCircle, Users, BarChart3, Settings, Home, LogOut, UserCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +22,7 @@ interface SidebarProps {
 
 export const Sidebar = ({ currentView, onViewChange }: SidebarProps) => {
   const { signOut } = useAuth();
+  const { psychologist } = useProfile();
   const [showSettings, setShowSettings] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -48,17 +50,32 @@ export const Sidebar = ({ currentView, onViewChange }: SidebarProps) => {
     setShowSettings(true);
   };
 
+  // Obtener el nombre del psicólogo o mostrar un fallback
+  const psychologistName = psychologist 
+    ? `Dr. ${psychologist.first_name} ${psychologist.last_name}`
+    : "Dr. Usuario";
+
+  // Obtener las iniciales para el avatar
+  const getInitials = () => {
+    if (psychologist && psychologist.first_name && psychologist.last_name) {
+      return `${psychologist.first_name.charAt(0)}${psychologist.last_name.charAt(0)}`;
+    }
+    return "Dr";
+  };
+
   return (
     <>
       <div className="fixed left-0 top-0 h-full w-64 bg-white shadow-xl border-r border-slate-200 z-50">
         <div className="p-6 border-b border-slate-200">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-emerald-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">P</span>
+              <span className="text-white font-bold text-lg">{getInitials()}</span>
             </div>
             <div>
-              <h2 className="font-semibold text-slate-800">Dr. María González</h2>
-              <p className="text-sm text-slate-600">Psicóloga Clínica</p>
+              <h2 className="font-semibold text-slate-800">{psychologistName}</h2>
+              <p className="text-sm text-slate-600">
+                {psychologist?.specialization || "Psicólogo Clínico"}
+              </p>
             </div>
           </div>
         </div>
