@@ -45,7 +45,7 @@ export const Calendar = () => {
     if (psychologist?.id) {
       fetchAppointments();
     }
-  }, [psychologist, selectedDate]);
+  }, [psychologist?.id, selectedDate.toDateString()]); // Use toDateString to avoid infinite loops
 
   const fetchAppointments = async () => {
     if (!psychologist?.id) return;
@@ -55,7 +55,7 @@ export const Calendar = () => {
       console.log('Fetching appointments for psychologist:', psychologist.id);
       console.log('Selected date:', selectedDate.toISOString());
 
-      // Get appointments for the selected date with more flexible time range
+      // Create date range in local timezone
       const startOfDay = new Date(selectedDate);
       startOfDay.setHours(0, 0, 0, 0);
       
@@ -91,7 +91,16 @@ export const Calendar = () => {
       }
 
       console.log('Fetched appointments for selected date:', data);
-      console.log('Appointments with meetings:', data?.filter(apt => apt.meeting_url));
+      if (data && data.length > 0) {
+        data.forEach(apt => {
+          const aptDate = new Date(apt.appointment_date);
+          console.log(`Appointment ${apt.id}:`, {
+            originalTime: apt.appointment_date,
+            localTime: aptDate.toLocaleString(),
+            timeOnly: aptDate.toTimeString().substring(0, 5)
+          });
+        });
+      }
       
       setAppointments(data || []);
     } catch (error) {
@@ -119,12 +128,23 @@ export const Calendar = () => {
   };
 
   const getAppointmentForTime = (time: string) => {
-    return appointments.find(apt => {
+    const appointment = appointments.find(apt => {
       const aptDate = new Date(apt.appointment_date);
-      const aptTime = aptDate.toTimeString().substring(0, 5);
-      console.log(`Comparing ${aptTime} with ${time} for appointment:`, apt.id);
+      // Use local time for comparison
+      const aptTime = aptDate.toLocaleTimeString('en-GB', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false 
+      });
+      console.log(`Comparing slot ${time} with appointment time ${aptTime} for appointment:`, apt.id);
       return aptTime === time;
     });
+    
+    if (appointment) {
+      console.log(`Found appointment for time ${time}:`, appointment.id);
+    }
+    
+    return appointment;
   };
 
   const getDaysInMonth = (date: Date) => {
@@ -342,9 +362,6 @@ export const Calendar = () => {
                   <CalendarIcon className="w-12 h-12 mx-auto mb-3 opacity-50" />
                   <p>No hay citas programadas para este día</p>
                   <p className="text-sm">Las citas aparecerán aquí cuando sean confirmadas</p>
-                  <p className="text-xs text-slate-400 mt-2">
-                    Revisa la consola del navegador para más detalles de debugging
-                  </p>
                 </div>
               )}
             </CardContent>
