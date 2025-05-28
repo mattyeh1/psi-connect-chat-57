@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -62,11 +61,25 @@ interface AffiliateReferral {
   };
 }
 
+interface PendingReferredPsychologist {
+  id: string;
+  first_name: string;
+  last_name: string;
+  professional_code: string;
+  created_at: string;
+  referrer_name: string;
+  referrer_professional_code: string;
+  affiliate_code: string;
+  commission_rate: number;
+  discount_rate: number;
+}
+
 export const useAffiliateAdmin = () => {
   const { user } = useAuth();
   const [affiliateStats, setAffiliateStats] = useState<AffiliateStats[]>([]);
   const [pendingPayments, setPendingPayments] = useState<AffiliatePayment[]>([]);
   const [affiliateReferrals, setAffiliateReferrals] = useState<AffiliateReferral[]>([]);
+  const [pendingReferredPsychologists, setPendingReferredPsychologists] = useState<PendingReferredPsychologist[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -86,7 +99,8 @@ export const useAffiliateAdmin = () => {
         await Promise.all([
           fetchAffiliateStats(),
           fetchPendingPayments(),
-          fetchAffiliateReferrals()
+          fetchAffiliateReferrals(),
+          fetchPendingReferredPsychologists()
         ]);
       }
     } catch (error) {
@@ -170,6 +184,66 @@ export const useAffiliateAdmin = () => {
     }
   };
 
+  const fetchPendingReferredPsychologists = async () => {
+    try {
+      console.log('Fetching pending referred psychologists...');
+      
+      // Obtener psicólogos que fueron referidos pero aún no han pagado su primera suscripción
+      const { data: referralsData, error: referralsError } = await supabase
+        .from('affiliate_referrals')
+        .select(`
+          *,
+          affiliate_code:affiliate_codes(code, commission_rate, discount_rate)
+        `)
+        .eq('status', 'active')
+        .is('subscription_start_date', null)
+        .order('created_at', { ascending: false });
+
+      if (referralsError) {
+        console.error('Error fetching pending referred psychologists:', referralsError);
+        throw referralsError;
+      }
+
+      // Obtener información detallada de cada psicólogo
+      const pendingPsychologists = await Promise.all(
+        (referralsData || []).map(async (referral) => {
+          // Datos del psicólogo referido
+          const { data: referredData } = await supabase
+            .from('psychologists')
+            .select('first_name, last_name, professional_code, created_at')
+            .eq('id', referral.referred_psychologist_id)
+            .single();
+
+          // Datos del psicólogo referidor
+          const { data: referrerData } = await supabase
+            .from('psychologists')
+            .select('first_name, last_name, professional_code')
+            .eq('id', referral.referrer_psychologist_id)
+            .single();
+
+          return {
+            id: referral.referred_psychologist_id,
+            first_name: referredData?.first_name || '',
+            last_name: referredData?.last_name || '',
+            professional_code: referredData?.professional_code || '',
+            created_at: referredData?.created_at || '',
+            referrer_name: referrerData ? `${referrerData.first_name} ${referrerData.last_name}` : '',
+            referrer_professional_code: referrerData?.professional_code || '',
+            affiliate_code: referral.affiliate_code?.code || '',
+            commission_rate: referral.affiliate_code?.commission_rate || 0,
+            discount_rate: referral.affiliate_code?.discount_rate || 0
+          };
+        })
+      );
+
+      console.log('Pending referred psychologists fetched:', pendingPsychologists);
+      setPendingReferredPsychologists(pendingPsychologists);
+    } catch (error) {
+      console.error('Error fetching pending referred psychologists:', error);
+      setPendingReferredPsychologists([]);
+    }
+  };
+
   const fetchAffiliateReferrals = async () => {
     try {
       console.log('Fetching affiliate referrals...');
@@ -244,7 +318,8 @@ export const useAffiliateAdmin = () => {
       await Promise.all([
         fetchAffiliateStats(),
         fetchPendingPayments(),
-        fetchAffiliateReferrals()
+        fetchAffiliateReferrals(),
+        fetchPendingReferredPsychologists()
       ]);
     } catch (error: any) {
       toast({
@@ -273,7 +348,8 @@ export const useAffiliateAdmin = () => {
       await Promise.all([
         fetchAffiliateStats(),
         fetchPendingPayments(),
-        fetchAffiliateReferrals()
+        fetchAffiliateReferrals(),
+        fetchPendingReferredPsychologists()
       ]);
     } catch (error: any) {
       toast({
@@ -338,6 +414,7 @@ export const useAffiliateAdmin = () => {
     affiliateStats,
     pendingPayments,
     affiliateReferrals,
+    pendingReferredPsychologists,
     loading,
     isAdmin,
     approvePayment,

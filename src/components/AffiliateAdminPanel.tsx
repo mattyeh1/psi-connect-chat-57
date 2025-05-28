@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DollarSign, Users, TrendingUp, Clock, CheckCircle, CreditCard, Plus, Eye, UserPlus } from 'lucide-react';
+import { DollarSign, Users, TrendingUp, Clock, CheckCircle, CreditCard, Plus, Eye, UserPlus, AlertCircle } from 'lucide-react';
 import { useAffiliateAdmin } from '@/hooks/useAffiliateAdmin';
 import { useAdmin } from '@/hooks/useAdmin';
 
@@ -17,6 +16,7 @@ export const AffiliateAdminPanel = () => {
     affiliateStats, 
     pendingPayments, 
     affiliateReferrals,
+    pendingReferredPsychologists,
     loading, 
     isAdmin, 
     approvePayment,
@@ -148,18 +148,25 @@ export const AffiliateAdminPanel = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Psicólogos Afiliados</CardTitle>
-            <TrendingUp className="h-4 w-4 text-blue-500" />
+            <CardTitle className="text-sm font-medium">Pendientes de Pago</CardTitle>
+            <AlertCircle className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{affiliateStats.length}</div>
-            <p className="text-xs text-muted-foreground">Con código de afiliado</p>
+            <div className="text-2xl font-bold text-yellow-600">{pendingReferredPsychologists.length}</div>
+            <p className="text-xs text-muted-foreground">Referidos sin suscripción</p>
           </CardContent>
         </Card>
       </div>
 
-      <Tabs defaultValue="stats" className="space-y-4">
+      <Tabs defaultValue="pending-subscriptions" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="pending-subscriptions">
+            <AlertCircle className="w-4 h-4 mr-1" />
+            Referidos Pendientes
+            {pendingReferredPsychologists.length > 0 && (
+              <Badge className="ml-2 bg-yellow-500">{pendingReferredPsychologists.length}</Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="stats">Estadísticas de Afiliados</TabsTrigger>
           <TabsTrigger value="payments">
             Pagos Pendientes 
@@ -176,6 +183,81 @@ export const AffiliateAdminPanel = () => {
             Gestionar
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="pending-subscriptions">
+          <Card>
+            <CardHeader>
+              <CardTitle>Psicólogos Referidos Pendientes de Primera Suscripción</CardTitle>
+              <p className="text-sm text-slate-600">
+                Estos psicólogos se registraron usando códigos de referido pero aún no han pagado su primera suscripción.
+                Cuando marquen que pagaron, se generará la comisión para el psicólogo que los refirió.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Psicólogo Referido</TableHead>
+                    <TableHead>Código Profesional</TableHead>
+                    <TableHead>Fecha Registro</TableHead>
+                    <TableHead>Psicólogo Referidor</TableHead>
+                    <TableHead>Código de Afiliado</TableHead>
+                    <TableHead>Comisión %</TableHead>
+                    <TableHead>Descuento %</TableHead>
+                    <TableHead>Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pendingReferredPsychologists.map((psychologist) => (
+                    <TableRow key={psychologist.id}>
+                      <TableCell className="font-medium">
+                        {psychologist.first_name} {psychologist.last_name}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {psychologist.professional_code}
+                      </TableCell>
+                      <TableCell>
+                        {new Date(psychologist.created_at).toLocaleDateString('es-ES')}
+                      </TableCell>
+                      <TableCell>
+                        {psychologist.referrer_name}
+                        <br />
+                        <span className="text-xs text-slate-500">
+                          {psychologist.referrer_professional_code}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="font-mono text-xs">
+                          {psychologist.affiliate_code}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{psychologist.commission_rate}%</TableCell>
+                      <TableCell>{psychologist.discount_rate}%</TableCell>
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setSelectedPsychologist(psychologist);
+                            setCommissionDialog(true);
+                          }}
+                        >
+                          <DollarSign className="w-3 h-3 mr-1" />
+                          Marcar Pago
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              
+              {pendingReferredPsychologists.length === 0 && (
+                <div className="text-center py-8 text-slate-500">
+                  No hay psicólogos referidos pendientes de primera suscripción
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="stats">
           <Card>
