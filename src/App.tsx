@@ -12,6 +12,7 @@ import NotFound from "./pages/NotFound";
 import { AdminLogin } from "./pages/AdminLogin";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { AdminRoute } from "./components/AdminRoute";
+import { RegisterPage } from "./pages/RegisterPage";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/demo" element={<DemoPage />} />
+            <Route path="/register" element={<RegisterPage />} />
             <Route path="/app" element={<Index />} />
             <Route path="/admin" element={<AdminLogin />} />
             <Route 

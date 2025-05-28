@@ -1,332 +1,385 @@
+import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/hooks/use-toast";
+import { Eye, EyeOff, Mail, Lock, User, Phone, FileText, Stethoscope } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import { Eye, EyeOff } from 'lucide-react';
+interface AuthPageProps {
+  affiliateCode?: string | null;
+}
 
-export const AuthPage = () => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [userType, setUserType] = useState<'psychologist' | 'patient'>('patient');
+export const AuthPage = ({ affiliateCode }: AuthPageProps) => {
+  const { signIn, signUp, loading } = useAuth();
+  const navigate = useNavigate();
+  const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [professionalCode, setProfessionalCode] = useState('');
-  const [codeValidation, setCodeValidation] = useState<{ valid: boolean; message: string } | null>(null);
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    firstName: '',
-    lastName: '',
-    phone: '',
-    age: '',
-    specialization: '',
-    licenseNumber: ''
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [signInData, setSignInData] = useState({
+    email: "",
+    password: "",
   });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [signUpData, setSignUpData] = useState({
+    email: "",
+    password: "",
+    confirmPassword: "",
+    userType: "patient",
+    firstName: "",
+    lastName: "",
+    phone: "",
+    licenseNumber: "",
+    specialization: "",
+    professionalCode: ""
+  });
 
-  const { signIn, signUp } = useAuth();
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
 
-  const validateCode = async (code: string) => {
-    if (!code) {
-      setCodeValidation(null);
+  const toggleConfirmPasswordVisibility = () => {
+    setShowConfirmPassword(!showConfirmPassword);
+  };
+
+  const handleSignInChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSignInData({ ...signInData, [e.target.name]: e.target.value });
+  };
+
+  const handleSignUpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSignUpData({ ...signUpData, [e.target.name]: e.target.value });
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (isSignUp && signUpData.password !== signUpData.confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Las contraseñas no coinciden",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (isSignUp && signUpData.userType === 'patient' && !signUpData.professionalCode) {
+      toast({
+        title: "Error", 
+        description: "El código profesional es requerido para pacientes",
+        variant: "destructive"
+      });
       return;
     }
 
     try {
-      console.log('Validating professional code:', code);
-      const { data, error } = await supabase.rpc('validate_professional_code', { code });
-      
-      if (error) {
-        console.error('Error validating code:', error);
-        setCodeValidation({ valid: false, message: 'Error validating code' });
-        return;
+      let metadata: any = {
+        user_type: signUpData.userType,
+        first_name: signUpData.firstName,
+        last_name: signUpData.lastName,
+        phone: signUpData.phone
+      };
+
+      // Add affiliate code to metadata if present
+      if (affiliateCode) {
+        metadata.affiliate_code = affiliateCode;
       }
 
-      console.log('Validation result:', data);
-      if (data) {
-        setCodeValidation({ valid: true, message: 'Valid professional code' });
-      } else {
-        setCodeValidation({ valid: false, message: 'Invalid professional code' });
+      if (signUpData.userType === 'psychologist') {
+        metadata = {
+          ...metadata,
+          license_number: signUpData.licenseNumber,
+          specialization: signUpData.specialization
+        };
+      } else if (signUpData.userType === 'patient') {
+        metadata = {
+          ...metadata,
+          professional_code: signUpData.professionalCode
+        };
       }
-    } catch (error) {
-      console.error('Exception validating code:', error);
-      setCodeValidation({ valid: false, message: 'Error validating code' });
+
+      const result = await signUp(signUpData.email, signUpData.password, metadata);
+      
+      if (result?.user) {
+        toast({
+          title: "Cuenta creada",
+          description: "Tu cuenta ha sido creada exitosamente. Revisa tu email para verificar tu cuenta.",
+        });
+      }
+    } catch (error: any) {
+      console.error('Error during sign up:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Error al crear la cuenta",
+        variant: "destructive"
+      });
     }
   };
 
-  const handleCodeChange = (value: string) => {
-    setProfessionalCode(value);
-    validateCode(value);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
 
     try {
-      if (isLogin) {
-        console.log('Attempting login with:', formData.email);
-        const { error } = await signIn(formData.email, formData.password);
-        if (error) {
-          console.error('Login error:', error);
-          throw error;
-        }
-        console.log('Login successful');
-      } else {
-        console.log('Attempting signup for:', userType, formData.email);
-        
-        // Validate professional code for patients
-        if (userType === 'patient' && (!professionalCode || !codeValidation?.valid)) {
-          throw new Error('Please enter a valid professional code');
-        }
-
-        // Build user data object dynamically
-        const userData: Record<string, any> = {
-          user_type: userType,
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          phone: formData.phone || null
-        };
-
-        // Add specific data based on user type
-        if (userType === 'patient') {
-          userData.professional_code = professionalCode;
-          if (formData.age) {
-            userData.age = parseInt(formData.age);
-          }
-        } else if (userType === 'psychologist') {
-          userData.specialization = formData.specialization || null;
-          userData.license_number = formData.licenseNumber || null;
-        }
-
-        console.log('Signup data being sent:', userData);
-
-        const { data, error } = await signUp(formData.email, formData.password, userType, userData);
-        
-        if (error) {
-          console.error('Signup error:', error);
-          throw error;
-        }
-        
-        console.log('Signup successful:', data);
-        
-        // Show success message
-        setError('');
-        alert('Account created successfully! Please check your email to confirm your account.');
-      }
+      await signIn(signInData.email, signInData.password);
+      toast({
+        title: "Inicio de sesión exitoso",
+        description: "Bienvenido a PsiConnect",
+      });
+      navigate("/app");
     } catch (error: any) {
-      console.error('Form submission error:', error);
-      setError(error.message || 'An error occurred');
-    } finally {
-      setLoading(false);
+      console.error('Error during sign in:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Error al iniciar sesión",
+        variant: "destructive"
+      });
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md border-0 shadow-xl">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
-            PsiConnect
-          </CardTitle>
-          <p className="text-slate-600">
-            {isLogin ? 'Inicia sesión en tu cuenta' : 'Crea tu cuenta'}
-          </p>
-        </CardHeader>
-
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
-              <div className="flex gap-2 mb-4">
-                <button
-                  type="button"
-                  onClick={() => setUserType('patient')}
-                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
-                    userType === 'patient'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  Paciente
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setUserType('psychologist')}
-                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
-                    userType === 'psychologist'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  Psicólogo
-                </button>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Contraseña</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  required
-                  minLength={6}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
-            </div>
-
-            {!isLogin && (
-              <>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">Nombre *</Label>
-                    <Input
-                      id="firstName"
-                      value={formData.firstName}
-                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">Apellido *</Label>
-                    <Input
-                      id="lastName"
-                      value={formData.lastName}
-                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Teléfono</Label>
-                  <Input
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+    <Card className="w-full max-w-md border-0 shadow-lg">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-2xl font-bold text-center">
+          {isSignUp ? "Crear Cuenta" : "Iniciar Sesión"}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue={isSignUp ? "register" : "login"} className="space-y-4">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="login" onClick={() => setIsSignUp(false)}>Iniciar Sesión</TabsTrigger>
+            <TabsTrigger value="register" onClick={() => setIsSignUp(true)}>Crear Cuenta</TabsTrigger>
+          </TabsList>
+          <TabsContent value="login">
+            <form onSubmit={handleSignIn} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Correo Electrónico</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500" size={16} />
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    name="email"
+                    placeholder="correo@ejemplo.com" 
+                    className="pl-9"
+                    value={signInData.email}
+                    onChange={handleSignInChange}
                   />
                 </div>
-
-                {userType === 'patient' && (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="professionalCode">Código del Profesional *</Label>
-                      <Input
-                        id="professionalCode"
-                        value={professionalCode}
-                        onChange={(e) => handleCodeChange(e.target.value)}
-                        placeholder="PSI-ABC123"
-                        required
-                      />
-                      {codeValidation && (
-                        <p className={`text-sm ${codeValidation.valid ? 'text-green-600' : 'text-red-600'}`}>
-                          {codeValidation.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="age">Edad</Label>
-                      <Input
-                        id="age"
-                        type="number"
-                        value={formData.age}
-                        onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-                        min="1"
-                        max="120"
-                      />
-                    </div>
-                  </>
-                )}
-
-                {userType === 'psychologist' && (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="specialization">Especialización</Label>
-                      <Input
-                        id="specialization"
-                        value={formData.specialization}
-                        onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
-                        placeholder="Psicología Clínica"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="licenseNumber">Número de Licencia</Label>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Contraseña</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500" size={16} />
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    placeholder="********"
+                    className="pl-9"
+                    value={signInData.password}
+                    onChange={handleSignInChange}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={togglePasswordVisibility}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
+              </Button>
+            </form>
+          </TabsContent>
+          <TabsContent value="register">
+            <form onSubmit={handleSignUp} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">Nombre</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500" size={16} />
+                    <Input
+                      id="firstName"
+                      type="text"
+                      name="firstName"
+                      placeholder="María"
+                      className="pl-9"
+                      value={signUpData.firstName}
+                      onChange={handleSignUpChange}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Apellido</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500" size={16} />
+                    <Input
+                      id="lastName"
+                      type="text"
+                      name="lastName"
+                      placeholder="González"
+                      className="pl-9"
+                      value={signUpData.lastName}
+                      onChange={handleSignUpChange}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Correo Electrónico</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500" size={16} />
+                  <Input
+                    id="email"
+                    type="email"
+                    name="email"
+                    placeholder="correo@ejemplo.com"
+                    className="pl-9"
+                    value={signUpData.email}
+                    onChange={handleSignUpChange}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Teléfono</Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500" size={16} />
+                  <Input
+                    id="phone"
+                    type="tel"
+                    name="phone"
+                    placeholder="+56912345678"
+                    className="pl-9"
+                    value={signUpData.phone}
+                    onChange={handleSignUpChange}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Contraseña</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500" size={16} />
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    placeholder="********"
+                    className="pl-9"
+                    value={signUpData.password}
+                    onChange={handleSignUpChange}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={togglePasswordVisibility}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500" size={16} />
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    placeholder="********"
+                    className="pl-9"
+                    value={signUpData.confirmPassword}
+                    onChange={handleSignUpChange}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={toggleConfirmPasswordVisibility}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2"
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="userType">Tipo de Usuario</Label>
+                <select
+                  id="userType"
+                  name="userType"
+                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring focus:border-blue-500"
+                  value={signUpData.userType}
+                  onChange={handleSignUpChange}
+                >
+                  <option value="patient">Paciente</option>
+                  <option value="psychologist">Psicólogo</option>
+                </select>
+              </div>
+              {signUpData.userType === "psychologist" && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="licenseNumber">Número de Licencia</Label>
+                    <div className="relative">
+                      <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500" size={16} />
                       <Input
                         id="licenseNumber"
-                        value={formData.licenseNumber}
-                        onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
+                        type="text"
+                        name="licenseNumber"
+                        placeholder="Ej: 123456"
+                        className="pl-9"
+                        value={signUpData.licenseNumber}
+                        onChange={handleSignUpChange}
                       />
                     </div>
-                  </>
-                )}
-              </>
-            )}
-
-            {error && (
-              <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-lg border border-red-200">
-                {error}
-              </div>
-            )}
-
-            <Button
-              type="submit"
-              className="w-full bg-gradient-to-r from-blue-500 to-emerald-500 hover:shadow-lg"
-              disabled={loading}
-            >
-              {loading ? 'Procesando...' : (isLogin ? 'Iniciar Sesión' : 'Crear Cuenta')}
-            </Button>
-
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsLogin(!isLogin);
-                  setError('');
-                  setFormData({
-                    email: '',
-                    password: '',
-                    firstName: '',
-                    lastName: '',
-                    phone: '',
-                    age: '',
-                    specialization: '',
-                    licenseNumber: ''
-                  });
-                }}
-                className="text-blue-600 hover:text-blue-800 text-sm"
-              >
-                {isLogin ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}
-              </button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="specialization">Especialización</Label>
+                    <div className="relative">
+                      <Stethoscope className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500" size={16} />
+                      <Input
+                        id="specialization"
+                        type="text"
+                        name="specialization"
+                        placeholder="Ej: Psicología Clínica"
+                        className="pl-9"
+                        value={signUpData.specialization}
+                        onChange={handleSignUpChange}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+              {signUpData.userType === "patient" && (
+                <div className="space-y-2">
+                  <Label htmlFor="professionalCode">Código Profesional</Label>
+                  <div className="relative">
+                    <Stethoscope className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500" size={16} />
+                    <Input
+                      id="professionalCode"
+                      type="text"
+                      name="professionalCode"
+                      placeholder="Ingresa el código de tu psicólogo"
+                      className="pl-9"
+                      value={signUpData.professionalCode}
+                      onChange={handleSignUpChange}
+                    />
+                  </div>
+                </div>
+              )}
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Creando cuenta..." : "Crear Cuenta"}
+              </Button>
+            </form>
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
   );
 };
