@@ -52,12 +52,17 @@ export const Calendar = () => {
       console.log('Fetching appointments for psychologist:', psychologist.id);
       console.log('Selected date:', selectedDate.toISOString());
 
-      // Get appointments for the selected date
+      // Get appointments for the selected date with more flexible time range
       const startOfDay = new Date(selectedDate);
       startOfDay.setHours(0, 0, 0, 0);
       
       const endOfDay = new Date(selectedDate);
       endOfDay.setHours(23, 59, 59, 999);
+
+      console.log('Date range:', {
+        start: startOfDay.toISOString(),
+        end: endOfDay.toISOString()
+      });
 
       const { data, error } = await supabase
         .from('appointments')
@@ -82,7 +87,25 @@ export const Calendar = () => {
         return;
       }
 
-      console.log('Fetched appointments:', data);
+      console.log('Fetched appointments for selected date:', data);
+      console.log('Appointments with meetings:', data?.filter(apt => apt.meeting_url));
+      
+      // Also fetch upcoming appointments to debug
+      const now = new Date().toISOString();
+      const { data: upcomingData } = await supabase
+        .from('appointments')
+        .select(`
+          *,
+          patient:patients(first_name, last_name)
+        `)
+        .eq('psychologist_id', psychologist.id)
+        .gte('appointment_date', now)
+        .in('status', ['scheduled', 'confirmed', 'accepted'])
+        .order('appointment_date', { ascending: true })
+        .limit(5);
+      
+      console.log('All upcoming appointments:', upcomingData);
+      
       setAppointments(data || []);
     } catch (error) {
       console.error('Error fetching appointments:', error);
@@ -112,6 +135,7 @@ export const Calendar = () => {
     return appointments.find(apt => {
       const aptDate = new Date(apt.appointment_date);
       const aptTime = aptDate.toTimeString().substring(0, 5);
+      console.log(`Comparing ${aptTime} with ${time} for appointment:`, apt.id);
       return aptTime === time;
     });
   };
@@ -169,6 +193,7 @@ export const Calendar = () => {
     if (day) {
       const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
       setSelectedDate(newDate);
+      console.log('Selected new date:', newDate.toISOString());
     }
   };
 
@@ -330,6 +355,9 @@ export const Calendar = () => {
                   <CalendarIcon className="w-12 h-12 mx-auto mb-3 opacity-50" />
                   <p>No hay citas programadas para este día</p>
                   <p className="text-sm">Las citas aparecerán aquí cuando sean confirmadas</p>
+                  <p className="text-xs text-slate-400 mt-2">
+                    Revisa la consola del navegador para más detalles de debugging
+                  </p>
                 </div>
               )}
             </CardContent>
