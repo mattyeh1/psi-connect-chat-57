@@ -26,9 +26,12 @@ export const Calendar = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Updated time slots to include half-hour intervals
   const timeSlots = [
-    "08:00", "09:00", "10:00", "11:00", "12:00", "13:00",
-    "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"
+    "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
+    "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
+    "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
+    "17:00", "17:30", "18:00", "18:30", "19:00", "19:30"
   ];
 
   const monthNames = [
@@ -89,22 +92,6 @@ export const Calendar = () => {
 
       console.log('Fetched appointments for selected date:', data);
       console.log('Appointments with meetings:', data?.filter(apt => apt.meeting_url));
-      
-      // Also fetch upcoming appointments to debug
-      const now = new Date().toISOString();
-      const { data: upcomingData } = await supabase
-        .from('appointments')
-        .select(`
-          *,
-          patient:patients(first_name, last_name)
-        `)
-        .eq('psychologist_id', psychologist.id)
-        .gte('appointment_date', now)
-        .in('status', ['scheduled', 'confirmed', 'accepted'])
-        .order('appointment_date', { ascending: true })
-        .limit(5);
-      
-      console.log('All upcoming appointments:', upcomingData);
       
       setAppointments(data || []);
     } catch (error) {
