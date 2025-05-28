@@ -210,7 +210,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     console.log('Additional data:', additionalData);
     
     try {
-      // Crear el usuario primero
+      // Crear el usuario SIN auto-confirmación
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -256,8 +256,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           console.error('Exception creating profile:', profileCreationError);
         }
         
-        // Cerrar sesión inmediatamente para evitar auto-login
-        await supabase.auth.signOut();
+        // IMPORTANTE: NO cerrar sesión automáticamente y NO iniciar sesión
+        // El usuario debe verificar su email primero
         
         // Enviar SOLO nuestro email personalizado de verificación
         try {
