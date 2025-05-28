@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -11,16 +12,17 @@ import { PatientManagement } from "@/components/PatientManagement";
 import { Calendar } from "@/components/CalendarView";
 import { MessagingHub } from "@/components/MessagingHub";
 import { PatientPortal } from "@/components/PatientPortal";
-import { AffiliateSystem } from "@/components/AffiliateSystem";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
+type ViewType = "dashboard" | "patients" | "calendar" | "messages" | "portal";
+
 const Index = () => {
   const { user, loading: authLoading, signOut } = useAuth();
   const { profile, psychologist, patient, loading: profileLoading, refetch } = useProfile();
-  const [currentView, setCurrentView] = useState("dashboard");
+  const [currentView, setCurrentView] = useState<ViewType>("dashboard");
   const [isTrialExpired, setIsTrialExpired] = useState(false);
   const [trialChecked, setTrialChecked] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -203,8 +205,6 @@ const Index = () => {
         return <Calendar />;
       case "messages":
         return <MessagingHub />;
-      case "affiliates":
-        return <AffiliateSystem />;
       default:
         return <Dashboard />;
     }
