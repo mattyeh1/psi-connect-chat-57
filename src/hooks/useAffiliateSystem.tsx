@@ -24,7 +24,6 @@ interface AffiliateReferral {
   referred_psychologist: {
     first_name: string;
     last_name: string;
-    email: string;
   };
 }
 
@@ -81,7 +80,15 @@ export const useAffiliateSystem = () => {
       if (referralsError) {
         console.error('Error fetching referrals:', referralsError);
       } else {
-        setReferrals(referralsData || []);
+        // Transformar los datos para que coincidan con la interfaz
+        const transformedReferrals = (referralsData || []).map(ref => ({
+          ...ref,
+          referred_psychologist: {
+            first_name: ref.referred_psychologist?.first_name || '',
+            last_name: ref.referred_psychologist?.last_name || ''
+          }
+        }));
+        setReferrals(transformedReferrals);
       }
 
       // Calcular estadísticas
