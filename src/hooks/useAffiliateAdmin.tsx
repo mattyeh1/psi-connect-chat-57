@@ -173,23 +173,48 @@ export const useAffiliateAdmin = () => {
   const fetchAffiliateReferrals = async () => {
     try {
       console.log('Fetching affiliate referrals...');
-      const { data, error } = await supabase
+      
+      // Primero obtener los referidos básicos
+      const { data: referralsData, error: referralsError } = await supabase
         .from('affiliate_referrals')
         .select(`
           *,
-          affiliate_code:affiliate_codes(code, commission_rate, discount_rate),
-          referrer:referrer_psychologist_id(first_name, last_name, professional_code),
-          referred:referred_psychologist_id(first_name, last_name, professional_code)
+          affiliate_code:affiliate_codes(code, commission_rate, discount_rate)
         `)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching affiliate referrals:', error);
-        throw error;
+      if (referralsError) {
+        console.error('Error fetching affiliate referrals:', referralsError);
+        throw referralsError;
       }
 
-      console.log('Affiliate referrals fetched:', data);
-      setAffiliateReferrals(data || []);
+      // Luego obtener los datos de los psicólogos referidores y referidos
+      const referralsWithPsychologists = await Promise.all(
+        (referralsData || []).map(async (referral) => {
+          // Obtener datos del referidor
+          const { data: referrerData } = await supabase
+            .from('psychologists')
+            .select('first_name, last_name, professional_code')
+            .eq('id', referral.referrer_psychologist_id)
+            .single();
+
+          // Obtener datos del referido
+          const { data: referredData } = await supabase
+            .from('psychologists')
+            .select('first_name, last_name, professional_code')
+            .eq('id', referral.referred_psychologist_id)
+            .single();
+
+          return {
+            ...referral,
+            referrer: referrerData || { first_name: '', last_name: '', professional_code: '' },
+            referred: referredData || { first_name: '', last_name: '', professional_code: '' }
+          };
+        })
+      );
+
+      console.log('Affiliate referrals fetched:', referralsWithPsychologists);
+      setAffiliateReferrals(referralsWithPsychologists);
     } catch (error) {
       console.error('Error fetching affiliate referrals:', error);
       setAffiliateReferrals([]);
