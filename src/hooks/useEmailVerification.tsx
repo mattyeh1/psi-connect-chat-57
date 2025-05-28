@@ -53,23 +53,6 @@ export const useEmailVerification = () => {
         // Verificar el usuario manualmente
         console.log('Attempting to verify user manually...');
         
-        // Primero verificar que el usuario existe en profiles
-        const { data: userData, error: userError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', verificationData.userId)
-          .single();
-
-        if (userError || !userData) {
-          console.error('User not found:', userError);
-          toast({
-            title: "Usuario no encontrado",
-            description: "No se pudo verificar la cuenta. El usuario puede no existir.",
-            variant: "destructive"
-          });
-          return;
-        }
-
         // Marcar el email como verificado usando nuestra función RPC personalizada
         const { error: verifyError } = await supabase.rpc('verify_user_email' as any, {
           user_id: verificationData.userId

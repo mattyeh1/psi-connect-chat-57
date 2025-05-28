@@ -1,4 +1,3 @@
-
 import { useState, useEffect, createContext, useContext } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -65,9 +64,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .single();
 
       if (existingProfile) {
-        console.log('Profile already exists, checking for specific role profile');
+        console.log('Profile exists, checking for specific role profile');
         
-        // Check if we need to create psychologist or patient profile
         const userType = user.user_metadata.user_type;
         
         if (userType === 'psychologist') {
@@ -126,7 +124,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 last_name: user.user_metadata.last_name,
                 psychologist_id: psychologistId,
                 phone: user.user_metadata.phone,
-                age: user.user_metadata.age
+                age: user.user_metadata.age ? parseInt(user.user_metadata.age.toString()) : null
               });
               
               if (patientError) {
