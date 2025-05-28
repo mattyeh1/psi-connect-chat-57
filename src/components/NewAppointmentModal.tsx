@@ -2,14 +2,14 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar, User, Plus } from "lucide-react";
+import { Calendar, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useProfile } from "@/hooks/useProfile";
+import { PatientSelector } from "./forms/PatientSelector";
 
 interface NewAppointmentModalProps {
   onAppointmentCreated: () => void;
@@ -20,9 +20,8 @@ export const NewAppointmentModal = ({ onAppointmentCreated }: NewAppointmentModa
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
+    patientId: "",
     patientName: "",
-    patientEmail: "",
-    patientPhone: "",
     appointmentDate: "",
     appointmentTime: "",
     type: "",
@@ -41,6 +40,14 @@ export const NewAppointmentModal = ({ onAppointmentCreated }: NewAppointmentModa
     return today.toISOString().split('T')[0];
   };
 
+  const handlePatientSelect = (patientId: string, patientName: string) => {
+    setFormData(prev => ({
+      ...prev,
+      patientId,
+      patientName
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -53,7 +60,7 @@ export const NewAppointmentModal = ({ onAppointmentCreated }: NewAppointmentModa
       return;
     }
 
-    if (!formData.appointmentDate || !formData.appointmentTime || !formData.type || !formData.patientName) {
+    if (!formData.appointmentDate || !formData.appointmentTime || !formData.type || !formData.patientId) {
       toast({
         title: "Error",
         description: "Por favor completa todos los campos requeridos",
@@ -68,51 +75,12 @@ export const NewAppointmentModal = ({ onAppointmentCreated }: NewAppointmentModa
       // Crear la fecha y hora del appointment
       const appointmentDateTime = new Date(`${formData.appointmentDate}T${formData.appointmentTime}:00`);
 
-      // Primero crear o buscar el paciente
-      let patientId = '';
-      
-      // Buscar si el paciente ya existe
-      const { data: existingPatient } = await supabase
-        .from('patients')
-        .select('id')
-        .eq('psychologist_id', psychologist.id)
-        .ilike('first_name', formData.patientName.split(' ')[0] || '')
-        .ilike('last_name', formData.patientName.split(' ').slice(1).join(' ') || '')
-        .single();
-
-      if (existingPatient) {
-        patientId = existingPatient.id;
-      } else {
-        // Crear nuevo paciente
-        const nameParts = formData.patientName.split(' ');
-        const firstName = nameParts[0] || '';
-        const lastName = nameParts.slice(1).join(' ') || '';
-
-        const { data: newPatient, error: patientError } = await supabase
-          .from('patients')
-          .insert({
-            psychologist_id: psychologist.id,
-            first_name: firstName,
-            last_name: lastName,
-            phone: formData.patientPhone || null,
-            notes: `Email: ${formData.patientEmail || 'No proporcionado'}`
-          })
-          .select('id')
-          .single();
-
-        if (patientError) {
-          throw new Error('Error al crear el paciente');
-        }
-
-        patientId = newPatient.id;
-      }
-
-      // Crear la cita
+      // Crear la cita directamente con el paciente seleccionado
       const { error: appointmentError } = await supabase
         .from('appointments')
         .insert({
           psychologist_id: psychologist.id,
-          patient_id: patientId,
+          patient_id: formData.patientId,
           appointment_date: appointmentDateTime.toISOString(),
           type: formData.type,
           status: 'scheduled',
@@ -120,6 +88,7 @@ export const NewAppointmentModal = ({ onAppointmentCreated }: NewAppointmentModa
         });
 
       if (appointmentError) {
+        console.error('Error creating appointment:', appointmentError);
         throw new Error('Error al crear la cita');
       }
 
@@ -130,9 +99,8 @@ export const NewAppointmentModal = ({ onAppointmentCreated }: NewAppointmentModa
 
       // Resetear formulario y cerrar modal
       setFormData({
+        patientId: "",
         patientName: "",
-        patientEmail: "",
-        patientPhone: "",
         appointmentDate: "",
         appointmentTime: "",
         type: "",
@@ -181,47 +149,22 @@ export const NewAppointmentModal = ({ onAppointmentCreated }: NewAppointmentModa
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="patientName">Nombre del paciente *</Label>
-            <Input
-              id="patientName"
-              value={formData.patientName}
-              onChange={(e) => setFormData({...formData, patientName: e.target.value})}
-              placeholder="Nombre completo del paciente"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="patientEmail">Email del paciente</Label>
-            <Input
-              id="patientEmail"
-              type="email"
-              value={formData.patientEmail}
-              onChange={(e) => setFormData({...formData, patientEmail: e.target.value})}
-              placeholder="email@ejemplo.com"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="patientPhone">Teléfono del paciente</Label>
-            <Input
-              id="patientPhone"
-              value={formData.patientPhone}
-              onChange={(e) => setFormData({...formData, patientPhone: e.target.value})}
-              placeholder="+54 11 1234-5678"
-            />
-          </div>
+          <PatientSelector
+            selectedPatientId={formData.patientId}
+            onPatientSelect={handlePatientSelect}
+            required={true}
+          />
 
           <div className="space-y-2">
             <Label htmlFor="appointmentDate">Fecha *</Label>
-            <Input
+            <input
               id="appointmentDate"
               type="date"
               value={formData.appointmentDate}
               onChange={(e) => setFormData({...formData, appointmentDate: e.target.value})}
               min={getMinDate()}
               required
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
 
@@ -255,10 +198,7 @@ export const NewAppointmentModal = ({ onAppointmentCreated }: NewAppointmentModa
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="individual">
-                  <div className="flex items-center gap-2">
-                    <User className="w-4 h-4" />
-                    {getTypeLabel("individual")}
-                  </div>
+                  {getTypeLabel("individual")}
                 </SelectItem>
                 <SelectItem value="couple">
                   {getTypeLabel("couple")}

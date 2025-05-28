@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar, Clock, MessageSquare, User, Search, Phone } from "lucide-react";
+import { Calendar, Clock, MessageSquare, User, Search, Phone, FileText } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -350,7 +350,7 @@ export const PatientPortal = () => {
                 <p className="text-sm text-slate-600">Sin leer</p>
               </div>
               <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 flex items-center justify-center">
-                <MessageCircle className="w-6 h-6 text-white" />
+                <MessageSquare className="w-6 h-6 text-white" />
               </div>
             </div>
           </CardContent>
@@ -411,7 +411,13 @@ export const PatientPortal = () => {
                   <p className="text-sm">Solicita una nueva cita usando el botón de abajo</p>
                 </div>
               )}
-              <AppointmentRequestForm onSuccess={fetchPatientData} />
+              {patient && (
+                <AppointmentRequestForm 
+                  psychologistId=""
+                  patientId={patient.id}
+                  onSuccess={fetchPatientData} 
+                />
+              )}
             </div>
           </CardContent>
         </Card>
@@ -420,7 +426,7 @@ export const PatientPortal = () => {
         <Card className="border-0 shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-slate-800">
-              <MessageCircle className="w-5 h-5" />
+              <MessageSquare className="w-5 h-5" />
               Mensajes Recientes
             </CardTitle>
           </CardHeader>
@@ -431,13 +437,13 @@ export const PatientPortal = () => {
                   <div key={message.id} className="p-4 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer">
                     <div className="flex justify-between items-start mb-2">
                       <p className="font-semibold text-slate-800 text-sm">
-                        {message.sender_id === patient.id ? 'Tú' : 'Tu psicólogo'}
+                        {message.sender_id === patient?.id ? 'Tú' : 'Tu psicólogo'}
                       </p>
                       <div className="flex items-center gap-2">
                         <p className="text-xs text-slate-500">
                           {formatDateLong(message.created_at)}
                         </p>
-                        {!message.read_at && message.sender_id !== patient.id && (
+                        {!message.read_at && message.sender_id !== patient?.id && (
                           <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                         )}
                       </div>
@@ -447,7 +453,7 @@ export const PatientPortal = () => {
                 ))
               ) : (
                 <div className="text-center py-8 text-slate-500">
-                  <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
                   <p>No tienes mensajes</p>
                   <p className="text-sm">Aquí aparecerán los mensajes de tu psicólogo</p>
                 </div>
@@ -480,7 +486,7 @@ export const PatientPortal = () => {
         </CardContent>
       </Card>
 
-      {selectedPsychologist && (
+      {selectedPsychologist && patient && (
         <Card className="border-0 shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-slate-800">
@@ -491,10 +497,10 @@ export const PatientPortal = () => {
           <CardContent>
             <AppointmentRequestForm
               psychologistId={selectedPsychologist.id}
-              patientId={patient?.id || ''}
+              patientId={patient.id}
               onSuccess={async () => {
                 setSelectedPsychologist(null);
-                await fetchAppointments();
+                await fetchPatientData();
               }}
             />
           </CardContent>
