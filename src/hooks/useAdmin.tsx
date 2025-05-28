@@ -71,59 +71,87 @@ export const useAdmin = () => {
     try {
       console.log('Fetching psychologist stats...');
       
-      // Primero intentamos con la vista psychologist_stats
-      let { data: statsData, error: statsError } = await supabase
-        .from('psychologist_stats')
+      // Intentar obtener datos directamente de las tablas
+      console.log('Querying psychologists table directly...');
+      const { data: psychologistData, error: psychologistError } = await supabase
+        .from('psychologists')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (statsError) {
-        console.error('Error fetching from psychologist_stats view:', statsError);
-        
-        // Si falla la vista, intentamos directamente desde las tablas
-        console.log('Trying direct table query...');
-        const { data: directData, error: directError } = await supabase
-          .from('psychologists')
-          .select(`
-            *,
-            profiles!inner(email)
-          `)
-          .order('created_at', { ascending: false });
+      console.log('Psychologists query result:', { psychologistData, psychologistError });
 
-        if (directError) {
-          console.error('Error fetching direct psychologist data:', directError);
-          throw directError;
-        }
-
-        // Transformar los datos para que coincidan con el formato esperado
-        const transformedData = directData?.map(psychologist => ({
-          id: psychologist.id,
-          first_name: psychologist.first_name,
-          last_name: psychologist.last_name,
-          email: psychologist.profiles?.email || '',
-          professional_code: psychologist.professional_code,
-          subscription_status: psychologist.subscription_status || 'trial',
-          trial_start_date: psychologist.trial_start_date,
-          trial_end_date: psychologist.trial_end_date,
-          subscription_end_date: psychologist.subscription_end_date,
-          created_at: psychologist.created_at,
-          trial_days_remaining: psychologist.trial_end_date 
-            ? Math.max(0, Math.ceil((new Date(psychologist.trial_end_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))
-            : 0,
-          subscription_days_remaining: psychologist.subscription_end_date 
-            ? Math.max(0, Math.ceil((new Date(psychologist.subscription_end_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))
-            : 0,
-          is_expired: psychologist.subscription_status === 'expired' || 
-                     (psychologist.subscription_status === 'trial' && new Date(psychologist.trial_end_date) < new Date()) ||
-                     (psychologist.subscription_status === 'active' && psychologist.subscription_end_date && new Date(psychologist.subscription_end_date) < new Date())
-        })) || [];
-
-        console.log('Direct query result:', transformedData);
-        setPsychologistStats(transformedData);
-      } else {
-        console.log('Stats view query result:', statsData);
-        setPsychologistStats(statsData || []);
+      if (psychologistError) {
+        console.error('Error fetching psychologists:', psychologistError);
+        throw psychologistError;
       }
+
+      if (!psychologistData || psychologistData.length === 0) {
+        console.log('No psychologists found in database');
+        setPsychologistStats([]);
+        return;
+      }
+
+      console.log('Found psychologists:', psychologistData.length);
+
+      // Obtener emails de la tabla profiles
+      const psychologistIds = psychologistData.map(p => p.id);
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, email')
+        .in('id', psychologistIds);
+
+      console.log('Profiles query result:', { profilesData, profilesError });
+
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+      }
+
+      // Crear un mapa de emails
+      const emailMap = new Map();
+      if (profilesData) {
+        profilesData.forEach(profile => {
+          emailMap.set(profile.id, profile.email);
+        });
+      }
+
+      // Transformar los datos
+      const transformedData = psychologistData.map(psychologist => {
+        const email = emailMap.get(psychologist.id) || 'No email';
+        const trialEndDate = psychologist.trial_end_date ? new Date(psychologist.trial_end_date) : null;
+        const subscriptionEndDate = psychologist.subscription_end_date ? new Date(psychologist.subscription_end_date) : null;
+        const now = new Date();
+
+        const trialDaysRemaining = trialEndDate 
+          ? Math.max(0, Math.ceil((trialEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+          : 0;
+
+        const subscriptionDaysRemaining = subscriptionEndDate 
+          ? Math.max(0, Math.ceil((subscriptionEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+          : 0;
+
+        const isExpired = psychologist.subscription_status === 'expired' || 
+                         (psychologist.subscription_status === 'trial' && trialEndDate && trialEndDate < now) ||
+                         (psychologist.subscription_status === 'active' && subscriptionEndDate && subscriptionEndDate < now);
+
+        return {
+          id: psychologist.id,
+          first_name: psychologist.first_name || 'Sin nombre',
+          last_name: psychologist.last_name || 'Sin apellido',
+          email: email,
+          professional_code: psychologist.professional_code || 'Sin código',
+          subscription_status: psychologist.subscription_status || 'trial',
+          trial_start_date: psychologist.trial_start_date || '',
+          trial_end_date: psychologist.trial_end_date || '',
+          subscription_end_date: psychologist.subscription_end_date || '',
+          created_at: psychologist.created_at || '',
+          trial_days_remaining: trialDaysRemaining,
+          subscription_days_remaining: subscriptionDaysRemaining,
+          is_expired: isExpired
+        };
+      });
+
+      console.log('Transformed data:', transformedData);
+      setPsychologistStats(transformedData);
 
     } catch (error) {
       console.error('Error fetching psychologist stats:', error);
