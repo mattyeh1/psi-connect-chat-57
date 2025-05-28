@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useProfile } from '@/hooks/useProfile';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface ProfileSetupProps {
   userType: 'psychologist' | 'patient';
@@ -13,7 +14,7 @@ interface ProfileSetupProps {
 }
 
 export const ProfileSetup = ({ userType, onComplete }: ProfileSetupProps) => {
-  const { createPsychologistProfile, createPatientProfile } = useProfile();
+  const { createPatientProfile, refetch } = useProfile();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [professionalCode, setProfessionalCode] = useState('');
@@ -65,6 +66,50 @@ export const ProfileSetup = ({ userType, onComplete }: ProfileSetupProps) => {
     }
   };
 
+  const updatePsychologistProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('Usuario no autenticado');
+      }
+
+      console.log('Updating psychologist profile for user:', user.id);
+      console.log('Update data:', formData);
+
+      // Update the existing psychologist profile
+      const { data: result, error: updateError } = await supabase
+        .from('psychologists')
+        .update({
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          phone: formData.phone || null,
+          specialization: formData.specialization || null,
+          license_number: formData.licenseNumber || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('Error updating psychologist profile:', updateError);
+        throw new Error(`Error al actualizar perfil: ${updateError.message}`);
+      }
+
+      console.log('Psychologist profile updated successfully:', result);
+      
+      toast({
+        title: "Perfil actualizado",
+        description: "Tu perfil de psicólogo ha sido actualizado exitosamente",
+      });
+
+      return { data: result, error: null };
+    } catch (error: any) {
+      console.error('Exception updating psychologist profile:', error);
+      throw error;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -75,19 +120,8 @@ export const ProfileSetup = ({ userType, onComplete }: ProfileSetupProps) => {
 
     try {
       if (userType === 'psychologist') {
-        console.log('Creating psychologist profile');
-        const result = await createPsychologistProfile({
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          phone: formData.phone,
-          specialization: formData.specialization,
-          license_number: formData.licenseNumber
-        });
-
-        console.log('Psychologist profile creation result:', result);
-        if (result.error) {
-          throw new Error(result.error);
-        }
+        console.log('Updating psychologist profile');
+        await updatePsychologistProfile();
       } else {
         if (!psychologistId) {
           throw new Error('Invalid professional code - no psychologist ID found');
@@ -110,6 +144,11 @@ export const ProfileSetup = ({ userType, onComplete }: ProfileSetupProps) => {
       }
 
       console.log('Profile setup completed successfully');
+      
+      // Refetch profile data to update cache
+      refetch();
+      
+      // Complete the setup
       onComplete();
     } catch (error: any) {
       console.error('Profile setup error:', error);
