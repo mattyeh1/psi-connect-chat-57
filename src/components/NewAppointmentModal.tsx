@@ -198,7 +198,7 @@ export const NewAppointmentModal = ({ onAppointmentCreated }: NewAppointmentModa
               </SelectTrigger>
               <SelectContent>
                 {slotsLoading ? (
-                  <SelectItem value="" disabled>Cargando horarios...</SelectItem>
+                  <div className="p-2 text-sm text-muted-foreground">Cargando horarios...</div>
                 ) : availableSlots.length > 0 ? (
                   availableSlots.map((time) => (
                     <SelectItem key={time} value={time}>
@@ -206,9 +206,9 @@ export const NewAppointmentModal = ({ onAppointmentCreated }: NewAppointmentModa
                     </SelectItem>
                   ))
                 ) : formData.appointmentDate ? (
-                  <SelectItem value="" disabled>No hay horarios disponibles para esta fecha</SelectItem>
+                  <div className="p-2 text-sm text-muted-foreground">No hay horarios disponibles para esta fecha</div>
                 ) : (
-                  <SelectItem value="" disabled>Selecciona primero una fecha</SelectItem>
+                  <div className="p-2 text-sm text-muted-foreground">Selecciona primero una fecha</div>
                 )}
               </SelectContent>
             </Select>
@@ -266,7 +266,7 @@ export const NewAppointmentModal = ({ onAppointmentCreated }: NewAppointmentModa
             </Button>
             <Button
               type="submit"
-              disabled={loading || slotsLoading}
+              disabled={loading || slotsLoading || availableSlots.length === 0}
               className="flex-1 bg-gradient-to-r from-blue-500 to-emerald-500"
             >
               {loading ? "Creando..." : "Crear Cita"}
