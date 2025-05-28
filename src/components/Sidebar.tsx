@@ -1,5 +1,6 @@
+
 import { cn } from "@/lib/utils";
-import { Calendar, MessageCircle, Users, BarChart3, Settings, Home, LogOut } from "lucide-react";
+import { Calendar, MessageCircle, Users, BarChart3, Settings, Home, LogOut, UserCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
@@ -28,6 +29,7 @@ export const Sidebar = ({ currentView, onViewChange }: SidebarProps) => {
     { id: "patients", label: "Pacientes", icon: Users },
     { id: "calendar", label: "Calendario", icon: Calendar },
     { id: "messages", label: "Mensajes", icon: MessageCircle },
+    { id: "affiliates", label: "Afiliados", icon: UserCheck },
   ];
 
   const handleLogout = async () => {

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -16,6 +17,7 @@ import { ProfessionalCodeDisplay } from "./ProfessionalCodeDisplay";
 import { TrialStatus } from "./TrialStatus";
 import { MeetingLinksCard } from "./MeetingLinksCard";
 import { SettingsModal } from "./SettingsModal";
+import { AffiliateSystem } from "./AffiliateSystem";
 
 export const Dashboard = () => {
   const { user } = useAuth();
@@ -109,13 +111,14 @@ export const Dashboard = () => {
 
               {/* Main Dashboard Tabs */}
               <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                <TabsList className="grid w-full grid-cols-6 my-[28px]">
+                <TabsList className="grid w-full grid-cols-7 my-[28px]">
                   <TabsTrigger value="overview">Resumen</TabsTrigger>
                   <TabsTrigger value="calendar">Calendario</TabsTrigger>
                   <TabsTrigger value="patients">Pacientes</TabsTrigger>
                   <TabsTrigger value="messages">Mensajes</TabsTrigger>
                   <TabsTrigger value="documents">Documentos</TabsTrigger>
                   <TabsTrigger value="requests">Solicitudes</TabsTrigger>
+                  <TabsTrigger value="affiliates">Afiliados</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="overview" className="space-y-6">
@@ -256,6 +259,10 @@ export const Dashboard = () => {
 
                 <TabsContent value="requests">
                   <AppointmentRequests />
+                </TabsContent>
+
+                <TabsContent value="affiliates">
+                  <AffiliateSystem />
                 </TabsContent>
               </Tabs>
             </>

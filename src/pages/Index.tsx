@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -11,12 +12,13 @@ import { PatientManagement } from "@/components/PatientManagement";
 import { Calendar } from "@/components/CalendarView";
 import { MessagingHub } from "@/components/MessagingHub";
 import { PatientPortal } from "@/components/PatientPortal";
+import { AffiliateSystem } from "@/components/AffiliateSystem";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
-type ViewType = "dashboard" | "patients" | "calendar" | "messages" | "portal";
+type ViewType = "dashboard" | "patients" | "calendar" | "messages" | "portal" | "affiliates";
 
 const Index = () => {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -81,6 +83,10 @@ const Index = () => {
     } finally {
       setIsLoggingOut(false);
     }
+  };
+
+  const handleViewChange = (view: ViewType) => {
+    setCurrentView(view);
   };
 
   // Show loading during initial authentication check
@@ -214,6 +220,8 @@ const Index = () => {
         return <Calendar />;
       case "messages":
         return <MessagingHub />;
+      case "affiliates":
+        return <AffiliateSystem />;
       default:
         return <Dashboard />;
     }
@@ -227,7 +235,10 @@ const Index = () => {
       )}
 
       {profile.user_type === "psychologist" && (
-        <Sidebar currentView={currentView} onViewChange={setCurrentView} />
+        <Sidebar 
+          currentView={currentView} 
+          onViewChange={handleViewChange}
+        />
       )}
       
       <main className={`flex-1 ${profile.user_type === "psychologist" ? "ml-64" : ""}`}>
