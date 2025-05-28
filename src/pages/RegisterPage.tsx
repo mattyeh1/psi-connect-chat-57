@@ -31,27 +31,13 @@ export const RegisterPage = () => {
   const validateAffiliateCode = async (code: string) => {
     try {
       setValidatingCode(true);
-      console.log('Validating affiliate code:', code);
       
-      // First check if any codes exist at all for debugging
-      const { data: allCodes, error: allCodesError } = await supabase
-        .from('affiliate_codes')
-        .select('code, is_active')
-        .limit(10);
-      
-      console.log('All affiliate codes (first 10):', allCodes, allCodesError);
-      
-      // First get the affiliate code
+      // Get the affiliate code
       const { data: affiliateData, error: affiliateError } = await supabase
         .from('affiliate_codes')
         .select('code, discount_rate, psychologist_id, is_active')
         .eq('code', code)
         .maybeSingle();
-
-      console.log('Affiliate data response:', affiliateData, affiliateError);
-      console.log('Searching for code:', code);
-      console.log('Code found:', affiliateData ? 'YES' : 'NO');
-      console.log('Is active:', affiliateData?.is_active);
 
       if (affiliateError) {
         console.error('Error fetching affiliate code:', affiliateError);
@@ -60,18 +46,16 @@ export const RegisterPage = () => {
       }
 
       if (!affiliateData) {
-        console.log('No affiliate data found for code:', code);
         setCodeValidationComplete(true);
         return;
       }
 
       if (!affiliateData.is_active) {
-        console.log('Affiliate code is not active:', code);
         setCodeValidationComplete(true);
         return;
       }
 
-      // Then get the psychologist info separately
+      // Get the psychologist info separately
       let psychologistName = undefined;
       if (affiliateData.psychologist_id) {
         const { data: psychologistData, error: psychologistError } = await supabase
@@ -79,8 +63,6 @@ export const RegisterPage = () => {
           .select('first_name, last_name')
           .eq('id', affiliateData.psychologist_id)
           .maybeSingle();
-
-        console.log('Psychologist data:', psychologistData, psychologistError);
 
         if (!psychologistError && psychologistData) {
           psychologistName = `${psychologistData.first_name} ${psychologistData.last_name}`;
