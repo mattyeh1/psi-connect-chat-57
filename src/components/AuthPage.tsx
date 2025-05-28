@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -75,34 +74,26 @@ export const AuthPage = ({ affiliateCode, registrationOnly = false }: AuthPagePr
     }
 
     try {
-      let metadata: any = {
+      const metadata = {
         user_type: signUpData.userType,
         first_name: signUpData.firstName,
         last_name: signUpData.lastName,
-        phone: signUpData.phone
-      };
-
-      // Add affiliate code to metadata if present
-      if (affiliateCode) {
-        metadata.affiliate_code = affiliateCode;
-      }
-
-      if (signUpData.userType === 'psychologist') {
-        metadata = {
-          ...metadata,
+        phone: signUpData.phone,
+        ...(affiliateCode && { affiliate_code: affiliateCode }),
+        ...(signUpData.userType === 'psychologist' && {
           license_number: signUpData.licenseNumber,
           specialization: signUpData.specialization
-        };
-      } else if (signUpData.userType === 'patient') {
-        metadata = {
-          ...metadata,
+        }),
+        ...(signUpData.userType === 'patient' && {
           professional_code: signUpData.professionalCode
-        };
-      }
+        })
+      };
 
-      const result = await signUp(signUpData.email, signUpData.password, metadata);
+      console.log('Attempting sign up with metadata:', metadata);
+
+      const result = await signUp(signUpData.email, signUpData.password, signUpData.userType, metadata);
       
-      if (result?.user) {
+      if (result?.data?.user) {
         toast({
           title: "Cuenta creada",
           description: "Tu cuenta ha sido creada exitosamente. Revisa tu email para verificar tu cuenta.",
