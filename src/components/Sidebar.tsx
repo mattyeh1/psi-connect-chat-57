@@ -1,4 +1,3 @@
-
 import {
   BarChart3,
   Calendar,
@@ -56,13 +55,7 @@ export const Sidebar = ({ activeTab, setActiveTab }: SidebarProps) => {
         </div>
 
         {/* Professional Code Display */}
-        {psychologist && (
-          <div className="p-4">
-            <ProfessionalCodeDisplay 
-              code={psychologist.professional_code} 
-            />
-          </div>
-        )}
+        {psychologist && <ProfessionalCodeDisplay />}
 
         {/* Trial Status */}
         <TrialStatus />

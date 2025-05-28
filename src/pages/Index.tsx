@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -7,7 +6,7 @@ import { AuthPage } from "@/components/AuthPage";
 import { ProfileSetup } from "@/components/ProfileSetup";
 import { TrialExpiredModal } from "@/components/TrialExpiredModal";
 import { Sidebar } from "@/components/Sidebar";
-import Dashboard from "@/components/Dashboard";
+import { Dashboard } from "@/components/Dashboard";
 import { PatientManagement } from "@/components/PatientManagement";
 import { Calendar } from "@/components/CalendarView";
 import { MessagingHub } from "@/components/MessagingHub";
@@ -63,6 +62,7 @@ const Index = () => {
 
   const handleNavigateToMessages = (patientId?: string) => {
     setCurrentView("messages");
+    // You could add logic here to select the specific patient's conversation
     console.log('Navigating to messages for patient:', patientId);
   };
 
@@ -117,8 +117,9 @@ const Index = () => {
     return <AuthPage />;
   }
 
-  // Handle admin users differently
+  // Handle admin users differently - redirect them to admin login/dashboard
   if (profile && profile.user_type === 'admin') {
+    // For admin users, redirect to admin interface
     window.location.href = '/admin/dashboard';
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
@@ -135,6 +136,7 @@ const Index = () => {
     if (!profile || profileLoading) return false;
     
     if (profile.user_type === 'psychologist') {
+      // Check if psychologist profile exists and has required fields
       const hasCompleteProfile = psychologist && psychologist.first_name && psychologist.last_name;
       
       console.log('Checking psychologist profile setup:', {
@@ -143,6 +145,8 @@ const Index = () => {
         subscription_status: psychologist?.subscription_status
       });
       
+      // If psychologist has complete profile data, NEVER ask for profile setup again
+      // regardless of subscription status
       if (hasCompleteProfile) {
         console.log('Psychologist has complete profile, skipping profile setup');
         return false;
@@ -150,13 +154,16 @@ const Index = () => {
       
       return !hasCompleteProfile;
     } else if (profile.user_type === 'patient') {
+      // Check if patient profile exists and has required fields
       const hasCompleteProfile = patient && patient.first_name && patient.last_name && patient.psychologist_id;
       return !hasCompleteProfile;
     }
     
+    // For any other user type, don't show profile setup
     return false;
   };
   
+  // Only show profile setup if we're not loading and actually need setup
   if (!profileLoading && needsProfileSetup()) {
     return (
       <ProfileSetup 
@@ -169,6 +176,7 @@ const Index = () => {
     );
   }
 
+  // If we're still loading profile but have a profile, show loading state
   if (profileLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
@@ -185,6 +193,7 @@ const Index = () => {
       return <PatientPortal />;
     }
 
+    // Bloquear acceso si el trial ha expirado
     if (isTrialExpired) {
       return (
         <div className="flex items-center justify-center min-h-96">
@@ -212,12 +221,13 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex">
+      {/* Modal de trial expirado para psicólogos */}
       {profile.user_type === "psychologist" && isTrialExpired && (
         <TrialExpiredModal onUpgrade={handleUpgrade} />
       )}
 
       {profile.user_type === "psychologist" && (
-        <Sidebar activeTab={currentView} setActiveTab={setCurrentView} />
+        <Sidebar currentView={currentView} onViewChange={setCurrentView} />
       )}
       
       <main className={`flex-1 ${profile.user_type === "psychologist" ? "ml-64" : ""}`}>
