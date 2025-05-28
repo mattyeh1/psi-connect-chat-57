@@ -244,7 +244,7 @@ export const AppointmentRequests = ({ onRequestProcessed }: AppointmentRequestsP
       toast({
         title: `Solicitud ${actionLabel}`,
         description: action === 'approved' 
-          ? 'La cita ha sido creada con reunión virtual incluida.'
+          ? 'La cita ha sido creada con reunión virtual incluida. El horario ahora está bloqueado para otros pacientes.'
           : 'La solicitud de cita ha sido rechazada.',
       });
 

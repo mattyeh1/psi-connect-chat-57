@@ -1,95 +1,116 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar, Plus } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar, Clock, User, Send, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { useProfile } from "@/hooks/useProfile";
-
-interface AppointmentRequestFormData {
-  preferred_date: string;
-  preferred_time: string;
-  type: string;
-  notes: string;
-}
+import { useAvailableSlots } from "@/hooks/useAvailableSlots";
 
 interface AppointmentRequestFormProps {
+  psychologistId: string;
+  patientId: string;
   onSuccess?: () => void;
 }
 
-export const AppointmentRequestForm = ({ onSuccess }: AppointmentRequestFormProps) => {
-  const { patient } = useProfile();
-  const [isOpen, setIsOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+export const AppointmentRequestForm = ({ 
+  psychologistId, 
+  patientId, 
+  onSuccess 
+}: AppointmentRequestFormProps) => {
+  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedTime, setSelectedTime] = useState("");
+  const [appointmentType, setAppointmentType] = useState("");
+  const [notes, setNotes] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const form = useForm<AppointmentRequestFormData>({
-    defaultValues: {
-      preferred_date: "",
-      preferred_time: "",
-      type: "individual",
-      notes: ""
-    }
+  const {
+    bookedSlots,
+    loading: slotsLoading,
+    isSlotAvailable,
+    getAvailableSlots,
+    refreshAvailability
+  } = useAvailableSlots({
+    psychologistId,
+    selectedDate
   });
 
-  const onSubmit = async (data: AppointmentRequestFormData) => {
-    if (!patient?.id || !patient?.psychologist_id) {
-      toast({
-        title: "Error",
-        description: "No se pudo identificar al paciente o al psicólogo asignado",
-        variant: "destructive"
-      });
-      return;
+  // Refresh availability when date changes
+  useEffect(() => {
+    if (selectedDate) {
+      setSelectedTime(""); // Reset selected time when date changes
+      refreshAvailability();
     }
+  }, [selectedDate, refreshAvailability]);
 
-    // Validar que la fecha sea futura
-    const selectedDate = new Date(data.preferred_date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    if (selectedDate < today) {
+    if (!selectedDate || !selectedTime || !appointmentType) {
       toast({
         title: "Error",
-        description: "La fecha seleccionada debe ser futura",
+        description: "Por favor completa todos los campos requeridos",
         variant: "destructive"
       });
       return;
     }
 
-    setIsSubmitting(true);
+    // Double-check availability before submitting
+    if (!isSlotAvailable(selectedTime)) {
+      toast({
+        title: "Horario no disponible",
+        description: "Este horario ya no está disponible. Por favor selecciona otro.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
 
     try {
+      console.log('Submitting appointment request:', {
+        patient_id: patientId,
+        psychologist_id: psychologistId,
+        preferred_date: selectedDate,
+        preferred_time: selectedTime,
+        type: appointmentType,
+        notes: notes || null
+      });
+
       const { error } = await supabase
         .from('appointment_requests')
         .insert({
-          patient_id: patient.id,
-          psychologist_id: patient.psychologist_id,
-          preferred_date: data.preferred_date,
-          preferred_time: data.preferred_time,
-          type: data.type,
-          notes: data.notes || null,
-          status: 'pending'
+          patient_id: patientId,
+          psychologist_id: psychologistId,
+          preferred_date: selectedDate,
+          preferred_time: selectedTime,
+          type: appointmentType,
+          notes: notes || null
         });
 
       if (error) {
         console.error('Error creating appointment request:', error);
-        throw new Error('No se pudo enviar la solicitud');
+        throw new Error('No se pudo crear la solicitud de cita');
       }
 
       toast({
-        title: "¡Solicitud enviada!",
-        description: "Tu solicitud de cita ha sido enviada exitosamente. Tu psicólogo la revisará pronto.",
+        title: "Solicitud enviada",
+        description: "Tu solicitud de cita ha sido enviada al profesional. Te notificaremos cuando sea respondida."
       });
 
-      form.reset();
-      setIsOpen(false);
+      // Reset form
+      setSelectedDate("");
+      setSelectedTime("");
+      setAppointmentType("");
+      setNotes("");
+      
       onSuccess?.();
     } catch (error) {
-      console.error('Error creating appointment request:', error);
+      console.error('Error submitting appointment request:', error);
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       toast({
         title: "Error",
@@ -97,183 +118,178 @@ export const AppointmentRequestForm = ({ onSuccess }: AppointmentRequestFormProp
         variant: "destructive"
       });
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
-  // Generate time slots from 8:00 to 19:00
-  const generateTimeSlots = () => {
-    const slots = [];
-    for (let hour = 8; hour <= 19; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
-        const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-        slots.push(timeString);
-      }
-    }
-    return slots;
+  const getTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      individual: "Terapia Individual",
+      couple: "Terapia de Pareja",
+      family: "Terapia Familiar",
+      evaluation: "Evaluación",
+      follow_up: "Seguimiento"
+    };
+    return labels[type] || type;
   };
 
-  const timeSlots = generateTimeSlots();
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "";
+    try {
+      return new Date(dateString).toLocaleDateString('es-ES', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch {
+      return dateString;
+    }
+  };
 
-  // Get tomorrow's date as minimum selectable date
+  // Get minimum date (today)
   const getMinDate = () => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return tomorrow.toISOString().split('T')[0];
+    const today = new Date();
+    return today.toISOString().split('T')[0];
   };
 
-  // Get max date (6 months from now)
-  const getMaxDate = () => {
-    const maxDate = new Date();
-    maxDate.setMonth(maxDate.getMonth() + 6);
-    return maxDate.toISOString().split('T')[0];
-  };
-
-  const appointmentTypes = [
-    { value: "individual", label: "Terapia Individual" },
-    { value: "couple", label: "Terapia de Pareja" },
-    { value: "family", label: "Terapia Familiar" },
-    { value: "evaluation", label: "Evaluación" },
-    { value: "follow_up", label: "Seguimiento" }
-  ];
+  // Get available time slots for display
+  const availableSlots = getAvailableSlots();
 
   return (
-    <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <SheetTrigger asChild>
-        <Button 
-          className="w-full p-3 border-2 border-dashed border-slate-300 rounded-lg text-slate-600 hover:border-blue-400 hover:text-blue-600 transition-colors flex items-center justify-center gap-2 bg-transparent"
-          variant="outline"
-        >
-          <Plus className="w-4 h-4" />
-          Solicitar nueva cita
-        </Button>
-      </SheetTrigger>
-      <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5" />
-            Solicitar Nueva Cita
-          </SheetTitle>
-          <SheetDescription>
-            Completa el formulario para solicitar una nueva cita con tu psicólogo.
-          </SheetDescription>
-        </SheetHeader>
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-6">
-            <FormField
-              control={form.control}
-              name="preferred_date"
-              rules={{ required: "Selecciona una fecha" }}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Fecha Preferida</FormLabel>
-                  <FormControl>
-                    <input
-                      type="date"
-                      min={getMinDate()}
-                      max={getMaxDate()}
-                      className="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+    <Card className="border-0 shadow-lg">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-slate-800">
+          <Calendar className="w-5 h-5" />
+          Solicitar Cita
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="date">Fecha preferida</Label>
+            <Input
+              id="date"
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              min={getMinDate()}
+              required
+              className="w-full"
             />
+            {selectedDate && (
+              <p className="text-sm text-slate-600">
+                {formatDate(selectedDate)}
+              </p>
+            )}
+          </div>
 
-            <FormField
-              control={form.control}
-              name="preferred_time"
-              rules={{ required: "Selecciona una hora" }}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Hora Preferida</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecciona una hora" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {timeSlots.map((time) => (
-                        <SelectItem key={time} value={time}>
-                          {time}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+          <div className="space-y-2">
+            <Label htmlFor="time">Hora preferida</Label>
+            <Select 
+              value={selectedTime} 
+              onValueChange={setSelectedTime}
+              disabled={!selectedDate || slotsLoading}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={
+                  !selectedDate 
+                    ? "Primero selecciona una fecha" 
+                    : slotsLoading 
+                    ? "Cargando horarios..."
+                    : availableSlots.length === 0
+                    ? "No hay horarios disponibles"
+                    : "Selecciona una hora"
+                } />
+              </SelectTrigger>
+              <SelectContent>
+                {availableSlots.map((time) => (
+                  <SelectItem key={time} value={time}>
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      {time}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            {selectedDate && bookedSlots.length > 0 && (
+              <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-amber-800">Horarios ocupados:</p>
+                    <p className="text-sm text-amber-700">
+                      {bookedSlots.join(", ")}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {selectedDate && availableSlots.length === 0 && (
+              <div className="p-3 bg-red-50 rounded-lg border border-red-200">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-600" />
+                  <p className="text-sm text-red-800">
+                    No hay horarios disponibles para esta fecha. Por favor selecciona otra fecha.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="type">Tipo de consulta</Label>
+            <Select value={appointmentType} onValueChange={setAppointmentType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona el tipo de consulta" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="individual">
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    {getTypeLabel("individual")}
+                  </div>
+                </SelectItem>
+                <SelectItem value="couple">
+                  {getTypeLabel("couple")}
+                </SelectItem>
+                <SelectItem value="family">
+                  {getTypeLabel("family")}
+                </SelectItem>
+                <SelectItem value="evaluation">
+                  {getTypeLabel("evaluation")}
+                </SelectItem>
+                <SelectItem value="follow_up">
+                  {getTypeLabel("follow_up")}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notas adicionales (opcional)</Label>
+            <Textarea
+              id="notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Describe brevemente el motivo de la consulta o cualquier información adicional..."
+              className="min-h-[100px]"
             />
+          </div>
 
-            <FormField
-              control={form.control}
-              name="type"
-              rules={{ required: "Selecciona el tipo de sesión" }}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tipo de Sesión</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecciona el tipo" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {appointmentTypes.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notas Adicionales (Opcional)</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Comparte cualquier información adicional sobre la cita..."
-                      className="min-h-[80px] resize-none"
-                      maxLength={500}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="flex gap-3 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsOpen(false)}
-                className="flex-1"
-                disabled={isSubmitting}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className="flex-1 bg-gradient-to-r from-blue-500 to-emerald-500 hover:shadow-lg"
-              >
-                {isSubmitting ? "Enviando..." : "Enviar Solicitud"}
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </SheetContent>
-    </Sheet>
+          <Button 
+            type="submit" 
+            disabled={loading || !selectedDate || !selectedTime || !appointmentType || availableSlots.length === 0}
+            className="w-full bg-gradient-to-r from-blue-500 to-emerald-500 hover:shadow-lg transition-all duration-200"
+          >
+            <Send className="w-4 h-4 mr-2" />
+            {loading ? "Enviando..." : "Enviar Solicitud"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 };
