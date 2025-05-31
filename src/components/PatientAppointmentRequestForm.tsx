@@ -69,7 +69,7 @@ export const PatientAppointmentRequestForm = ({ onRequestCreated }: PatientAppoi
       });
 
       // Crear solicitud de cita (no cita directa)
-      const { error: requestError } = await supabase
+      const { data: insertedData, error: requestError } = await supabase
         .from('appointment_requests')
         .insert({
           patient_id: patient.id,
@@ -79,12 +79,16 @@ export const PatientAppointmentRequestForm = ({ onRequestCreated }: PatientAppoi
           type: formData.type,
           status: 'pending',
           notes: formData.notes || null
-        });
+        })
+        .select()
+        .single();
 
       if (requestError) {
         console.error('Error creating appointment request:', requestError);
         throw new Error('Error al enviar la solicitud de cita');
       }
+
+      console.log('Appointment request created successfully:', insertedData);
 
       toast({
         title: "Solicitud enviada",

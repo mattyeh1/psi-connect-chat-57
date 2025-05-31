@@ -38,6 +38,7 @@ export const AppointmentRequests = ({ onRequestProcessed }: AppointmentRequestsP
 
   useEffect(() => {
     if (psychologist?.id) {
+      console.log('Setting up appointment requests for psychologist:', psychologist.id);
       fetchRequests();
       
       // Set up real-time subscription for new appointment requests
@@ -74,11 +75,14 @@ export const AppointmentRequests = ({ onRequestProcessed }: AppointmentRequestsP
       return () => {
         supabase.removeChannel(channel);
       };
+    } else {
+      console.log('No psychologist ID available for appointment requests');
     }
   }, [psychologist]);
 
   const fetchRequests = async () => {
     if (!psychologist?.id) {
+      console.log('No psychologist ID, skipping fetch');
       setLoading(false);
       return;
     }
@@ -86,6 +90,23 @@ export const AppointmentRequests = ({ onRequestProcessed }: AppointmentRequestsP
     try {
       console.log('Fetching appointment requests for psychologist:', psychologist.id);
       
+      // First, let's check all appointment requests for this psychologist
+      const { data: allRequests, error: allRequestsError } = await supabase
+        .from('appointment_requests')
+        .select(`
+          *,
+          patient:patients(first_name, last_name, phone)
+        `)
+        .eq('psychologist_id', psychologist.id)
+        .order('created_at', { ascending: false });
+
+      if (allRequestsError) {
+        console.error('Error fetching all appointment requests:', allRequestsError);
+      } else {
+        console.log('All appointment requests for psychologist:', allRequests);
+      }
+
+      // Now fetch only pending requests
       const { data, error } = await supabase
         .from('appointment_requests')
         .select(`
@@ -97,7 +118,7 @@ export const AppointmentRequests = ({ onRequestProcessed }: AppointmentRequestsP
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching appointment requests:', error);
+        console.error('Error fetching pending appointment requests:', error);
         toast({
           title: "Error",
           description: "No se pudieron cargar las solicitudes de citas",
@@ -106,7 +127,7 @@ export const AppointmentRequests = ({ onRequestProcessed }: AppointmentRequestsP
         return;
       }
 
-      console.log('Fetched appointment requests:', data);
+      console.log('Fetched pending appointment requests:', data);
       
       const typedRequests = (data || []).map(request => ({
         ...request,
@@ -115,6 +136,7 @@ export const AppointmentRequests = ({ onRequestProcessed }: AppointmentRequestsP
           : null
       }));
 
+      console.log('Typed requests:', typedRequests);
       setRequests(typedRequests);
     } catch (error) {
       console.error('Error fetching appointment requests:', error);
