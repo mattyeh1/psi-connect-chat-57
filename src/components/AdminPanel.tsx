@@ -86,6 +86,9 @@ export const AdminPanel = () => {
         throw error;
       }
 
+      // Esperar un momento para que la DB se actualice
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       // Disparar eventos de actualización
       window.dispatchEvent(new CustomEvent('adminPlanUpdated', {
         detail: { psychologistId: selectedPsychologist, newStatus }
@@ -140,6 +143,9 @@ export const AdminPanel = () => {
         throw error;
       }
 
+      // Esperar un momento para que la DB se actualice
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       // Disparar eventos de actualización
       window.dispatchEvent(new CustomEvent('adminPlanUpdated', {
         detail: { psychologistId: selectedPsychologist, additionalDays: trialDays }
@@ -185,7 +191,7 @@ export const AdminPanel = () => {
       console.log('Psychologist ID:', selectedPsychologist);
       console.log('New plan type:', newPlanType);
 
-      // Actualizar en la base de datos
+      // Actualizar en la base de datos Y ESPERAR QUE TERMINE
       const { error } = await supabase
         .from('psychologists')
         .update({ 
@@ -201,7 +207,23 @@ export const AdminPanel = () => {
 
       console.log('Plan type updated successfully in database');
 
-      // Crear el evento con todos los detalles necesarios
+      // ESPERAR MÁS TIEMPO para que la DB se actualice completamente
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Verificar que el cambio se aplicó
+      const { data: verification, error: verifyError } = await supabase
+        .from('psychologists')
+        .select('plan_type')
+        .eq('id', selectedPsychologist)
+        .single();
+
+      if (verifyError) {
+        console.error('Error verifying update:', verifyError);
+      } else {
+        console.log('Verified plan type in DB:', verification?.plan_type);
+      }
+
+      // AHORA SÍ disparar eventos con todos los detalles
       const eventDetail = { 
         psychologistId: selectedPsychologist, 
         newPlan: newPlanType,
@@ -210,34 +232,30 @@ export const AdminPanel = () => {
       
       console.log('Dispatching events with detail:', eventDetail);
 
-      // Disparar MÚLTIPLES eventos para asegurar que se capture
+      // Disparar eventos secuencialmente para asegurar propagación
       window.dispatchEvent(new CustomEvent('adminPlanUpdated', { detail: eventDetail }));
-      window.dispatchEvent(new CustomEvent('planUpdated', { detail: eventDetail }));
-      window.dispatchEvent(new CustomEvent('forceRefreshCapabilities', { detail: eventDetail }));
       
-      // Disparar eventos adicionales con diferentes delays para asegurar propagación
+      // Esperar un poco y disparar más eventos
       setTimeout(() => {
-        console.log('Dispatching delayed events...');
-        window.dispatchEvent(new CustomEvent('adminPlanUpdated', { detail: eventDetail }));
         window.dispatchEvent(new CustomEvent('planUpdated', { detail: eventDetail }));
         window.dispatchEvent(new CustomEvent('forceRefreshCapabilities', { detail: eventDetail }));
-      }, 50);
+      }, 100);
       
+      // Otro delay para asegurar
       setTimeout(() => {
-        console.log('Dispatching final delayed events...');
         window.dispatchEvent(new CustomEvent('adminPlanUpdated', { detail: eventDetail }));
-        window.dispatchEvent(new CustomEvent('planUpdated', { detail: eventDetail }));
-        window.dispatchEvent(new CustomEvent('forceRefreshCapabilities', { detail: eventDetail }));
-      }, 200);
+      }, 300);
 
       toast({
         title: "Plan actualizado",
         description: `El plan ha sido cambiado a ${newPlanType.toUpperCase()}`,
       });
 
-      // Forzar refresh inmediato y agresivo
-      console.log('Forcing immediate refresh...');
-      await forceRefresh();
+      // Forzar refresh con delay para que los eventos se procesen
+      setTimeout(async () => {
+        console.log('Forcing admin refresh...');
+        await forceRefresh();
+      }, 600);
       
       // Limpiar formulario
       setSelectedPsychologist('');

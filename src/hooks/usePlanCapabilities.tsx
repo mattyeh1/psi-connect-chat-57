@@ -26,14 +26,14 @@ export const usePlanCapabilities = () => {
     }
 
     try {
-      console.log('=== FETCHING PLAN CAPABILITIES (FORCED) ===');
+      console.log('=== FETCHING PLAN CAPABILITIES ===');
       console.log('Psychologist ID:', psychologist.id);
       console.log('Force refresh:', forceRefresh);
       
       setLoading(true);
       setError(null);
       
-      // SIEMPRE hacer una consulta fresca - no cache
+      // SIEMPRE hacer una consulta fresca a la base de datos - sin cache
       const { data, error } = await supabase.rpc('get_plan_capabilities', {
         psychologist_id: psychologist.id
       });
@@ -43,7 +43,7 @@ export const usePlanCapabilities = () => {
         throw error;
       }
 
-      console.log('Raw capabilities data:', data);
+      console.log('Raw capabilities data from DB:', data);
       
       let validCapabilities: PlanCapabilities;
       
@@ -69,7 +69,7 @@ export const usePlanCapabilities = () => {
         };
       }
       
-      console.log('Final capabilities:', validCapabilities);
+      console.log('Final capabilities set:', validCapabilities);
       setCapabilities(validCapabilities);
       
     } catch (err) {
@@ -87,35 +87,51 @@ export const usePlanCapabilities = () => {
   // Escuchar cambios de plan con refresco INMEDIATO
   useEffect(() => {
     const handlePlanUpdate = () => {
-      console.log('=== PLAN UPDATE EVENT - IMMEDIATE REFRESH ===');
-      // Refrescar perfil INMEDIATAMENTE
+      console.log('=== PLAN UPDATE EVENT - FORCING IMMEDIATE REFRESH ===');
+      
+      // Refrescar INMEDIATAMENTE sin delays
       refreshProfile();
-      // Refrescar capacidades INMEDIATAMENTE
       fetchCapabilities(true);
     };
 
     const handleAdminPlanUpdate = (event: CustomEvent) => {
       const { psychologistId } = event.detail;
+      console.log('=== ADMIN PLAN UPDATE EVENT ===');
+      console.log('Event detail:', event.detail);
+      console.log('Target psychologist:', psychologistId);
+      console.log('Current psychologist:', psychologist?.id);
+      
       if (psychologist?.id === psychologistId) {
-        console.log('=== ADMIN PLAN UPDATE - IMMEDIATE REFRESH ===');
-        console.log('Target psychologist:', psychologistId);
-        console.log('Current psychologist:', psychologist.id);
+        console.log('=== MATCH! FORCING IMMEDIATE REFRESH ===');
         
-        // Refrescar INMEDIATAMENTE sin delays
+        // Refrescar INMEDIATAMENTE - sin delays, sin promise chains
         refreshProfile();
         fetchCapabilities(true);
+        
+        // También hacer un segundo refresh con delay por si acaso
+        setTimeout(() => {
+          console.log('=== SECOND REFRESH (DELAYED) ===');
+          refreshProfile();
+          fetchCapabilities(true);
+        }, 1000);
       }
     };
 
-    // Escuchar múltiples eventos
+    const handleForceRefresh = () => {
+      console.log('=== FORCE REFRESH EVENT ===');
+      refreshProfile();
+      fetchCapabilities(true);
+    };
+
+    // Escuchar TODOS los eventos posibles
     window.addEventListener('planUpdated', handlePlanUpdate);
     window.addEventListener('adminPlanUpdated', handleAdminPlanUpdate as EventListener);
-    window.addEventListener('forceRefreshCapabilities', handlePlanUpdate);
+    window.addEventListener('forceRefreshCapabilities', handleForceRefresh);
     
     return () => {
       window.removeEventListener('planUpdated', handlePlanUpdate);
       window.removeEventListener('adminPlanUpdated', handleAdminPlanUpdate as EventListener);
-      window.removeEventListener('forceRefreshCapabilities', handlePlanUpdate);
+      window.removeEventListener('forceRefreshCapabilities', handleForceRefresh);
     };
   }, [psychologist?.id, fetchCapabilities, refreshProfile]);
 
@@ -127,7 +143,7 @@ export const usePlanCapabilities = () => {
 
   const hasCapability = useCallback((capability: keyof PlanCapabilities): boolean => {
     const result = capabilities?.[capability] ?? false;
-    console.log(`Checking capability ${capability}:`, result);
+    console.log(`Checking capability ${capability}:`, result, 'from capabilities:', capabilities);
     return result;
   }, [capabilities]);
 
