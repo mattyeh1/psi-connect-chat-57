@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -189,72 +190,106 @@ export const AdminPanel = () => {
 
     try {
       setUpdating(true);
-      console.log('=== USANDO FUNCIÓN RPC PARA ACTUALIZAR PLAN ===');
+      console.log('=== ACTUALIZACIÓN FORZADA DE PLAN CON VERIFICACIÓN AGRESIVA ===');
       console.log('Psychologist ID:', selectedPsychologist);
       console.log('New plan type:', newPlanType);
-
-      // Usar la función RPC para actualizar el plan de manera confiable
+      
+      // 1. Usar la función RPC 
+      console.log('Step 1: Ejecutando función RPC...');
       const { error: rpcError } = await supabase.rpc('admin_update_plan_type', {
         psychologist_id: selectedPsychologist,
         new_plan_type: newPlanType
       });
 
       if (rpcError) {
-        console.error('Error updating plan with RPC:', rpcError);
+        console.error('Error with RPC function:', rpcError);
         throw rpcError;
       }
 
-      console.log('✅ Plan actualizado exitosamente usando función RPC');
+      console.log('✅ Step 1 completed: RPC function executed');
 
-      // Verificar que la actualización se realizó
-      const { data: verification, error: verifyError } = await supabase
-        .from('psychologists')
-        .select('plan_type')
-        .eq('id', selectedPsychologist)
-        .single();
+      // 2. Esperar un momento para que la DB se actualice
+      console.log('Step 2: Waiting for DB to update...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      if (verifyError) {
-        console.error('Error verifying update:', verifyError);
-      } else {
-        console.log('✅ VERIFICACIÓN: Plan type en DB es:', verification?.plan_type);
+      // 3. Verificar con polling agresivo hasta que se actualice
+      console.log('Step 3: Verificando actualización con polling...');
+      let attempts = 0;
+      let planUpdated = false;
+      
+      while (attempts < 10 && !planUpdated) {
+        attempts++;
+        console.log(`Attempt ${attempts}: Checking if plan was updated...`);
         
-        if (verification?.plan_type === newPlanType) {
-          console.log('✅ CONFIRMADO: El plan se actualizó correctamente en la base de datos');
-        } else {
-          console.warn('⚠️ WARNING: Plan en DB no coincide con el esperado');
+        const { data: verification, error: verifyError } = await supabase
+          .from('psychologists')
+          .select('plan_type, updated_at')
+          .eq('id', selectedPsychologist)
+          .single();
+
+        if (!verifyError && verification) {
+          console.log(`Attempt ${attempts}: Current plan_type in DB:`, verification.plan_type);
+          console.log(`Attempt ${attempts}: Updated at:`, verification.updated_at);
+          
+          if (verification.plan_type === newPlanType) {
+            planUpdated = true;
+            console.log('✅ CONFIRMADO: Plan actualizado correctamente en la base de datos!');
+            break;
+          }
+        }
+        
+        if (!planUpdated) {
+          console.log(`Attempt ${attempts}: Plan not updated yet, waiting...`);
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
       }
 
-      // Disparar eventos de actualización
+      if (!planUpdated) {
+        console.warn('⚠️ WARNING: No se pudo verificar la actualización después de 10 intentos');
+        toast({
+          title: "Advertencia",
+          description: "La actualización se ejecutó pero no se pudo verificar. Revisa manualmente.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "¡Éxito total!",
+          description: `Plan ${newPlanType.toUpperCase()} actualizado y verificado en la base de datos`,
+        });
+      }
+
+      // 4. Actualizar la UI con múltiples estrategias
+      console.log('Step 4: Actualizando UI...');
+      
+      // Disparar eventos
       window.dispatchEvent(new CustomEvent('planUpdated'));
       window.dispatchEvent(new CustomEvent('adminPlanUpdated', {
         detail: { psychologistId: selectedPsychologist }
       }));
       window.dispatchEvent(new CustomEvent('forceRefreshCapabilities'));
 
-      // Forzar múltiples refreshes para asegurar UI actualizada
+      // Forzar refreshes escalonados
       forceRefresh();
-      setTimeout(() => forceRefresh(), 1000);
+      setTimeout(() => forceRefresh(), 500);
+      setTimeout(() => forceRefresh(), 1500);
       setTimeout(() => forceRefresh(), 3000);
       setTimeout(() => forceRefresh(), 5000);
 
-      toast({
-        title: "¡Plan actualizado exitosamente!",
-        description: `El plan ${newPlanType.toUpperCase()} ha sido aplicado y verificado en la base de datos`,
-      });
+      console.log('✅ Step 4 completed: UI refresh initiated');
       
       // Limpiar formulario
       setSelectedPsychologist('');
       setNewPlanType('');
 
     } catch (error: any) {
-      console.error('Error updating plan type:', error);
+      console.error('❌ ERROR CRÍTICO en updatePlanType:', error);
       toast({
-        title: "Error",
-        description: error.message || "No se pudo actualizar el tipo de plan",
+        title: "Error crítico",
+        description: error.message || "Fallo total en la actualización del plan",
         variant: "destructive"
       });
     } finally {
+      // Mantener updating por más tiempo para asegurar refreshes
       setTimeout(() => setUpdating(false), 8000);
     }
   };

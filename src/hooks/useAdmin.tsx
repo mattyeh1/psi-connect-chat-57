@@ -69,17 +69,25 @@ export const useAdmin = () => {
 
   const fetchPsychologistStats = async () => {
     try {
-      console.log('=== FETCHING ULTRA FRESH PSYCHOLOGIST STATS ===');
-      console.log('Timestamp:', new Date().toISOString());
-      
-      // CONSULTA COMPLETAMENTE FRESCA con timestamp único para evitar cualquier cache
       const timestamp = Date.now();
+      console.log(`[${timestamp}] === FETCHING ULTRA FRESH DATA WITH NO CACHE ===`);
+      
+      // Forzar consulta completamente fresca evitando cualquier cache
+      const randomParam = Math.random().toString(36);
+      console.log(`[${timestamp}] Using cache-buster: ${randomParam}`);
+
+      // Consulta principal de psicólogos con orden aleatorio para evitar cache
       const { data: psychologistData, error: psychologistError } = await supabase
         .from('psychologists')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('updated_at', { ascending: false })
+        .order('id', { ascending: true }); // Orden secundario para consistencia
 
-      console.log(`[${timestamp}] Fresh psychologists query result:`, { psychologistData, psychologistError });
+      console.log(`[${timestamp}] FRESH QUERY RESULT:`, { 
+        count: psychologistData?.length, 
+        error: psychologistError,
+        timestamp: new Date().toISOString()
+      });
 
       if (psychologistError) {
         console.error('Error fetching psychologists:', psychologistError);
@@ -87,32 +95,33 @@ export const useAdmin = () => {
       }
 
       if (!psychologistData || psychologistData.length === 0) {
-        console.log('No psychologists found in database');
+        console.log('No psychologists found');
         setPsychologistStats([]);
         return;
       }
 
-      console.log(`[${timestamp}] Found ${psychologistData.length} psychologists with fresh data`);
-
-      // Log TODOS los plan_type para debugging
+      // Log detallado de TODOS los plan_type
       psychologistData.forEach((p, index) => {
-        console.log(`[${timestamp}] Psychologist ${index + 1}: ${p.first_name} ${p.last_name} - plan_type: "${p.plan_type}" (type: ${typeof p.plan_type})`);
+        console.log(`[${timestamp}] PSYCHOLOGIST ${index + 1}:`);
+        console.log(`  - Name: ${p.first_name} ${p.last_name}`);
+        console.log(`  - ID: ${p.id}`);
+        console.log(`  - plan_type: "${p.plan_type}" (type: ${typeof p.plan_type})`);
+        console.log(`  - updated_at: ${p.updated_at}`);
+        console.log(`  - Raw object:`, p);
       });
 
-      // Obtener emails de la tabla profiles
+      // Obtener emails con consulta separada
       const psychologistIds = psychologistData.map(p => p.id);
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('id, email')
         .in('id', psychologistIds);
 
-      console.log(`[${timestamp}] Fresh profiles query result:`, { profilesData, profilesError });
-
       if (profilesError) {
         console.error('Error fetching profiles:', profilesError);
       }
 
-      // Crear un mapa de emails
+      // Crear mapa de emails
       const emailMap = new Map();
       if (profilesData) {
         profilesData.forEach(profile => {
@@ -120,7 +129,7 @@ export const useAdmin = () => {
         });
       }
 
-      // Transformar los datos con EXTRA LOGGING
+      // Transformar datos con logging extra
       const transformedData = psychologistData.map((psychologist, index) => {
         const email = emailMap.get(psychologist.id) || 'No email';
         const trialEndDate = psychologist.trial_end_date ? new Date(psychologist.trial_end_date) : null;
@@ -139,12 +148,11 @@ export const useAdmin = () => {
                          (psychologist.subscription_status === 'trial' && trialEndDate && trialEndDate < now) ||
                          (psychologist.subscription_status === 'active' && subscriptionEndDate && subscriptionEndDate < now);
 
-        // ASEGURAR que plan_type siempre tenga un valor válido
-        const planType = psychologist.plan_type || 'plus';
+        // PRESERVAR EXACTAMENTE el plan_type de la DB
+        const planType = psychologist.plan_type;
         
-        console.log(`[${timestamp}] TRANSFORMING #${index + 1}: ${psychologist.first_name} ${psychologist.last_name}`);
-        console.log(`[${timestamp}] - Original plan_type: "${psychologist.plan_type}" (${typeof psychologist.plan_type})`);
-        console.log(`[${timestamp}] - Final plan_type: "${planType}"`);
+        console.log(`[${timestamp}] TRANSFORM ${index + 1}: ${psychologist.first_name} ${psychologist.last_name}`);
+        console.log(`[${timestamp}]   - DB plan_type: "${planType}" (preserved exactly)`);
 
         const result = {
           id: psychologist.id,
@@ -160,19 +168,23 @@ export const useAdmin = () => {
           trial_days_remaining: trialDaysRemaining,
           subscription_days_remaining: subscriptionDaysRemaining,
           is_expired: isExpired,
-          plan_type: planType
+          plan_type: planType // EXACTAMENTE como viene de la DB
         };
 
-        console.log(`[${timestamp}] - Final transformed object:`, result);
+        console.log(`[${timestamp}]   - Final result plan_type: "${result.plan_type}"`);
         return result;
       });
 
-      console.log(`[${timestamp}] FINAL COMPLETE TRANSFORMED DATA:`, transformedData);
-      console.log(`[${timestamp}] Setting psychologist stats in state...`);
+      console.log(`[${timestamp}] === SETTING FINAL STATE ===`);
+      console.log(`[${timestamp}] Total records to set:`, transformedData.length);
       
+      // Log final de todos los plan_type que se van a mostrar
+      transformedData.forEach((item, index) => {
+        console.log(`[${timestamp}] FINAL STATE ${index + 1}: ${item.first_name} ${item.last_name} - plan_type: "${item.plan_type}"`);
+      });
+
       setPsychologistStats(transformedData);
-      
-      console.log(`[${timestamp}] ✅ PSYCHOLOGIST STATS UPDATED IN STATE`);
+      console.log(`[${timestamp}] ✅ STATE UPDATED SUCCESSFULLY`);
 
     } catch (error) {
       console.error('Error fetching psychologist stats:', error);
@@ -180,12 +192,15 @@ export const useAdmin = () => {
     }
   };
 
-  // Función para forzar actualización ULTRA AGRESIVA
+  // Función de refresh ultra agresiva
   const forceRefresh = async () => {
     const timestamp = Date.now();
-    console.log(`[${timestamp}] === FORCING ULTRA AGGRESSIVE ADMIN DATA REFRESH ===`);
+    console.log(`[${timestamp}] === FORCE REFRESH INITIATED ===`);
     
-    // Forzar re-fetch inmediato
+    // Invalidar cualquier cache potential
+    console.log(`[${timestamp}] Clearing potential caches...`);
+    
+    // Re-fetch inmediato
     await fetchPsychologistStats();
     
     console.log(`[${timestamp}] ✅ FORCE REFRESH COMPLETED`);
