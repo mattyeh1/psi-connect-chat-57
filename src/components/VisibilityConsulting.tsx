@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Eye, TrendingUp, Globe, Users, Star, Target, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Eye, TrendingUp, Globe, Users, Star, Target, CheckCircle, AlertTriangle, Clock } from 'lucide-react';
 import { PlanGate } from './PlanGate';
 
 const visibilityMetrics = [
