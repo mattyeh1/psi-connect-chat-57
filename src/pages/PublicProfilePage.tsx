@@ -77,7 +77,7 @@ export const PublicProfilePage = () => {
           <div className="max-w-4xl mx-auto">
             <div className="text-center">
               <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-6"></div>
-              <p className="text-white/80 text-lg font-inter">Cargando perfil profesional premium...</p>
+              <p className="text-white/80 text-lg">Cargando perfil profesional premium...</p>
             </div>
           </div>
         </div>
@@ -95,15 +95,15 @@ export const PublicProfilePage = () => {
             <div className="w-32 h-32 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center mx-auto mb-8 border border-white/20">
               <Users className="w-16 h-16 text-white/60" />
             </div>
-            <h1 className="text-4xl font-playfair font-bold text-white mb-6">
+            <h1 className="text-4xl font-bold text-white mb-6">
               Perfil no encontrado
             </h1>
-            <p className="text-xl text-white/80 mb-8 font-inter">
+            <p className="text-xl text-white/80 mb-8">
               El perfil profesional que buscas no existe o no está disponible públicamente.
             </p>
             <Button
               onClick={() => window.location.href = '/'}
-              className="bg-white/10 backdrop-blur-md hover:bg-white/20 border border-white/20 text-white font-inter px-8 py-3"
+              className="bg-white/10 backdrop-blur-md hover:bg-white/20 border border-white/20 text-white px-8 py-3"
             >
               Volver al inicio
             </Button>
@@ -165,14 +165,14 @@ export const PublicProfilePage = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-emerald-500 rounded-xl flex items-center justify-center shadow-luxury">
-                  <span className="text-white font-bold text-xl font-playfair">P</span>
+                  <span className="text-white font-bold text-xl">P</span>
                 </div>
                 <div>
-                  <span className="font-playfair font-bold text-2xl text-white">ProConnection</span>
-                  <p className="text-white/60 text-sm font-inter">Plataforma Premium de Salud Mental</p>
+                  <span className="font-bold text-2xl text-white">ProConnection</span>
+                  <p className="text-white/60 text-sm">Plataforma Premium de Salud Mental</p>
                 </div>
               </div>
-              <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-400/30 backdrop-blur-md px-4 py-2 font-inter">
+              <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-400/30 backdrop-blur-md px-4 py-2">
                 <Shield className="w-4 h-4 mr-2" />
                 Perfil Verificado
               </Badge>
@@ -189,7 +189,7 @@ export const PublicProfilePage = () => {
               <div className="relative mb-8">
                 <div className="w-40 h-40 mx-auto relative">
                   <div className="w-full h-full bg-gradient-to-br from-blue-500 to-emerald-500 rounded-full flex items-center justify-center shadow-premium animate-float">
-                    <span className="text-white text-5xl font-bold font-playfair">
+                    <span className="text-white text-5xl font-bold">
                       {profile.first_name.charAt(0)}{profile.last_name.charAt(0)}
                     </span>
                   </div>
@@ -201,12 +201,12 @@ export const PublicProfilePage = () => {
               </div>
               
               {/* Name and Title */}
-              <h1 className="text-5xl md:text-6xl font-playfair font-bold text-white mb-4 tracking-tight">
+              <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 tracking-tight">
                 Dr. {profile.first_name} {profile.last_name}
               </h1>
               
               {profile.specialization && (
-                <p className="text-2xl text-blue-200 mb-6 font-crimson italic">
+                <p className="text-2xl text-blue-200 mb-6 italic">
                   {profile.specialization}
                 </p>
               )}
@@ -215,15 +215,15 @@ export const PublicProfilePage = () => {
               <div className="flex flex-wrap items-center justify-center gap-6 text-white/80 mb-8">
                 <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full border border-white/20">
                   <Award className="w-5 h-5 text-yellow-400" />
-                  <span className="font-inter">Código: {profile.professional_code}</span>
+                  <span>Código: {profile.professional_code}</span>
                 </div>
                 <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full border border-white/20">
                   <Users className="w-5 h-5 text-blue-400" />
-                  <span className="font-inter">{profile.view_count} consultas</span>
+                  <span>{profile.view_count} consultas</span>
                 </div>
                 <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full border border-white/20">
                   <Star className="w-5 h-5 text-emerald-400" />
-                  <span className="font-inter">Especialista Certificado</span>
+                  <span>Especialista Certificado</span>
                 </div>
               </div>
             </section>
@@ -237,13 +237,13 @@ export const PublicProfilePage = () => {
                 {/* About Section */}
                 <Card className="bg-white/5 backdrop-blur-xl border-white/10 shadow-glass animate-fade-in-scale">
                   <CardContent className="p-8">
-                    <h2 className="text-3xl font-playfair font-bold text-white mb-6 flex items-center gap-3">
+                    <h2 className="text-3xl font-bold text-white mb-6 flex items-center gap-3">
                       <Brain className="w-8 h-8 text-blue-400" />
                       Acerca del Dr. {profile.first_name}
                     </h2>
                     
                     <div className="prose prose-lg prose-invert max-w-none">
-                      <p className="text-white/80 leading-relaxed font-inter mb-6">
+                      <p className="text-white/80 leading-relaxed mb-6">
                         Psicólogo profesional especializado en {profile.specialization || 'terapia psicológica'}, 
                         con amplia experiencia en el tratamiento de diversos trastornos emocionales y del comportamiento. 
                         Comprometido con brindar atención de la más alta calidad utilizando enfoques terapéuticos 
@@ -274,7 +274,7 @@ export const PublicProfilePage = () => {
                 {/* Specialties */}
                 <Card className="bg-white/5 backdrop-blur-xl border-white/10 shadow-glass animate-fade-in-scale">
                   <CardContent className="p-8">
-                    <h3 className="text-2xl font-playfair font-bold text-white mb-6 flex items-center gap-3">
+                    <h3 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
                       <Sparkles className="w-6 h-6 text-yellow-400" />
                       Especialidades
                     </h3>
@@ -291,7 +291,7 @@ export const PublicProfilePage = () => {
                         <div key={index} className="bg-white/5 p-4 rounded-lg border border-white/10 hover:bg-white/10 transition-all duration-300">
                           <div className="flex items-center gap-3">
                             <span className="text-2xl">{specialty.icon}</span>
-                            <span className="text-white font-inter">{specialty.name}</span>
+                            <span className="text-white">{specialty.name}</span>
                           </div>
                         </div>
                       ))}
@@ -306,7 +306,7 @@ export const PublicProfilePage = () => {
                 {/* Contact Information */}
                 <Card className="bg-white/5 backdrop-blur-xl border-white/10 shadow-glass animate-fade-in-scale">
                   <CardContent className="p-6">
-                    <h3 className="text-xl font-playfair font-bold text-white mb-6 flex items-center gap-2">
+                    <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                       <MessageCircle className="w-6 h-6 text-blue-400" />
                       Contacto Premium
                     </h3>
@@ -314,13 +314,13 @@ export const PublicProfilePage = () => {
                     <div className="space-y-4">
                       {/* Primary CTA */}
                       <div className="bg-gradient-to-r from-blue-500 to-emerald-500 p-6 rounded-xl border border-white/20 shadow-luxury">
-                        <h4 className="text-white font-bold mb-2 font-inter">Solicitar Consulta</h4>
-                        <p className="text-white/90 text-sm mb-4 font-inter">
+                        <h4 className="text-white font-bold mb-2">Solicitar Consulta</h4>
+                        <p className="text-white/90 text-sm mb-4">
                           Agenda tu sesión profesional de manera segura y confidencial
                         </p>
                         <Button 
                           onClick={() => window.location.href = '/register'}
-                          className="w-full bg-white text-blue-600 hover:bg-white/90 font-inter font-semibold py-3"
+                          className="w-full bg-white text-blue-600 hover:bg-white/90 font-semibold py-3"
                         >
                           <Calendar className="w-5 h-5 mr-2" />
                           Agendar Cita
@@ -331,9 +331,9 @@ export const PublicProfilePage = () => {
                       <div className="bg-white/5 p-4 rounded-lg border border-white/10">
                         <div className="flex items-center gap-2 text-emerald-400 mb-2">
                           <Video className="w-5 h-5" />
-                          <span className="font-semibold font-inter">Consulta Online</span>
+                          <span className="font-semibold">Consulta Online</span>
                         </div>
-                        <p className="text-white/70 text-sm font-inter">
+                        <p className="text-white/70 text-sm">
                           Sesiones por videollamada desde la comodidad de tu hogar
                         </p>
                       </div>
@@ -342,9 +342,9 @@ export const PublicProfilePage = () => {
                       <div className="bg-white/5 p-4 rounded-lg border border-white/10">
                         <div className="flex items-center gap-2 text-blue-400 mb-2">
                           <MapPin className="w-5 h-5" />
-                          <span className="font-semibold font-inter">Consulta Presencial</span>
+                          <span className="font-semibold">Consulta Presencial</span>
                         </div>
-                        <p className="text-white/70 text-sm font-inter">
+                        <p className="text-white/70 text-sm">
                           Atención personalizada en consultorio profesional
                         </p>
                       </div>
@@ -357,14 +357,14 @@ export const PublicProfilePage = () => {
                   <CardContent className="p-6">
                     <div className="text-center">
                       <Globe className="w-12 h-12 text-emerald-400 mx-auto mb-4" />
-                      <h4 className="text-white font-bold mb-2 font-inter">ProConnection</h4>
-                      <p className="text-white/70 text-sm mb-4 font-inter">
+                      <h4 className="text-white font-bold mb-2">ProConnection</h4>
+                      <p className="text-white/70 text-sm mb-4">
                         Plataforma premium de gestión de salud mental con los más altos estándares de seguridad
                       </p>
                       <Button 
                         variant="outline"
                         onClick={() => window.location.href = '/'}
-                        className="w-full border-white/20 text-white hover:bg-white/10 font-inter"
+                        className="w-full border-white/20 text-white hover:bg-white/10"
                       >
                         Conocer la Plataforma
                       </Button>
@@ -379,17 +379,17 @@ export const PublicProfilePage = () => {
               <div className="flex flex-col items-center gap-4">
                 <div className="flex items-center gap-2 text-white/60">
                   <Shield className="w-5 h-5" />
-                  <span className="font-inter text-sm">
+                  <span className="text-sm">
                     Perfil profesional verificado y protegido por
                   </span>
                 </div>
                 <a 
                   href="/" 
-                  className="text-emerald-400 hover:text-emerald-300 font-semibold font-inter transition-colors"
+                  className="text-emerald-400 hover:text-emerald-300 font-semibold transition-colors"
                 >
                   ProConnection Premium
                 </a>
-                <p className="text-white/40 text-xs font-inter max-w-2xl">
+                <p className="text-white/40 text-xs max-w-2xl">
                   Plataforma líder en gestión psicológica profesional • Tecnología segura • Confidencialidad garantizada
                 </p>
               </div>
