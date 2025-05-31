@@ -1,10 +1,9 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   BrowserRouter as Router,
   Routes,
   Route,
-  useLocation,
 } from 'react-router-dom';
 import { AuthPage } from '@/components/AuthPage';
 import Index from '@/pages/Index';
@@ -14,7 +13,6 @@ import { AdminLogin } from '@/pages/AdminLogin';
 import { AdminDashboard } from '@/pages/AdminDashboard';
 import NotFound from '@/pages/NotFound';
 import { Toaster } from '@/components/ui/toaster';
-import { useAuth } from '@/hooks/useAuth';
 import { AdminRoute } from '@/components/AdminRoute';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LandingPage } from './pages/LandingPage';
@@ -23,21 +21,6 @@ import { PublicProfilePage } from "@/pages/PublicProfilePage";
 
 function App() {
   const [queryClient] = useState(() => new QueryClient());
-  const { session } = useAuth();
-  const location = useLocation();
-
-  useEffect(() => {
-    // Track page view in Supabase
-    // Disabled for now to avoid spamming
-    // if (session?.user) {
-    //   supabase.from('page_views').insert({
-    //     user_id: session.user.id,
-    //     path: location.pathname,
-    //   }).then(() => {
-    //     console.log('Page view tracked');
-    //   });
-    // }
-  }, [location, session]);
 
   return (
     <QueryClientProvider client={queryClient}>
