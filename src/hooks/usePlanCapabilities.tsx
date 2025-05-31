@@ -12,49 +12,26 @@ interface PlanCapabilities {
   basic_features: boolean;
 }
 
-// Cache global que se limpia cuando cambia el plan
-let globalCapabilitiesCache: {
-  [psychologistId: string]: {
-    capabilities: PlanCapabilities;
-    timestamp: number;
-  }
-} = {};
-
 export const usePlanCapabilities = () => {
-  const { psychologist } = useProfile();
+  const { psychologist, forceRefresh: refreshProfile } = useProfile();
   const [capabilities, setCapabilities] = useState<PlanCapabilities | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const clearCache = useCallback(() => {
-    if (psychologist?.id) {
-      delete globalCapabilitiesCache[psychologist.id];
-    }
-  }, [psychologist?.id]);
-
   const fetchCapabilities = useCallback(async (forceRefresh = false) => {
     if (!psychologist?.id) {
-      setLoading(false);
-      return;
-    }
-
-    // Verificar cache solo si no es refresh forzado
-    const cached = globalCapabilitiesCache[psychologist.id];
-    const cacheAge = cached ? Date.now() - cached.timestamp : Infinity;
-    
-    if (!forceRefresh && cached && cacheAge < 10000) { // Cache de 10 segundos
-      console.log('Using cached capabilities for:', psychologist.id);
-      setCapabilities(cached.capabilities);
+      console.log('No psychologist ID, skipping capabilities fetch');
       setLoading(false);
       return;
     }
 
     try {
-      console.log('=== FETCHING PLAN CAPABILITIES (FRESH) ===');
+      console.log('=== FETCHING PLAN CAPABILITIES ===');
       console.log('Psychologist ID:', psychologist.id);
       console.log('Force refresh:', forceRefresh);
       
       setLoading(true);
+      setError(null);
       
       const { data, error } = await supabase.rpc('get_plan_capabilities', {
         psychologist_id: psychologist.id
@@ -65,7 +42,7 @@ export const usePlanCapabilities = () => {
         throw error;
       }
 
-      console.log('Plan capabilities result:', data);
+      console.log('Raw capabilities data:', data);
       
       let validCapabilities: PlanCapabilities;
       
@@ -91,13 +68,7 @@ export const usePlanCapabilities = () => {
         };
       }
       
-      // Actualizar cache global
-      globalCapabilitiesCache[psychologist.id] = {
-        capabilities: validCapabilities,
-        timestamp: Date.now()
-      };
-      
-      console.log('Setting capabilities:', validCapabilities);
+      console.log('Final capabilities:', validCapabilities);
       setCapabilities(validCapabilities);
       
     } catch (err) {
@@ -112,20 +83,24 @@ export const usePlanCapabilities = () => {
     fetchCapabilities();
   }, [fetchCapabilities]);
 
-  // Escuchar eventos de actualización de plan
+  // Escuchar cambios de plan
   useEffect(() => {
     const handlePlanUpdate = () => {
-      console.log('Plan update event received, clearing cache and refreshing...');
-      clearCache();
-      fetchCapabilities(true);
+      console.log('Plan update event received, refreshing capabilities...');
+      refreshProfile(); // Refrescar perfil primero
+      setTimeout(() => {
+        fetchCapabilities(true); // Luego refrescar capacidades
+      }, 500);
     };
 
     const handleAdminPlanUpdate = (event: CustomEvent) => {
       const { psychologistId } = event.detail;
       if (psychologist?.id === psychologistId) {
         console.log('Admin plan update event for this psychologist, refreshing...');
-        clearCache();
-        fetchCapabilities(true);
+        refreshProfile(); // Refrescar perfil primero
+        setTimeout(() => {
+          fetchCapabilities(true); // Luego refrescar capacidades
+        }, 500);
       }
     };
 
@@ -136,13 +111,15 @@ export const usePlanCapabilities = () => {
       window.removeEventListener('planUpdated', handlePlanUpdate);
       window.removeEventListener('adminPlanUpdated', handleAdminPlanUpdate as EventListener);
     };
-  }, [psychologist?.id, clearCache, fetchCapabilities]);
+  }, [psychologist?.id, fetchCapabilities, refreshProfile]);
 
   const refreshCapabilities = useCallback(() => {
     console.log('Manually refreshing plan capabilities...');
-    clearCache();
-    fetchCapabilities(true);
-  }, [clearCache, fetchCapabilities]);
+    refreshProfile(); // Refrescar perfil primero
+    setTimeout(() => {
+      fetchCapabilities(true); // Luego refrescar capacidades
+    }, 500);
+  }, [fetchCapabilities, refreshProfile]);
 
   const hasCapability = useCallback((capability: keyof PlanCapabilities): boolean => {
     return capabilities?.[capability] ?? false;

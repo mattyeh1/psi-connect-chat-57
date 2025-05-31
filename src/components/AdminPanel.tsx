@@ -197,28 +197,30 @@ export const AdminPanel = () => {
       }
 
       // Disparar múltiples eventos para asegurar sincronización
-      window.dispatchEvent(new CustomEvent('adminPlanUpdated', {
-        detail: { psychologistId: selectedPsychologist, newPlan: newPlanType }
-      }));
+      const eventDetail = { psychologistId: selectedPsychologist, newPlan: newPlanType };
       
-      window.dispatchEvent(new CustomEvent('planUpdated', {
-        detail: { psychologistId: selectedPsychologist, newPlan: newPlanType }
-      }));
+      // Disparar eventos inmediatamente
+      window.dispatchEvent(new CustomEvent('adminPlanUpdated', { detail: eventDetail }));
+      window.dispatchEvent(new CustomEvent('planUpdated', { detail: eventDetail }));
+      
+      // Disparar eventos con delay para asegurar propagación
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('adminPlanUpdated', { detail: eventDetail }));
+        window.dispatchEvent(new CustomEvent('planUpdated', { detail: eventDetail }));
+      }, 100);
+      
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('adminPlanUpdated', { detail: eventDetail }));
+        window.dispatchEvent(new CustomEvent('planUpdated', { detail: eventDetail }));
+      }, 500);
 
       toast({
         title: "Plan actualizado",
         description: `El plan ha sido cambiado a ${newPlanType.toUpperCase()}`,
       });
 
-      // Forzar refresh en todos los hooks relacionados
+      // Forzar refresh agresivo
       await forceRefresh();
-      
-      // Pequeño delay para asegurar que los eventos se procesen
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('adminPlanUpdated', {
-          detail: { psychologistId: selectedPsychologist, newPlan: newPlanType }
-        }));
-      }, 100);
       
       // Limpiar formulario
       setSelectedPsychologist('');

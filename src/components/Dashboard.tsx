@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Users, Clock, AlertCircle, TrendingUp, Crown, Zap, BarChart3, Headphones, Rocket, Eye } from "lucide-react";
@@ -22,8 +21,8 @@ interface DashboardProps {
 }
 
 export const Dashboard = ({ onViewChange }: DashboardProps) => {
-  const { psychologist } = useProfile();
-  const { capabilities, isPlusUser, isProUser } = usePlanCapabilities();
+  const { psychologist, forceRefresh: refreshProfile } = useProfile();
+  const { capabilities, isPlusUser, isProUser, refreshCapabilities } = usePlanCapabilities();
   const [stats, setStats] = useState<DashboardStats>({
     totalPatients: 0,
     appointmentsToday: 0,
@@ -38,6 +37,32 @@ export const Dashboard = ({ onViewChange }: DashboardProps) => {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Escuchar eventos de actualización de plan
+  useEffect(() => {
+    const handlePlanUpdate = () => {
+      console.log('Dashboard: Plan update event received, refreshing data...');
+      refreshProfile();
+      refreshCapabilities();
+    };
+
+    const handleAdminPlanUpdate = (event: CustomEvent) => {
+      const { psychologistId } = event.detail;
+      if (psychologist?.id === psychologistId) {
+        console.log('Dashboard: Admin plan update for this psychologist, refreshing...');
+        refreshProfile();
+        refreshCapabilities();
+      }
+    };
+
+    window.addEventListener('planUpdated', handlePlanUpdate);
+    window.addEventListener('adminPlanUpdated', handleAdminPlanUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('planUpdated', handlePlanUpdate);
+      window.removeEventListener('adminPlanUpdated', handleAdminPlanUpdate as EventListener);
+    };
+  }, [psychologist?.id, refreshProfile, refreshCapabilities]);
 
   useEffect(() => {
     if (psychologist?.id) {
@@ -145,6 +170,7 @@ export const Dashboard = ({ onViewChange }: DashboardProps) => {
   }
 
   const getPlanIcon = () => {
+    console.log('Dashboard: Getting plan icon - isProUser:', isProUser(), 'isPlusUser:', isPlusUser());
     if (isProUser()) {
       return <Crown className="w-5 h-5 text-purple-500" />;
     } else if (isPlusUser()) {
@@ -154,6 +180,7 @@ export const Dashboard = ({ onViewChange }: DashboardProps) => {
   };
 
   const getPlanName = () => {
+    console.log('Dashboard: Getting plan name - isProUser:', isProUser(), 'isPlusUser:', isPlusUser());
     if (isProUser()) return "PRO";
     if (isPlusUser()) return "PLUS";
     return "BASIC";
