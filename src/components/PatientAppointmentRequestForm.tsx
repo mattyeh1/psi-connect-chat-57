@@ -39,6 +39,7 @@ export const PatientAppointmentRequestForm = ({ onRequestCreated }: PatientAppoi
     e.preventDefault();
     
     if (!patient?.psychologist_id) {
+      console.error('No psychologist_id found for patient:', patient);
       toast({
         title: "Error",
         description: "No se pudo identificar al psicólogo asignado",
@@ -59,36 +60,50 @@ export const PatientAppointmentRequestForm = ({ onRequestCreated }: PatientAppoi
     setLoading(true);
 
     try {
-      console.log('Creating appointment request with data:', {
+      const requestData = {
         patient_id: patient.id,
         psychologist_id: patient.psychologist_id,
         preferred_date: formData.preferredDate,
         preferred_time: formData.preferredTime,
         type: formData.type,
-        notes: formData.notes
-      });
+        status: 'pending',
+        notes: formData.notes || null
+      };
+
+      console.log('Creating appointment request with data:', requestData);
 
       // Crear solicitud de cita (no cita directa)
       const { data: insertedData, error: requestError } = await supabase
         .from('appointment_requests')
-        .insert({
-          patient_id: patient.id,
-          psychologist_id: patient.psychologist_id,
-          preferred_date: formData.preferredDate,
-          preferred_time: formData.preferredTime,
-          type: formData.type,
-          status: 'pending',
-          notes: formData.notes || null
-        })
+        .insert(requestData)
         .select()
         .single();
 
       if (requestError) {
         console.error('Error creating appointment request:', requestError);
+        console.error('Request error details:', {
+          code: requestError.code,
+          message: requestError.message,
+          details: requestError.details,
+          hint: requestError.hint
+        });
         throw new Error('Error al enviar la solicitud de cita');
       }
 
       console.log('Appointment request created successfully:', insertedData);
+
+      // Verify the request was actually saved
+      const { data: verifyData, error: verifyError } = await supabase
+        .from('appointment_requests')
+        .select('*')
+        .eq('id', insertedData.id)
+        .single();
+
+      if (verifyError) {
+        console.error('Error verifying appointment request:', verifyError);
+      } else {
+        console.log('Verified appointment request exists:', verifyData);
+      }
 
       toast({
         title: "Solicitud enviada",

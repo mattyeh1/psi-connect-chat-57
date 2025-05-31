@@ -90,23 +90,20 @@ export const AppointmentRequests = ({ onRequestProcessed }: AppointmentRequestsP
     try {
       console.log('Fetching appointment requests for psychologist:', psychologist.id);
       
-      // First, let's check all appointment requests for this psychologist
+      // First, let's check ALL appointment requests to see if they exist
       const { data: allRequests, error: allRequestsError } = await supabase
         .from('appointment_requests')
-        .select(`
-          *,
-          patient:patients(first_name, last_name, phone)
-        `)
-        .eq('psychologist_id', psychologist.id)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (allRequestsError) {
         console.error('Error fetching all appointment requests:', allRequestsError);
       } else {
-        console.log('All appointment requests for psychologist:', allRequests);
+        console.log('ALL appointment requests in database:', allRequests);
+        console.log('Requests for our psychologist:', allRequests?.filter(r => r.psychologist_id === psychologist.id));
       }
 
-      // Now fetch only pending requests
+      // Now fetch requests for this specific psychologist with patient data
       const { data, error } = await supabase
         .from('appointment_requests')
         .select(`
@@ -119,6 +116,12 @@ export const AppointmentRequests = ({ onRequestProcessed }: AppointmentRequestsP
 
       if (error) {
         console.error('Error fetching pending appointment requests:', error);
+        console.error('Error details:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
         toast({
           title: "Error",
           description: "No se pudieron cargar las solicitudes de citas",
