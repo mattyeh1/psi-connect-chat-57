@@ -1,19 +1,22 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, CreditCard, Star } from 'lucide-react';
+import { Check, CreditCard, Star, Crown } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Plan {
   id: string;
-  name: string;
-  price: number;
-  currency: string;
-  interval: 'monthly' | 'yearly';
+  plan_key: string;
+  title: string;
+  price_display: string;
+  price_cents: number;
+  period: string;
   features: string[];
-  popular?: boolean;
+  is_recommended: boolean;
+  savings_text?: string;
 }
 
 interface SubscriptionPlansProps {
@@ -21,51 +24,49 @@ interface SubscriptionPlansProps {
 }
 
 export const SubscriptionPlans = ({ onPlanSelect }: SubscriptionPlansProps) => {
+  const [plans, setPlans] = useState<Plan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const plans: Plan[] = [
-    {
-      id: 'monthly',
-      name: 'Plan Mensual',
-      price: 2900,
-      currency: 'ARS',
-      interval: 'monthly',
-      features: [
-        'Gestión ilimitada de pacientes',
-        'Sistema de citas y recordatorios',
-        'Mensajería segura con pacientes',
-        'Reportes y estadísticas básicas',
-        'Soporte técnico estándar'
-      ]
-    },
-    {
-      id: 'yearly',
-      name: 'Plan Anual',
-      price: 29000,
-      currency: 'ARS',
-      interval: 'yearly',
-      popular: true,
-      features: [
-        'Gestión ilimitada de pacientes',
-        'Sistema de citas y recordatorios',
-        'Mensajería segura con pacientes',
-        'Reportes y estadísticas avanzadas',
-        'Documentos y formularios profesionales',
-        'Soporte técnico prioritario',
-        '2 meses gratis (equivale a 10 meses)',
-        'Descuentos en futuras actualizaciones'
-      ]
-    }
-  ];
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        console.log('=== FETCHING SUBSCRIPTION PLANS ===');
+        
+        const { data, error } = await supabase
+          .from('subscription_plans')
+          .select('*')
+          .order('price_cents', { ascending: true });
+
+        if (error) {
+          console.error('Error fetching plans:', error);
+          throw error;
+        }
+
+        console.log('Fetched plans:', data);
+        setPlans(data || []);
+      } catch (error) {
+        console.error('Error in fetchPlans:', error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los planes. Inténtalo nuevamente.",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPlans();
+  }, []);
 
   const handleSelectPlan = async (plan: Plan) => {
-    setSelectedPlan(plan.id);
+    setSelectedPlan(plan.plan_key);
     setIsLoading(true);
 
     try {
-      // Llamar a la función que creará la preferencia de MercadoPago
-      await onPlanSelect(plan.id);
+      await onPlanSelect(plan.plan_key);
     } catch (error) {
       console.error('Error selecting plan:', error);
       toast({
@@ -79,14 +80,25 @@ export const SubscriptionPlans = ({ onPlanSelect }: SubscriptionPlansProps) => {
     }
   };
 
-  const formatPrice = (price: number, currency: string, interval: string) => {
-    const formatted = new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: currency
-    }).format(price);
-    
-    return `${formatted} / ${interval === 'monthly' ? 'mes' : 'año'}`;
-  };
+  if (loading) {
+    return (
+      <div className="py-8">
+        <div className="text-center mb-8">
+          <div className="animate-pulse">
+            <div className="h-8 bg-slate-200 rounded w-64 mx-auto mb-4"></div>
+            <div className="h-4 bg-slate-200 rounded w-96 mx-auto"></div>
+          </div>
+        </div>
+        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+          {[1, 2].map((i) => (
+            <div key={i} className="animate-pulse">
+              <div className="h-96 bg-slate-200 rounded-lg"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="py-8">
@@ -95,8 +107,8 @@ export const SubscriptionPlans = ({ onPlanSelect }: SubscriptionPlansProps) => {
           Elige tu Plan de Suscripción
         </h2>
         <p className="text-slate-600 max-w-2xl mx-auto">
-          Activa tu suscripción para continuar usando todas las funciones de PsiConnect 
-          y gestionar tu práctica profesional sin interrupciones.
+          Selecciona el plan que mejor se adapte a tus necesidades profesionales. 
+          Todos los planes incluyen acceso completo a la plataforma.
         </p>
       </div>
 
@@ -105,34 +117,42 @@ export const SubscriptionPlans = ({ onPlanSelect }: SubscriptionPlansProps) => {
           <Card 
             key={plan.id} 
             className={`relative border-2 transition-all duration-200 hover:shadow-lg ${
-              plan.popular ? 'border-blue-500 shadow-md' : 'border-slate-200'
+              plan.is_recommended ? 'border-purple-500 shadow-md scale-105' : 'border-slate-200'
             }`}
           >
-            {plan.popular && (
+            {plan.is_recommended && (
               <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                <Badge className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1">
-                  <Star className="w-3 h-3 mr-1" />
-                  Más Popular
+                <Badge className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white px-4 py-1">
+                  <Crown className="w-3 h-3 mr-1" />
+                  {plan.savings_text || 'Recomendado'}
                 </Badge>
               </div>
             )}
 
             <CardHeader className="text-center pb-4">
-              <CardTitle className="text-2xl font-bold text-slate-800">
-                {plan.name}
+              <CardTitle className="text-2xl font-bold text-slate-800 flex items-center justify-center gap-2">
+                {plan.plan_key.includes('pro') ? (
+                  <Crown className="w-6 h-6 text-purple-500" />
+                ) : (
+                  <Star className="w-6 h-6 text-blue-500" />
+                )}
+                {plan.title}
               </CardTitle>
               <div className="mt-2">
-                <span className="text-4xl font-bold text-blue-600">
-                  {formatPrice(plan.price, plan.currency, plan.interval)}
+                <span className={`text-4xl font-bold ${
+                  plan.is_recommended ? 'text-purple-600' : 'text-blue-600'
+                }`}>
+                  {plan.price_display}
                 </span>
+                <span className="text-slate-500 ml-2">/ mes</span>
               </div>
             </CardHeader>
 
             <CardContent className="space-y-6">
               <ul className="space-y-3">
                 {plan.features.map((feature, index) => (
-                  <li key={index} className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
+                  <li key={index} className="flex items-start gap-3">
+                    <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
                     <span className="text-slate-600">{feature}</span>
                   </li>
                 ))}
@@ -140,20 +160,20 @@ export const SubscriptionPlans = ({ onPlanSelect }: SubscriptionPlansProps) => {
 
               <Button
                 onClick={() => handleSelectPlan(plan)}
-                disabled={isLoading && selectedPlan === plan.id}
+                disabled={isLoading && selectedPlan === plan.plan_key}
                 className={`w-full py-3 ${
-                  plan.popular 
-                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700' 
-                    : 'bg-slate-800 hover:bg-slate-900'
+                  plan.is_recommended 
+                    ? 'bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600' 
+                    : 'bg-gradient-to-r from-blue-500 to-emerald-500 hover:from-blue-600 hover:to-emerald-600'
                 }`}
                 size="lg"
               >
-                {isLoading && selectedPlan === plan.id ? (
+                {isLoading && selectedPlan === plan.plan_key ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
                 ) : (
                   <CreditCard className="w-5 h-5 mr-2" />
                 )}
-                {isLoading && selectedPlan === plan.id ? 'Procesando...' : 'Suscribirse Ahora'}
+                {isLoading && selectedPlan === plan.plan_key ? 'Procesando...' : 'Suscribirse Ahora'}
               </Button>
             </CardContent>
           </Card>
@@ -162,7 +182,7 @@ export const SubscriptionPlans = ({ onPlanSelect }: SubscriptionPlansProps) => {
 
       <div className="text-center mt-8">
         <p className="text-sm text-slate-500 max-w-md mx-auto">
-          Pago seguro procesado por MercadoPago. Puedes cancelar tu suscripción en cualquier momento.
+          Pago seguro procesado por MercadoPago. Puedes cambiar de plan en cualquier momento.
         </p>
       </div>
     </div>

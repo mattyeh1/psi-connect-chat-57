@@ -637,6 +637,7 @@ export type Database = {
           last_name: string
           license_number: string | null
           phone: string | null
+          plan_type: string | null
           professional_code: string
           specialization: string | null
           subscription_end_date: string | null
@@ -655,6 +656,7 @@ export type Database = {
           last_name: string
           license_number?: string | null
           phone?: string | null
+          plan_type?: string | null
           professional_code: string
           specialization?: string | null
           subscription_end_date?: string | null
@@ -673,6 +675,7 @@ export type Database = {
           last_name?: string
           license_number?: string | null
           phone?: string | null
+          plan_type?: string | null
           professional_code?: string
           specialization?: string | null
           subscription_end_date?: string | null
@@ -826,6 +829,10 @@ export type Database = {
       generate_professional_code: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_plan_capabilities: {
+        Args: { psychologist_id: string }
+        Returns: Json
       }
       get_trial_days_remaining: {
         Args: { psychologist_id: string }
