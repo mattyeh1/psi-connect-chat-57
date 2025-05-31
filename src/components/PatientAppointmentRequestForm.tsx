@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar, Clock } from "lucide-react";
+import { Calendar, Clock, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useProfile } from "@/hooks/useProfile";
+import { useAvailableSlots } from "@/hooks/useAvailableSlots";
 
 interface PatientAppointmentRequestFormProps {
   onRequestCreated: () => void;
@@ -23,6 +24,17 @@ export const PatientAppointmentRequestForm = ({ onRequestCreated }: PatientAppoi
     notes: ""
   });
 
+  // Verificar disponibilidad de horarios
+  const {
+    loading: slotsLoading,
+    isSlotAvailable,
+    getAvailableSlots,
+    bookedSlots
+  } = useAvailableSlots({
+    psychologistId: patient?.psychologist_id || "",
+    selectedDate: formData.preferredDate
+  });
+
   const getMinDate = () => {
     const today = new Date();
     const year = today.getFullYear();
@@ -31,12 +43,8 @@ export const PatientAppointmentRequestForm = ({ onRequestCreated }: PatientAppoi
     return `${year}-${month}-${day}`;
   };
 
-  const timeSlots = [
-    "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
-    "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
-    "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
-    "17:00", "17:30", "18:00", "18:30", "19:00", "19:30"
-  ];
+  // Obtener solo los horarios disponibles
+  const availableTimeSlots = getAvailableSlots();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,14 +72,23 @@ export const PatientAppointmentRequestForm = ({ onRequestCreated }: PatientAppoi
       return;
     }
 
+    // Verificar disponibilidad antes de enviar
+    if (!isSlotAvailable(formData.preferredTime)) {
+      toast({
+        title: "Horario no disponible",
+        description: "Este horario ya no está disponible. Por favor selecciona otro.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Asegurar que la fecha se mantenga en formato local sin conversión a UTC
       const requestData = {
         patient_id: patient.id,
         psychologist_id: patient.psychologist_id,
-        preferred_date: formData.preferredDate, // Mantener como string de fecha local
+        preferred_date: formData.preferredDate,
         preferred_time: formData.preferredTime,
         type: formData.type,
         status: 'pending',
@@ -79,9 +96,6 @@ export const PatientAppointmentRequestForm = ({ onRequestCreated }: PatientAppoi
       };
 
       console.log('Creating appointment request with data:', requestData);
-      console.log('Patient ID:', patient.id);
-      console.log('Psychologist ID:', patient.psychologist_id);
-      console.log('Selected date (local):', formData.preferredDate);
 
       const { data: insertedData, error: requestError } = await supabase
         .from('appointment_requests')
@@ -91,12 +105,6 @@ export const PatientAppointmentRequestForm = ({ onRequestCreated }: PatientAppoi
 
       if (requestError) {
         console.error('Error creating appointment request:', requestError);
-        console.error('Request error details:', {
-          code: requestError.code,
-          message: requestError.message,
-          details: requestError.details,
-          hint: requestError.hint
-        });
         throw new Error('Error al enviar la solicitud de cita: ' + requestError.message);
       }
 
@@ -144,7 +152,6 @@ export const PatientAppointmentRequestForm = ({ onRequestCreated }: PatientAppoi
   const formatSelectedDate = (dateString: string) => {
     if (!dateString) return "";
     
-    // Crear fecha directamente del string sin conversión UTC
     const [year, month, day] = dateString.split('-');
     const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
     
@@ -173,9 +180,6 @@ export const PatientAppointmentRequestForm = ({ onRequestCreated }: PatientAppoi
         <Calendar className="w-8 h-8 mx-auto mb-2 text-blue-600" />
         <h2 className="text-xl font-bold text-slate-800">Solicitar Cita</h2>
         <p className="text-sm text-slate-600">Envía una solicitud de cita a tu psicólogo</p>
-        <p className="text-xs text-slate-500 mt-1">
-          Tu psicólogo: {patient.psychologist_id}
-        </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -185,7 +189,9 @@ export const PatientAppointmentRequestForm = ({ onRequestCreated }: PatientAppoi
             id="preferredDate"
             type="date"
             value={formData.preferredDate}
-            onChange={(e) => setFormData({...formData, preferredDate: e.target.value})}
+            onChange={(e) => {
+              setFormData({...formData, preferredDate: e.target.value, preferredTime: ""});
+            }}
             min={getMinDate()}
             required
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
@@ -202,12 +208,21 @@ export const PatientAppointmentRequestForm = ({ onRequestCreated }: PatientAppoi
           <Select 
             value={formData.preferredTime} 
             onValueChange={(value) => setFormData({...formData, preferredTime: value})}
+            disabled={!formData.preferredDate || slotsLoading}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Selecciona una hora" />
+              <SelectValue placeholder={
+                !formData.preferredDate 
+                  ? "Primero selecciona una fecha" 
+                  : slotsLoading 
+                  ? "Cargando horarios..."
+                  : availableTimeSlots.length === 0
+                  ? "No hay horarios disponibles"
+                  : "Selecciona una hora"
+              } />
             </SelectTrigger>
             <SelectContent>
-              {timeSlots.map((time) => (
+              {availableTimeSlots.map((time) => (
                 <SelectItem key={time} value={time}>
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4" />
@@ -217,6 +232,31 @@ export const PatientAppointmentRequestForm = ({ onRequestCreated }: PatientAppoi
               ))}
             </SelectContent>
           </Select>
+
+          {formData.preferredDate && bookedSlots.length > 0 && (
+            <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-amber-800">Horarios ocupados:</p>
+                  <p className="text-sm text-amber-700">
+                    {bookedSlots.join(", ")}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {formData.preferredDate && availableTimeSlots.length === 0 && (
+            <div className="p-3 bg-red-50 rounded-lg border border-red-200">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-600" />
+                <p className="text-sm text-red-800">
+                  No hay horarios disponibles para esta fecha. Por favor selecciona otra fecha.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -261,7 +301,7 @@ export const PatientAppointmentRequestForm = ({ onRequestCreated }: PatientAppoi
 
         <Button
           type="submit"
-          disabled={loading}
+          disabled={loading || !formData.preferredDate || !formData.preferredTime || !formData.type || availableTimeSlots.length === 0}
           className="w-full bg-gradient-to-r from-blue-500 to-emerald-500"
         >
           {loading ? "Enviando solicitud..." : "Enviar Solicitud"}
