@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -189,12 +190,11 @@ export const AdminPanel = () => {
 
     try {
       setUpdating(true);
-      console.log('=== INICIANDO ACTUALIZACIÓN DE PLAN ===');
+      console.log('=== ACTUALIZANDO PLAN SIMPLIFICADO ===');
       console.log('Psychologist ID:', selectedPsychologist);
       console.log('New plan type:', newPlanType);
 
-      // 1. ACTUALIZAR DIRECTAMENTE LA TABLA
-      console.log('Paso 1: Actualizando tabla psychologists...');
+      // Actualizar directamente la tabla psychologists
       const { error: updateError } = await supabase
         .from('psychologists')
         .update({ 
@@ -208,53 +208,23 @@ export const AdminPanel = () => {
         throw updateError;
       }
 
-      // 2. ESPERAR Y VERIFICAR
-      console.log('Paso 2: Esperando actualización...');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log('Plan actualizado exitosamente en la base de datos');
 
-      console.log('Paso 3: Verificando actualización...');
-      const { data: verification, error: verifyError } = await supabase
-        .from('psychologists')
-        .select('plan_type')
-        .eq('id', selectedPsychologist)
-        .single();
+      // Disparar eventos de actualización
+      window.dispatchEvent(new CustomEvent('planUpdated'));
+      window.dispatchEvent(new CustomEvent('adminPlanUpdated', {
+        detail: { psychologistId: selectedPsychologist }
+      }));
+      window.dispatchEvent(new CustomEvent('forceRefreshCapabilities'));
 
-      if (verifyError) {
-        console.error('Error verifying update:', verifyError);
-        throw new Error('No se pudo verificar la actualización');
-      }
-
-      console.log('VERIFICACIÓN: Plan type en DB es:', verification?.plan_type);
-
-      if (verification?.plan_type !== newPlanType) {
-        throw new Error(`Plan no se actualizó. Esperado: ${newPlanType}, Actual: ${verification?.plan_type}`);
-      }
-
-      // 3. FORZAR MÚLTIPLES REFRESHES
-      console.log('Paso 4: Forzando refreshes múltiples...');
-      
-      // Refresh inmediato
+      // Forzar múltiples refreshes
       forceRefresh();
-      
-      // Refreshes con delays
-      setTimeout(() => {
-        console.log('Refresh 1 segundo...');
-        forceRefresh();
-      }, 1000);
-      
-      setTimeout(() => {
-        console.log('Refresh 3 segundos...');
-        forceRefresh();
-      }, 3000);
-      
-      setTimeout(() => {
-        console.log('Refresh 5 segundos...');
-        forceRefresh();
-      }, 5000);
+      setTimeout(() => forceRefresh(), 1000);
+      setTimeout(() => forceRefresh(), 3000);
 
       toast({
-        title: "¡Plan actualizado exitosamente!",
-        description: `El plan ${newPlanType.toUpperCase()} ha sido aplicado y verificado`,
+        title: "¡Plan actualizado!",
+        description: `El plan ${newPlanType.toUpperCase()} ha sido aplicado exitosamente`,
       });
       
       // Limpiar formulario
@@ -269,7 +239,6 @@ export const AdminPanel = () => {
         variant: "destructive"
       });
     } finally {
-      // Mantener el estado "updating" por más tiempo para que siga auto-refrescando
       setTimeout(() => setUpdating(false), 8000);
     }
   };
