@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, Users, Clock, Calendar, AlertTriangle, CheckCircle, Settings, Plus, DollarSign } from 'lucide-react';
+import { Shield, Users, Clock, Calendar, AlertTriangle, CheckCircle, Settings, Plus, DollarSign, Crown, Zap } from 'lucide-react';
 import { useAdmin } from '@/hooks/useAdmin';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -19,10 +20,11 @@ export const AdminPanel = () => {
   const { toast } = useToast();
   const [selectedPsychologist, setSelectedPsychologist] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [actionType, setActionType] = useState<'trial' | 'subscription'>('trial');
+  const [actionType, setActionType] = useState<'trial' | 'subscription' | 'plan'>('trial');
   const [additionalDays, setAdditionalDays] = useState('');
   const [newStatus, setNewStatus] = useState('');
   const [subscriptionDays, setSubscriptionDays] = useState('');
+  const [newPlanType, setNewPlanType] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
@@ -95,7 +97,38 @@ export const AdminPanel = () => {
     }
   };
 
-  const openManageDialog = (psychologist: any, type: 'trial' | 'subscription') => {
+  const handleUpdatePlanType = async () => {
+    if (!selectedPsychologist || !newPlanType) return;
+
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase
+        .from('psychologists')
+        .update({ plan_type: newPlanType, updated_at: new Date().toISOString() })
+        .eq('id', selectedPsychologist.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Plan actualizado",
+        description: `El plan de ${selectedPsychologist.first_name} ${selectedPsychologist.last_name} se cambió a ${newPlanType.toUpperCase()}`,
+      });
+
+      setDialogOpen(false);
+      setNewPlanType('');
+      refetch();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo actualizar el plan",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const openManageDialog = (psychologist: any, type: 'trial' | 'subscription' | 'plan') => {
     setSelectedPsychologist(psychologist);
     setActionType(type);
     setDialogOpen(true);
@@ -182,6 +215,17 @@ export const AdminPanel = () => {
         return <Badge variant="outline">Cancelado</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const getPlanBadge = (planType: string) => {
+    switch (planType) {
+      case 'pro':
+        return <Badge className="bg-purple-500 text-white"><Crown className="w-3 h-3 mr-1" />PRO</Badge>;
+      case 'plus':
+        return <Badge className="bg-blue-500 text-white"><Zap className="w-3 h-3 mr-1" />PLUS</Badge>;
+      default:
+        return <Badge variant="outline">Basic</Badge>;
     }
   };
 
@@ -276,6 +320,7 @@ export const AdminPanel = () => {
                   <TableRow>
                     <TableHead>Nombre</TableHead>
                     <TableHead>Email</TableHead>
+                    <TableHead>Plan</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead>Días Trial</TableHead>
                     <TableHead>Días Suscripción</TableHead>
@@ -290,6 +335,9 @@ export const AdminPanel = () => {
                         {psychologist.first_name} {psychologist.last_name}
                       </TableCell>
                       <TableCell>{psychologist.email}</TableCell>
+                      <TableCell>
+                        {getPlanBadge(psychologist.plan_type || 'plus')}
+                      </TableCell>
                       <TableCell>
                         {getStatusBadge(psychologist.subscription_status, psychologist.is_expired)}
                       </TableCell>
@@ -328,6 +376,14 @@ export const AdminPanel = () => {
                           >
                             <Settings className="w-3 h-3" />
                           </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-purple-300 text-purple-600"
+                            onClick={() => openManageDialog(psychologist, 'plan')}
+                          >
+                            <Crown className="w-3 h-3" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -348,7 +404,9 @@ export const AdminPanel = () => {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>
-                  {actionType === 'trial' ? 'Agregar Días de Trial' : 'Cambiar Plan de Suscripción'}
+                  {actionType === 'trial' ? 'Agregar Días de Trial' : 
+                   actionType === 'subscription' ? 'Cambiar Plan de Suscripción' : 
+                   'Cambiar Tipo de Plan'}
                 </DialogTitle>
               </DialogHeader>
               
@@ -358,6 +416,9 @@ export const AdminPanel = () => {
                     <p className="text-sm text-slate-600">Usuario seleccionado:</p>
                     <p className="font-medium">{selectedPsychologist.first_name} {selectedPsychologist.last_name}</p>
                     <p className="text-sm text-slate-500">{selectedPsychologist.email}</p>
+                    <div className="mt-2">
+                      {getPlanBadge(selectedPsychologist.plan_type || 'plus')}
+                    </div>
                   </div>
 
                   {actionType === 'trial' ? (
@@ -380,7 +441,7 @@ export const AdminPanel = () => {
                         {isProcessing ? 'Procesando...' : 'Agregar Días'}
                       </Button>
                     </div>
-                  ) : (
+                  ) : actionType === 'subscription' ? (
                     <div className="space-y-4">
                       <div>
                         <Label htmlFor="newStatus">Nuevo estado</Label>
@@ -416,6 +477,62 @@ export const AdminPanel = () => {
                         className="w-full"
                       >
                         {isProcessing ? 'Procesando...' : 'Actualizar Estado'}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="newPlanType">Tipo de plan</Label>
+                        <Select value={newPlanType} onValueChange={setNewPlanType}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar plan" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="plus">
+                              <div className="flex items-center gap-2">
+                                <Zap className="w-4 h-4 text-blue-500" />
+                                <span>Plan PLUS</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="pro">
+                              <div className="flex items-center gap-2">
+                                <Crown className="w-4 h-4 text-purple-500" />
+                                <span>Plan PRO</span>
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="bg-slate-50 p-3 rounded-lg text-sm">
+                        <p className="font-medium mb-1">Funcionalidades incluidas:</p>
+                        {newPlanType === 'pro' ? (
+                          <ul className="text-slate-600 space-y-1">
+                            <li>• Todas las funcionalidades básicas</li>
+                            <li>• Gestión de perfil SEO</li>
+                            <li>• Reportes avanzados</li>
+                            <li>• Acceso anticipado a nuevas funciones</li>
+                            <li>• Soporte prioritario</li>
+                            <li>• Consultoría de visibilidad</li>
+                          </ul>
+                        ) : newPlanType === 'plus' ? (
+                          <ul className="text-slate-600 space-y-1">
+                            <li>• Funcionalidades básicas del sistema</li>
+                            <li>• Gestión de pacientes</li>
+                            <li>• Calendario de citas</li>
+                            <li>• Mensajería básica</li>
+                          </ul>
+                        ) : (
+                          <p className="text-slate-500">Selecciona un plan para ver las funcionalidades</p>
+                        )}
+                      </div>
+                      
+                      <Button 
+                        onClick={handleUpdatePlanType} 
+                        disabled={!newPlanType || isProcessing}
+                        className="w-full"
+                      >
+                        {isProcessing ? 'Procesando...' : 'Cambiar Plan'}
                       </Button>
                     </div>
                   )}

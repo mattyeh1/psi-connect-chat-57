@@ -1,12 +1,15 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Users, Clock, AlertCircle, TrendingUp } from "lucide-react";
+import { Calendar, Users, Clock, AlertCircle, TrendingUp, Crown, Zap, BarChart3, Headphones, Rocket, Eye } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
+import { usePlanCapabilities } from "@/hooks/usePlanCapabilities";
 import { supabase } from "@/integrations/supabase/client";
 import { AppointmentRequests } from "./AppointmentRequests";
 import { MeetingLinksCard } from "./MeetingLinksCard";
 import { TrialStatus } from "./TrialStatus";
 import { ProfessionalCodeDisplay } from "./ProfessionalCodeDisplay";
+import { Button } from "@/components/ui/button";
 
 interface DashboardStats {
   totalPatients: number;
@@ -15,11 +18,12 @@ interface DashboardStats {
 }
 
 interface DashboardProps {
-  onViewChange?: (view: "dashboard" | "patients" | "calendar" | "messages") => void;
+  onViewChange?: (view: "dashboard" | "patients" | "calendar" | "messages" | "seo" | "reports" | "support" | "early-access" | "visibility") => void;
 }
 
 export const Dashboard = ({ onViewChange }: DashboardProps) => {
   const { psychologist } = useProfile();
+  const { capabilities, isPlusUser, isProUser } = usePlanCapabilities();
   const [stats, setStats] = useState<DashboardStats>({
     totalPatients: 0,
     appointmentsToday: 0,
@@ -107,7 +111,7 @@ export const Dashboard = ({ onViewChange }: DashboardProps) => {
     fetchDashboardData();
   };
 
-  const handleQuickAction = (action: "calendar" | "patients") => {
+  const handleQuickAction = (action: "calendar" | "patients" | "seo" | "reports" | "support" | "early-access" | "visibility") => {
     if (onViewChange) {
       onViewChange(action);
     }
@@ -140,6 +144,27 @@ export const Dashboard = ({ onViewChange }: DashboardProps) => {
     );
   }
 
+  const getPlanIcon = () => {
+    if (isProUser()) {
+      return <Crown className="w-5 h-5 text-purple-500" />;
+    } else if (isPlusUser()) {
+      return <Zap className="w-5 h-5 text-blue-500" />;
+    }
+    return <Users className="w-5 h-5 text-gray-500" />;
+  };
+
+  const getPlanName = () => {
+    if (isProUser()) return "PRO";
+    if (isPlusUser()) return "PLUS";
+    return "BASIC";
+  };
+
+  const getPlanColor = () => {
+    if (isProUser()) return "from-purple-600 to-pink-600";
+    if (isPlusUser()) return "from-blue-600 to-cyan-600";
+    return "from-gray-600 to-gray-700";
+  };
+
   return (
     <div className="space-y-8">
       {/* Welcome Header */}
@@ -159,12 +184,19 @@ export const Dashboard = ({ onViewChange }: DashboardProps) => {
           </div>
           <div className="text-right">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full flex items-center justify-center text-white font-bold">
-                Dr
+              <div className={`w-10 h-10 bg-gradient-to-r ${getPlanColor()} rounded-full flex items-center justify-center text-white font-bold`}>
+                {getPlanIcon()}
               </div>
               <div>
                 <p className="font-semibold text-slate-800">Dr. {psychologist?.first_name} {psychologist?.last_name}</p>
-                <p className="text-sm text-slate-500">Psicólogo Profesional</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-500">Plan {getPlanName()}</span>
+                  {isProUser() && (
+                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
+                      Funcionalidades Premium
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -280,6 +312,84 @@ export const Dashboard = ({ onViewChange }: DashboardProps) => {
               </button>
             </CardContent>
           </Card>
+
+          {/* Pro Features Quick Access */}
+          {isProUser() && (
+            <Card className="border-0 shadow-md border-l-4 border-l-purple-500">
+              <CardHeader>
+                <CardTitle className="text-slate-800 text-lg flex items-center gap-2">
+                  <Crown className="w-5 h-5 text-purple-500" />
+                  Funcionalidades PRO
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <button
+                  onClick={() => handleQuickAction("reports")}
+                  className="w-full p-3 bg-purple-50 rounded-lg border border-purple-100 hover:bg-purple-100 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <BarChart3 className="w-5 h-5 text-purple-600" />
+                    <div>
+                      <h4 className="font-medium text-purple-800">Reportes Avanzados</h4>
+                      <p className="text-sm text-purple-600">Analytics detallados</p>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => handleQuickAction("seo")}
+                  className="w-full p-3 bg-green-50 rounded-lg border border-green-100 hover:bg-green-100 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <TrendingUp className="w-5 h-5 text-green-600" />
+                    <div>
+                      <h4 className="font-medium text-green-800">Perfil SEO</h4>
+                      <p className="text-sm text-green-600">Optimizar presencia online</p>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => handleQuickAction("support")}
+                  className="w-full p-3 bg-orange-50 rounded-lg border border-orange-100 hover:bg-orange-100 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <Headphones className="w-5 h-5 text-orange-600" />
+                    <div>
+                      <h4 className="font-medium text-orange-800">Soporte Prioritario</h4>
+                      <p className="text-sm text-orange-600">Asistencia exclusiva</p>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => handleQuickAction("early-access")}
+                  className="w-full p-3 bg-red-50 rounded-lg border border-red-100 hover:bg-red-100 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <Rocket className="w-5 h-5 text-red-600" />
+                    <div>
+                      <h4 className="font-medium text-red-800">Acceso Anticipado</h4>
+                      <p className="text-sm text-red-600">Nuevas funcionalidades</p>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => handleQuickAction("visibility")}
+                  className="w-full p-3 bg-teal-50 rounded-lg border border-teal-100 hover:bg-teal-100 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <Eye className="w-5 h-5 text-teal-600" />
+                    <div>
+                      <h4 className="font-medium text-teal-800">Consultoría Visibilidad</h4>
+                      <p className="text-sm text-teal-600">Análisis de presencia</p>
+                    </div>
+                  </div>
+                </button>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Main Content Area */}
