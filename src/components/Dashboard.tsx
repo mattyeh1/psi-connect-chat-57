@@ -1,18 +1,18 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Users, MessageSquare, TrendingUp, Clock, AlertCircle, CheckCircle } from "lucide-react";
+import { Calendar, Users, Clock, AlertCircle, TrendingUp } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { AppointmentRequests } from "./AppointmentRequests";
 import { MeetingLinksCard } from "./MeetingLinksCard";
-import { DashboardOverview } from "./DashboardOverview";
+import { TrialStatus } from "./TrialStatus";
+import { ProfessionalCodeDisplay } from "./ProfessionalCodeDisplay";
 
 interface DashboardStats {
   totalPatients: number;
   appointmentsToday: number;
   pendingRequests: number;
-  messagesUnread: number;
 }
 
 export const Dashboard = () => {
@@ -20,10 +20,17 @@ export const Dashboard = () => {
   const [stats, setStats] = useState<DashboardStats>({
     totalPatients: 0,
     appointmentsToday: 0,
-    pendingRequests: 0,
-    messagesUnread: 0
+    pendingRequests: 0
   });
   const [loading, setLoading] = useState(true);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (psychologist?.id) {
@@ -43,11 +50,6 @@ export const Dashboard = () => {
       const today = new Date();
       const startOfDay = new Date(today.setHours(0, 0, 0, 0));
       const endOfDay = new Date(today.setHours(23, 59, 59, 999));
-
-      console.log('Dashboard: Date range for today:', {
-        start: startOfDay.toISOString(),
-        end: endOfDay.toISOString()
-      });
 
       // Fetch all data in parallel
       const [patientsResult, appointmentsResult, requestsResult] = await Promise.all([
@@ -74,12 +76,6 @@ export const Dashboard = () => {
           .eq('status', 'pending')
       ]);
 
-      console.log('Dashboard: Fetch results:', {
-        patients: patientsResult,
-        appointments: appointmentsResult,
-        requests: requestsResult
-      });
-
       if (patientsResult.error) {
         console.error('Dashboard: Error fetching patients:', patientsResult.error);
       }
@@ -93,15 +89,7 @@ export const Dashboard = () => {
       setStats({
         totalPatients: patientsResult.count || 0,
         appointmentsToday: appointmentsResult.count || 0,
-        pendingRequests: requestsResult.count || 0,
-        messagesUnread: 0 // We'll implement this later
-      });
-
-      console.log('Dashboard: Stats updated:', {
-        totalPatients: patientsResult.count || 0,
-        appointmentsToday: appointmentsResult.count || 0,
-        pendingRequests: requestsResult.count || 0,
-        messagesUnread: 0
+        pendingRequests: requestsResult.count || 0
       });
 
     } catch (error) {
@@ -116,8 +104,23 @@ export const Dashboard = () => {
     fetchDashboardData();
   };
 
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('es-ES', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
   if (loading) {
-    console.log('Dashboard: Loading state');
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
@@ -128,106 +131,159 @@ export const Dashboard = () => {
     );
   }
 
-  console.log('Dashboard: Rendering with stats:', stats);
-
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-slate-800">
-          Dashboard
-        </h2>
-        <p className="text-slate-600 mt-1">
-          Resumen de tu actividad profesional
-        </p>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pacientes Totales</CardTitle>
-            <Users className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalPatients}</div>
-            <p className="text-xs text-muted-foreground">
-              Pacientes registrados
+    <div className="space-y-8">
+      {/* Welcome Header */}
+      <div className="bg-gradient-to-r from-blue-50 to-emerald-50 rounded-2xl p-8 border border-blue-100">
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent mb-2">
+              ¡Bienvenido, Dr. {psychologist?.first_name}!
+            </h1>
+            <p className="text-slate-600 text-lg mb-1">
+              {formatDate(currentTime)}
             </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Citas Hoy</CardTitle>
-            <Calendar className="h-4 w-4 text-emerald-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.appointmentsToday}</div>
-            <p className="text-xs text-muted-foreground">
-              Programadas para hoy
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Solicitudes Pendientes</CardTitle>
-            <Clock className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.pendingRequests}</div>
-            <p className="text-xs text-muted-foreground">
-              Esperando aprobación
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Mensajes</CardTitle>
-            <MessageSquare className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.messagesUnread}</div>
-            <p className="text-xs text-muted-foreground">
-              Sin leer
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Alert for pending requests */}
-      {stats.pendingRequests > 0 && (
-        <Card className="border-orange-200 bg-orange-50">
-          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-slate-500">
+              <Clock className="w-4 h-4" />
+              <span className="text-sm font-mono">{formatTime(currentTime)}</span>
+            </div>
+          </div>
+          <div className="text-right">
             <div className="flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 text-orange-600" />
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                Dr
+              </div>
               <div>
-                <p className="font-medium text-orange-800">
-                  Tienes {stats.pendingRequests} solicitud{stats.pendingRequests > 1 ? 'es' : ''} de cita pendiente{stats.pendingRequests > 1 ? 's' : ''}
+                <p className="font-semibold text-slate-800">Dr. {psychologist?.first_name} {psychologist?.last_name}</p>
+                <p className="text-sm text-slate-500">Psicólogo Profesional</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Trial Status and Professional Code */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {psychologist && <TrialStatus />}
+        {psychologist && psychologist.professional_code && (
+          <ProfessionalCodeDisplay code={psychologist.professional_code} />
+        )}
+      </div>
+
+      {/* Main Statistics */}
+      <div>
+        <h2 className="text-xl font-semibold text-slate-800 mb-6">Resumen de Actividad</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm font-medium text-slate-600">Pacientes Totales</CardTitle>
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Users className="h-5 w-5 text-blue-600" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-slate-800 mb-1">{stats.totalPatients}</div>
+              <p className="text-xs text-slate-500">
+                Pacientes registrados
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm font-medium text-slate-600">Citas Hoy</CardTitle>
+              <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+                <Calendar className="h-5 w-5 text-emerald-600" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-slate-800 mb-1">{stats.appointmentsToday}</div>
+              <p className="text-xs text-slate-500">
+                Programadas para hoy
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm font-medium text-slate-600">Solicitudes Pendientes</CardTitle>
+              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                <Clock className="h-5 w-5 text-orange-600" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-slate-800 mb-1">{stats.pendingRequests}</div>
+              <p className="text-xs text-slate-500">
+                Esperando aprobación
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Pending Requests Alert */}
+      {stats.pendingRequests > 0 && (
+        <Card className="border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 shadow-lg">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                <AlertCircle className="w-6 h-6 text-orange-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-orange-800 text-lg mb-1">
+                  {stats.pendingRequests} Solicitud{stats.pendingRequests > 1 ? 'es' : ''} Pendiente{stats.pendingRequests > 1 ? 's' : ''}
+                </h3>
+                <p className="text-orange-700">
+                  Revisa las solicitudes de citas para aprobar o rechazar las nuevas consultas.
                 </p>
-                <p className="text-sm text-orange-600">
-                  Revisa las solicitudes a continuación para aprobar o rechazar las citas.
-                </p>
+              </div>
+              <div className="flex items-center gap-2 text-orange-600">
+                <TrendingUp className="w-5 h-5" />
+                <span className="font-medium">Acción requerida</span>
               </div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Appointment Requests - Always show this */}
-        <div className="lg:col-span-2">
+      {/* Main Content Sections */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+        {/* Appointment Requests */}
+        <div className="xl:col-span-2">
           <AppointmentRequests onRequestProcessed={handleRequestProcessed} />
         </div>
 
         {/* Meeting Links */}
         <MeetingLinksCard />
 
-        {/* Overview */}
-        <DashboardOverview />
+        {/* Quick Actions */}
+        <Card className="border-0 shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-slate-800">Acciones Rápidas</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 gap-3">
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors cursor-pointer">
+                <div className="flex items-center gap-3">
+                  <Calendar className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <h4 className="font-medium text-blue-800">Ver Calendario</h4>
+                    <p className="text-sm text-blue-600">Revisar citas programadas</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors cursor-pointer">
+                <div className="flex items-center gap-3">
+                  <Users className="w-5 h-5 text-emerald-600" />
+                  <div>
+                    <h4 className="font-medium text-emerald-800">Gestionar Pacientes</h4>
+                    <p className="text-sm text-emerald-600">Ver lista de pacientes</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
