@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   BrowserRouter as Router,
@@ -6,12 +7,12 @@ import {
   useLocation,
 } from 'react-router-dom';
 import { AuthPage } from '@/components/AuthPage';
-import { Index } from '@/pages/Index';
+import Index from '@/pages/Index';
 import { RegisterPage } from '@/pages/RegisterPage';
 import { DemoPage } from '@/pages/DemoPage';
 import { AdminLogin } from '@/pages/AdminLogin';
 import { AdminDashboard } from '@/pages/AdminDashboard';
-import { NotFound } from '@/pages/NotFound';
+import NotFound from '@/pages/NotFound';
 import { Toaster } from '@/components/ui/toaster';
 import { useAuth } from '@/hooks/useAuth';
 import { AdminRoute } from '@/components/AdminRoute';
