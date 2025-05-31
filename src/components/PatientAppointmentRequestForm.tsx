@@ -38,6 +38,10 @@ export const PatientAppointmentRequestForm = ({ onRequestCreated }: PatientAppoi
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('=== CREATING APPOINTMENT REQUEST ===');
+    console.log('Patient data:', patient);
+    console.log('Form data:', formData);
+    
     if (!patient?.psychologist_id) {
       console.error('No psychologist_id found for patient:', patient);
       toast({
@@ -71,8 +75,10 @@ export const PatientAppointmentRequestForm = ({ onRequestCreated }: PatientAppoi
       };
 
       console.log('Creating appointment request with data:', requestData);
+      console.log('Patient ID:', patient.id);
+      console.log('Psychologist ID:', patient.psychologist_id);
 
-      // Crear solicitud de cita (no cita directa)
+      // Crear solicitud de cita
       const { data: insertedData, error: requestError } = await supabase
         .from('appointment_requests')
         .insert(requestData)
@@ -87,12 +93,12 @@ export const PatientAppointmentRequestForm = ({ onRequestCreated }: PatientAppoi
           details: requestError.details,
           hint: requestError.hint
         });
-        throw new Error('Error al enviar la solicitud de cita');
+        throw new Error('Error al enviar la solicitud de cita: ' + requestError.message);
       }
 
-      console.log('Appointment request created successfully:', insertedData);
+      console.log('✅ Appointment request created successfully:', insertedData);
 
-      // Verify the request was actually saved
+      // Verificar que la solicitud se guardó correctamente
       const { data: verifyData, error: verifyError } = await supabase
         .from('appointment_requests')
         .select('*')
@@ -102,7 +108,19 @@ export const PatientAppointmentRequestForm = ({ onRequestCreated }: PatientAppoi
       if (verifyError) {
         console.error('Error verifying appointment request:', verifyError);
       } else {
-        console.log('Verified appointment request exists:', verifyData);
+        console.log('✅ Verified appointment request exists:', verifyData);
+      }
+
+      // Verificar que aparece para el psicólogo
+      const { data: psychRequests, error: psychError } = await supabase
+        .from('appointment_requests')
+        .select('*')
+        .eq('psychologist_id', patient.psychologist_id);
+
+      if (psychError) {
+        console.error('Error checking psychologist requests:', psychError);
+      } else {
+        console.log('✅ All requests for psychologist:', psychRequests);
       }
 
       toast({
@@ -147,7 +165,10 @@ export const PatientAppointmentRequestForm = ({ onRequestCreated }: PatientAppoi
   if (!patient?.psychologist_id) {
     return (
       <div className="text-center text-red-600 p-4">
-        No tienes un psicólogo asignado. Contacta al administrador.
+        <p>No tienes un psicólogo asignado. Contacta al administrador.</p>
+        <p className="text-sm mt-2">
+          Debug: Patient ID: {patient?.id || 'N/A'}, Psychologist ID: {patient?.psychologist_id || 'N/A'}
+        </p>
       </div>
     );
   }
@@ -158,6 +179,9 @@ export const PatientAppointmentRequestForm = ({ onRequestCreated }: PatientAppoi
         <Calendar className="w-8 h-8 mx-auto mb-2 text-blue-600" />
         <h2 className="text-xl font-bold text-slate-800">Solicitar Cita</h2>
         <p className="text-sm text-slate-600">Envía una solicitud de cita a tu psicólogo</p>
+        <p className="text-xs text-slate-500 mt-1">
+          Tu psicólogo: {patient.psychologist_id}
+        </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">

@@ -88,22 +88,27 @@ export const AppointmentRequests = ({ onRequestProcessed }: AppointmentRequestsP
     }
 
     try {
-      console.log('Fetching appointment requests for psychologist:', psychologist.id);
+      console.log('=== FETCHING APPOINTMENT REQUESTS ===');
+      console.log('Psychologist ID:', psychologist.id);
       
-      // First, let's check ALL appointment requests to see if they exist
-      const { data: allRequests, error: allRequestsError } = await supabase
+      setLoading(true);
+
+      // First check ALL requests in the database
+      const { data: allData, error: allError } = await supabase
         .from('appointment_requests')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (allRequestsError) {
-        console.error('Error fetching all appointment requests:', allRequestsError);
-      } else {
-        console.log('ALL appointment requests in database:', allRequests);
-        console.log('Requests for our psychologist:', allRequests?.filter(r => r.psychologist_id === psychologist.id));
+      console.log('ALL appointment requests in database:', allData);
+      console.log('Number of total requests:', allData?.length || 0);
+
+      if (allData) {
+        const myRequests = allData.filter(r => r.psychologist_id === psychologist.id);
+        console.log('Requests for my psychologist ID:', myRequests);
+        console.log('Number of my requests:', myRequests.length);
       }
 
-      // Now fetch requests for this specific psychologist with patient data
+      // Now fetch with patient data
       const { data, error } = await supabase
         .from('appointment_requests')
         .select(`
@@ -111,17 +116,13 @@ export const AppointmentRequests = ({ onRequestProcessed }: AppointmentRequestsP
           patient:patients(first_name, last_name, phone)
         `)
         .eq('psychologist_id', psychologist.id)
-        .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
+      console.log('Query result for psychologist requests:', data);
+      console.log('Query error:', error);
+
       if (error) {
-        console.error('Error fetching pending appointment requests:', error);
-        console.error('Error details:', {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint
-        });
+        console.error('Error fetching appointment requests:', error);
         toast({
           title: "Error",
           description: "No se pudieron cargar las solicitudes de citas",
@@ -130,8 +131,6 @@ export const AppointmentRequests = ({ onRequestProcessed }: AppointmentRequestsP
         return;
       }
 
-      console.log('Fetched pending appointment requests:', data);
-      
       const typedRequests = (data || []).map(request => ({
         ...request,
         patient: request.patient && typeof request.patient === 'object' && 'first_name' in request.patient 
@@ -139,10 +138,10 @@ export const AppointmentRequests = ({ onRequestProcessed }: AppointmentRequestsP
           : null
       }));
 
-      console.log('Typed requests:', typedRequests);
+      console.log('Final typed requests:', typedRequests);
       setRequests(typedRequests);
     } catch (error) {
-      console.error('Error fetching appointment requests:', error);
+      console.error('Exception fetching appointment requests:', error);
       toast({
         title: "Error",
         description: "Error inesperado al cargar las solicitudes",
@@ -241,12 +240,6 @@ export const AppointmentRequests = ({ onRequestProcessed }: AppointmentRequestsP
 
         if (appointmentError) {
           console.error('Error creating appointment:', appointmentError);
-          console.error('Appointment error details:', {
-            code: appointmentError.code,
-            message: appointmentError.message,
-            details: appointmentError.details,
-            hint: appointmentError.hint
-          });
           
           // Provide more specific error messages
           if (appointmentError.message.includes('check constraint')) {
@@ -376,7 +369,7 @@ export const AppointmentRequests = ({ onRequestProcessed }: AppointmentRequestsP
           <div className="flex items-center gap-2">
             <Calendar className="w-5 h-5" />
             <CardTitle className="text-slate-800">
-              Solicitudes de Citas Pendientes
+              Solicitudes de Citas
             </CardTitle>
             {requests.length > 0 && (
               <Badge variant="secondary" className="ml-2">
@@ -397,10 +390,16 @@ export const AppointmentRequests = ({ onRequestProcessed }: AppointmentRequestsP
         </div>
       </CardHeader>
       <CardContent>
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-800">
+            <strong>Debug info:</strong> Mostrando {requests.length} solicitudes para psicólogo ID: {psychologist?.id}
+          </p>
+        </div>
+        
         {requests.length === 0 ? (
           <div className="text-center py-8 text-slate-500">
             <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p>No hay solicitudes de citas pendientes</p>
+            <p>No hay solicitudes de citas</p>
             <p className="text-sm">Las nuevas solicitudes aparecerán aquí automáticamente</p>
           </div>
         ) : (
@@ -422,6 +421,9 @@ export const AppointmentRequests = ({ onRequestProcessed }: AppointmentRequestsP
                         </h4>
                         <p className="text-sm text-slate-600">
                           Solicitud enviada el {formatCreatedDate(request.created_at)}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          Status: {request.status} | ID: {request.id}
                         </p>
                       </div>
                     </div>
@@ -460,27 +462,29 @@ export const AppointmentRequests = ({ onRequestProcessed }: AppointmentRequestsP
                     )}
                   </div>
 
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleRequestAction(request.id, 'rejected')}
-                      disabled={processingId === request.id}
-                      className="border-red-200 text-red-700 hover:bg-red-50"
-                    >
-                      <X className="w-4 h-4 mr-1" />
-                      Rechazar
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => handleRequestAction(request.id, 'approved')}
-                      disabled={processingId === request.id}
-                      className="bg-emerald-600 hover:bg-emerald-700"
-                    >
-                      <Check className="w-4 h-4 mr-1" />
-                      {processingId === request.id ? "Procesando..." : "Aprobar"}
-                    </Button>
-                  </div>
+                  {request.status === 'pending' && (
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleRequestAction(request.id, 'rejected')}
+                        disabled={processingId === request.id}
+                        className="border-red-200 text-red-700 hover:bg-red-50"
+                      >
+                        <X className="w-4 h-4 mr-1" />
+                        Rechazar
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => handleRequestAction(request.id, 'approved')}
+                        disabled={processingId === request.id}
+                        className="bg-emerald-600 hover:bg-emerald-700"
+                      >
+                        <Check className="w-4 h-4 mr-1" />
+                        {processingId === request.id ? "Procesando..." : "Aprobar"}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
