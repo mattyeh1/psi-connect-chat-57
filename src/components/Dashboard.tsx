@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Users, Clock, AlertCircle, TrendingUp } from "lucide-react";
@@ -15,7 +14,11 @@ interface DashboardStats {
   pendingRequests: number;
 }
 
-export const Dashboard = () => {
+interface DashboardProps {
+  onViewChange?: (view: "dashboard" | "patients" | "calendar" | "messages") => void;
+}
+
+export const Dashboard = ({ onViewChange }: DashboardProps) => {
   const { psychologist } = useProfile();
   const [stats, setStats] = useState<DashboardStats>({
     totalPatients: 0,
@@ -104,6 +107,12 @@ export const Dashboard = () => {
     fetchDashboardData();
   };
 
+  const handleQuickAction = (action: "calendar" | "patients") => {
+    if (onViewChange) {
+      onViewChange(action);
+    }
+  };
+
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('es-ES', {
       hour: '2-digit',
@@ -134,13 +143,13 @@ export const Dashboard = () => {
   return (
     <div className="space-y-8">
       {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-blue-50 to-emerald-50 rounded-2xl p-8 border border-blue-100">
+      <div className="bg-gradient-to-r from-blue-50 to-emerald-50 rounded-2xl p-6 border border-blue-100">
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent mb-2">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent mb-2">
               ¡Bienvenido, Dr. {psychologist?.first_name}!
             </h1>
-            <p className="text-slate-600 text-lg mb-1">
+            <p className="text-slate-600 mb-1">
               {formatDate(currentTime)}
             </p>
             <div className="flex items-center gap-2 text-slate-500">
@@ -150,7 +159,7 @@ export const Dashboard = () => {
           </div>
           <div className="text-right">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full flex items-center justify-center text-white font-bold">
                 Dr
               </div>
               <div>
@@ -162,108 +171,92 @@ export const Dashboard = () => {
         </div>
       </div>
 
-      {/* Trial Status and Professional Code */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {psychologist && <TrialStatus />}
-        {psychologist && psychologist.professional_code && (
-          <ProfessionalCodeDisplay code={psychologist.professional_code} />
-        )}
+      {/* Main Statistics Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-medium text-slate-600">Pacientes Totales</CardTitle>
+            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <Users className="h-5 w-5 text-blue-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-slate-800 mb-1">{stats.totalPatients}</div>
+            <p className="text-xs text-slate-500">Pacientes registrados</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-medium text-slate-600">Citas Hoy</CardTitle>
+            <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+              <Calendar className="h-5 w-5 text-emerald-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-slate-800 mb-1">{stats.appointmentsToday}</div>
+            <p className="text-xs text-slate-500">Programadas para hoy</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-medium text-slate-600">Solicitudes Pendientes</CardTitle>
+            <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+              <Clock className="h-5 w-5 text-orange-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-slate-800 mb-1">{stats.pendingRequests}</div>
+            <p className="text-xs text-slate-500">Esperando aprobación</p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Main Statistics */}
-      <div>
-        <h2 className="text-xl font-semibold text-slate-800 mb-6">Resumen de Actividad</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-sm font-medium text-slate-600">Pacientes Totales</CardTitle>
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Users className="h-5 w-5 text-blue-600" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-slate-800 mb-1">{stats.totalPatients}</div>
-              <p className="text-xs text-slate-500">
-                Pacientes registrados
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-sm font-medium text-slate-600">Citas Hoy</CardTitle>
-              <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
-                <Calendar className="h-5 w-5 text-emerald-600" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-slate-800 mb-1">{stats.appointmentsToday}</div>
-              <p className="text-xs text-slate-500">
-                Programadas para hoy
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-sm font-medium text-slate-600">Solicitudes Pendientes</CardTitle>
-              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                <Clock className="h-5 w-5 text-orange-600" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-slate-800 mb-1">{stats.pendingRequests}</div>
-              <p className="text-xs text-slate-500">
-                Esperando aprobación
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Pending Requests Alert */}
+      {/* Alert for Pending Requests */}
       {stats.pendingRequests > 0 && (
-        <Card className="border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 shadow-lg">
-          <CardContent className="p-6">
+        <Card className="border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 shadow-md">
+          <CardContent className="p-4">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                <AlertCircle className="w-6 h-6 text-orange-600" />
+              <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                <AlertCircle className="w-5 h-5 text-orange-600" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-orange-800 text-lg mb-1">
+                <h3 className="font-semibold text-orange-800 mb-1">
                   {stats.pendingRequests} Solicitud{stats.pendingRequests > 1 ? 'es' : ''} Pendiente{stats.pendingRequests > 1 ? 's' : ''}
                 </h3>
-                <p className="text-orange-700">
+                <p className="text-orange-700 text-sm">
                   Revisa las solicitudes de citas para aprobar o rechazar las nuevas consultas.
                 </p>
               </div>
               <div className="flex items-center gap-2 text-orange-600">
-                <TrendingUp className="w-5 h-5" />
-                <span className="font-medium">Acción requerida</span>
+                <TrendingUp className="w-4 h-4" />
+                <span className="text-sm font-medium">Acción requerida</span>
               </div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Main Content Sections */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-        {/* Appointment Requests */}
-        <div className="xl:col-span-2">
-          <AppointmentRequests onRequestProcessed={handleRequestProcessed} />
-        </div>
-
-        {/* Meeting Links */}
-        <MeetingLinksCard />
-
-        {/* Quick Actions */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-slate-800">Acciones Rápidas</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 gap-3">
-              <div className="p-4 bg-blue-50 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors cursor-pointer">
+      {/* Two Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Trial Status and Professional Code */}
+        <div className="lg:col-span-1 space-y-6">
+          {psychologist && <TrialStatus />}
+          {psychologist && psychologist.professional_code && (
+            <ProfessionalCodeDisplay code={psychologist.professional_code} />
+          )}
+          
+          {/* Quick Actions */}
+          <Card className="border-0 shadow-md">
+            <CardHeader>
+              <CardTitle className="text-slate-800 text-lg">Acciones Rápidas</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <button
+                onClick={() => handleQuickAction("calendar")}
+                className="w-full p-3 bg-blue-50 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors text-left"
+              >
                 <div className="flex items-center gap-3">
                   <Calendar className="w-5 h-5 text-blue-600" />
                   <div>
@@ -271,8 +264,12 @@ export const Dashboard = () => {
                     <p className="text-sm text-blue-600">Revisar citas programadas</p>
                   </div>
                 </div>
-              </div>
-              <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors cursor-pointer">
+              </button>
+              
+              <button
+                onClick={() => handleQuickAction("patients")}
+                className="w-full p-3 bg-emerald-50 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors text-left"
+              >
                 <div className="flex items-center gap-3">
                   <Users className="w-5 h-5 text-emerald-600" />
                   <div>
@@ -280,10 +277,19 @@ export const Dashboard = () => {
                     <p className="text-sm text-emerald-600">Ver lista de pacientes</p>
                   </div>
                 </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              </button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Content Area */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Appointment Requests */}
+          <AppointmentRequests onRequestProcessed={handleRequestProcessed} />
+          
+          {/* Meeting Links */}
+          <MeetingLinksCard />
+        </div>
       </div>
     </div>
   );
