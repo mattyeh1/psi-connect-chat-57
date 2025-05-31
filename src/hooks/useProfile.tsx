@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -60,7 +61,7 @@ export const useProfile = () => {
   const [error, setError] = useState<string | null>(null);
 
   const clearCache = () => {
-    console.log('Clearing profile cache');
+    console.log('=== CLEARING PROFILE CACHE ===');
     profileCache = {
       profile: null,
       psychologist: null,
@@ -72,17 +73,21 @@ export const useProfile = () => {
 
   const fetchProfile = async (forceRefresh = false) => {
     if (!user) {
-      console.log('No user in fetchProfile');
+      console.log('=== NO USER IN FETCH PROFILE ===');
       setLoading(false);
       return;
     }
+
+    console.log('=== FETCH PROFILE START ===');
+    console.log('User ID:', user.id);
+    console.log('Force refresh:', forceRefresh);
 
     // Verificar cache
     const cacheAge = Date.now() - profileCache.lastFetch;
     const isSameUser = profileCache.userId === user.id;
     
     if (!forceRefresh && isSameUser && cacheAge < 30000 && profileCache.profile) {
-      console.log('Using cached profile data for user:', user.id);
+      console.log('=== USING CACHED PROFILE ===');
       setProfile(profileCache.profile);
       setPsychologist(profileCache.psychologist);
       setPatient(profileCache.patient);
@@ -91,23 +96,55 @@ export const useProfile = () => {
     }
 
     try {
-      console.log('Fetching fresh profile for user:', user.id);
+      console.log('=== FETCHING FRESH PROFILE ===');
       setLoading(true);
       setError(null);
       
-      // Fetch profile
+      // Fetch profile - USANDO MAYBLESINGLE PARA EVITAR ERRORES
+      console.log('Fetching base profile...');
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (profileError) {
-        console.error('Error fetching profile:', profileError);
-        throw new Error('No se pudo cargar el perfil');
+        console.error('=== PROFILE ERROR ===', profileError);
+        throw new Error('Error al cargar el perfil base');
       }
       
-      console.log('Profile fetched successfully:', profileData);
+      if (!profileData) {
+        console.warn('=== NO PROFILE FOUND, CREATING ONE ===');
+        // Intentar crear el perfil base si no existe
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            email: user.email!,
+            user_type: user.user_metadata?.user_type || 'patient'
+          })
+          .select()
+          .single();
+          
+        if (createError) {
+          console.error('=== ERROR CREATING PROFILE ===', createError);
+          throw new Error('No se pudo crear el perfil');
+        }
+        
+        console.log('=== PROFILE CREATED ===', newProfile);
+        const typedProfile: Profile = {
+          ...newProfile,
+          user_type: newProfile.user_type as 'psychologist' | 'patient' | 'admin'
+        };
+        setProfile(typedProfile);
+        profileCache.profile = typedProfile;
+        profileCache.userId = user.id;
+        profileCache.lastFetch = Date.now();
+        setLoading(false);
+        return;
+      }
+      
+      console.log('=== PROFILE FOUND ===', profileData);
       
       const typedProfile: Profile = {
         ...profileData,
@@ -120,7 +157,7 @@ export const useProfile = () => {
 
       // Fetch specific role data
       if (typedProfile.user_type === 'psychologist') {
-        console.log('Fetching psychologist data for:', user.id);
+        console.log('=== FETCHING PSYCHOLOGIST DATA ===');
         const { data: psychResult, error: psychError } = await supabase
           .from('psychologists')
           .select('*')
@@ -128,15 +165,19 @@ export const useProfile = () => {
           .maybeSingle();
         
         if (psychError) {
-          console.error('Error fetching psychologist data:', psychError);
+          console.error('=== PSYCHOLOGIST ERROR ===', psychError);
           setError('Error al cargar datos del psicólogo');
-        } else {
-          console.log('Psychologist data fetched:', psychResult);
+        } else if (psychResult) {
+          console.log('=== PSYCHOLOGIST DATA FOUND ===', psychResult);
           psychData = psychResult;
           setPsychologist(psychResult);
+        } else {
+          console.warn('=== NO PSYCHOLOGIST DATA, NEEDS SETUP ===');
+          // El psicólogo existe en profiles pero no en psychologists - necesita setup
+          setPsychologist(null);
         }
       } else if (typedProfile.user_type === 'patient') {
-        console.log('Fetching patient data for:', user.id);
+        console.log('=== FETCHING PATIENT DATA ===');
         const { data: patientResult, error: patientError } = await supabase
           .from('patients')
           .select('*')
@@ -144,12 +185,16 @@ export const useProfile = () => {
           .maybeSingle();
         
         if (patientError) {
-          console.error('Error fetching patient data:', patientError);
+          console.error('=== PATIENT ERROR ===', patientError);
           setError('Error al cargar datos del paciente');
-        } else {
-          console.log('Patient data fetched:', patientResult);
+        } else if (patientResult) {
+          console.log('=== PATIENT DATA FOUND ===', patientResult);
           patientData = patientResult;
           setPatient(patientResult);
+        } else {
+          console.warn('=== NO PATIENT DATA, NEEDS SETUP ===');
+          // El paciente existe en profiles pero no en patients - necesita setup
+          setPatient(null);
         }
       }
 
@@ -162,10 +207,10 @@ export const useProfile = () => {
         lastFetch: Date.now()
       };
 
-      console.log('Profile data cached successfully');
+      console.log('=== PROFILE DATA CACHED SUCCESSFULLY ===');
 
     } catch (error) {
-      console.error('Error in fetchProfile:', error);
+      console.error('=== ERROR IN FETCH PROFILE ===', error);
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       setError(errorMessage);
       toast({
@@ -179,14 +224,13 @@ export const useProfile = () => {
   };
 
   useEffect(() => {
-    console.log('useProfile effect triggered:', { 
+    console.log('=== USEPROFILE EFFECT TRIGGERED ===', { 
       userId: user?.id, 
       cachedUserId: profileCache.userId
     });
 
     if (!user) {
-      // Limpiar estado cuando no hay usuario
-      console.log('No user found, clearing state');
+      console.log('=== NO USER, CLEARING STATE ===');
       setProfile(null);
       setPsychologist(null);
       setPatient(null);
@@ -198,7 +242,7 @@ export const useProfile = () => {
 
     // Si el usuario cambió, limpiar cache
     if (profileCache.userId !== user.id) {
-      console.log('User ID changed, clearing cache and fetching new profile');
+      console.log('=== USER CHANGED, CLEARING CACHE ===');
       clearCache();
       profileCache.userId = user.id;
     }
@@ -211,7 +255,7 @@ export const useProfile = () => {
     const handlePlanUpdate = (event: CustomEvent) => {
       const { psychologistId } = event.detail;
       if (psychologist?.id === psychologistId) {
-        console.log('Plan updated event received, refreshing profile data');
+        console.log('=== PLAN UPDATE EVENT, REFRESHING ===');
         fetchProfile(true);
       }
     };
@@ -219,7 +263,7 @@ export const useProfile = () => {
     const handleAdminPlanUpdate = (event: CustomEvent) => {
       const { psychologistId } = event.detail;
       if (psychologist?.id === psychologistId) {
-        console.log('Admin plan update event received, refreshing profile data');
+        console.log('=== ADMIN PLAN UPDATE EVENT, REFRESHING ===');
         fetchProfile(true);
       }
     };
@@ -235,25 +279,26 @@ export const useProfile = () => {
 
   const createPsychologistProfile = async (data: Omit<Psychologist, 'id' | 'professional_code'>) => {
     if (!user) {
-      console.error('No user logged in');
+      console.error('=== NO USER FOR PSYCHOLOGIST CREATION ===');
       return { error: 'No user logged in' };
     }
 
     try {
       setLoading(true);
-      console.log('Creating psychologist profile for user:', user.id);
+      console.log('=== CREATING PSYCHOLOGIST PROFILE ===');
+      console.log('User ID:', user.id);
       console.log('Profile data:', data);
       
       // First, generate professional code
-      console.log('Generating professional code...');
+      console.log('=== GENERATING PROFESSIONAL CODE ===');
       const { data: codeData, error: codeError } = await supabase.rpc('generate_professional_code');
       
       if (codeError) {
-        console.error('Error generating professional code:', codeError);
+        console.error('=== CODE GENERATION ERROR ===', codeError);
         return { error: `Error al generar código profesional: ${codeError.message}` };
       }
 
-      console.log('Generated professional code:', codeData);
+      console.log('=== PROFESSIONAL CODE GENERATED ===', codeData);
 
       // Check if psychologist profile already exists
       const { data: existingPsych, error: checkError } = await supabase
@@ -263,19 +308,19 @@ export const useProfile = () => {
         .maybeSingle();
 
       if (checkError) {
-        console.error('Error checking existing psychologist:', checkError);
+        console.error('=== ERROR CHECKING EXISTING PSYCHOLOGIST ===', checkError);
         return { error: `Error al verificar perfil existente: ${checkError.message}` };
       }
 
       if (existingPsych) {
-        console.log('Psychologist profile already exists:', existingPsych);
+        console.log('=== PSYCHOLOGIST ALREADY EXISTS ===', existingPsych);
         setPsychologist(existingPsych);
         profileCache.psychologist = existingPsych;
         return { data: existingPsych, error: null };
       }
 
       // Create the psychologist profile
-      console.log('Inserting new psychologist profile...');
+      console.log('=== INSERTING NEW PSYCHOLOGIST ===');
       const psychologistData = {
         id: user.id,
         professional_code: codeData,
@@ -286,7 +331,7 @@ export const useProfile = () => {
         license_number: data.license_number || null
       };
 
-      console.log('Psychologist data to insert:', psychologistData);
+      console.log('=== PSYCHOLOGIST DATA TO INSERT ===', psychologistData);
 
       const { data: result, error: insertError } = await supabase
         .from('psychologists')
@@ -295,11 +340,11 @@ export const useProfile = () => {
         .single();
 
       if (insertError) {
-        console.error('Error creating psychologist profile:', insertError);
+        console.error('=== PSYCHOLOGIST INSERT ERROR ===', insertError);
         return { error: `Error al crear perfil: ${insertError.message}` };
       }
 
-      console.log('Psychologist profile created successfully:', result);
+      console.log('=== PSYCHOLOGIST CREATED SUCCESSFULLY ===', result);
 
       setPsychologist(result);
       profileCache.psychologist = result;
@@ -311,7 +356,7 @@ export const useProfile = () => {
       
       return { data: result, error: null };
     } catch (error: any) {
-      console.error('Exception creating psychologist profile:', error);
+      console.error('=== EXCEPTION CREATING PSYCHOLOGIST ===', error);
       const errorMessage = error.message || 'Error inesperado al crear el perfil';
       toast({
         title: "Error",
@@ -329,6 +374,8 @@ export const useProfile = () => {
 
     try {
       setLoading(true);
+      console.log('=== CREATING PATIENT PROFILE ===');
+      console.log('Patient data:', data);
       
       const { data: result, error } = await supabase
         .from('patients')
@@ -340,9 +387,11 @@ export const useProfile = () => {
         .single();
 
       if (error) {
-        console.error('Error creating patient:', error);
+        console.error('=== PATIENT CREATION ERROR ===', error);
         return { error: 'No se pudo crear el perfil de paciente' };
       }
+
+      console.log('=== PATIENT CREATED SUCCESSFULLY ===', result);
 
       setPatient(result);
       profileCache.patient = result;
@@ -354,7 +403,7 @@ export const useProfile = () => {
       
       return { data: result, error: null };
     } catch (error: any) {
-      console.error('Error creating patient profile:', error);
+      console.error('=== EXCEPTION CREATING PATIENT ===', error);
       const errorMessage = error.message || 'Error inesperado';
       toast({
         title: "Error",
@@ -368,12 +417,12 @@ export const useProfile = () => {
   };
 
   const refetch = () => {
-    console.log('Refetching profile data');
+    console.log('=== REFETCHING PROFILE ===');
     fetchProfile(true);
   };
 
   const forceRefresh = () => {
-    console.log('Force refreshing profile data');
+    console.log('=== FORCE REFRESH PROFILE ===');
     clearCache();
     if (user) {
       profileCache.userId = user.id;

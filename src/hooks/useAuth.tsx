@@ -21,17 +21,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('Setting up auth state listener');
+    console.log('=== SETTING UP AUTH STATE LISTENER ===');
     
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id);
+        console.log('=== AUTH STATE CHANGED ===', event, session?.user?.id);
         setSession(session);
         setUser(session?.user ?? null);
         
         // When user confirms email, create their profile automatically
         if (event === 'SIGNED_IN' && session?.user && session.user.user_metadata) {
+          console.log('=== SIGNED IN EVENT, HANDLING PROFILE ===');
           setTimeout(async () => {
             await handlePostSignInProfile(session.user);
           }, 100);
@@ -43,7 +44,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session check:', session?.user?.id);
+      console.log('=== INITIAL SESSION CHECK ===', session?.user?.id);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -54,46 +55,54 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const handlePostSignInProfile = async (user: User) => {
     try {
-      console.log('Handling post sign-in profile creation for user:', user.id);
+      console.log('=== HANDLING POST SIGN-IN PROFILE ===');
+      console.log('User ID:', user.id);
       console.log('User metadata:', user.user_metadata);
 
       // Check if profile already exists
-      const { data: existingProfile } = await supabase
+      const { data: existingProfile, error: profileCheckError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
+
+      if (profileCheckError) {
+        console.error('=== ERROR CHECKING PROFILE ===', profileCheckError);
+        return;
+      }
 
       if (existingProfile) {
-        console.log('Profile exists, checking for specific role profile');
+        console.log('=== PROFILE EXISTS ===', existingProfile);
         
-        const userType = user.user_metadata.user_type;
+        const userType = existingProfile.user_type || user.user_metadata.user_type;
         
         if (userType === 'psychologist') {
           const { data: existingPsych } = await supabase
             .from('psychologists')
             .select('*')
             .eq('id', user.id)
-            .single();
+            .maybeSingle();
             
           if (!existingPsych && user.user_metadata.first_name) {
-            console.log('Creating psychologist profile from metadata');
+            console.log('=== CREATING PSYCHOLOGIST FROM METADATA ===');
             const { data: codeData } = await supabase.rpc('generate_professional_code');
             
-            const { error: psychError } = await supabase.from('psychologists').insert({
-              id: user.id,
-              first_name: user.user_metadata.first_name,
-              last_name: user.user_metadata.last_name,
-              professional_code: codeData,
-              phone: user.user_metadata.phone,
-              specialization: user.user_metadata.specialization,
-              license_number: user.user_metadata.license_number
-            });
-            
-            if (psychError) {
-              console.error('Error creating psychologist profile:', psychError);
-            } else {
-              console.log('Psychologist profile created successfully');
+            if (codeData) {
+              const { error: psychError } = await supabase.from('psychologists').insert({
+                id: user.id,
+                first_name: user.user_metadata.first_name,
+                last_name: user.user_metadata.last_name,
+                professional_code: codeData,
+                phone: user.user_metadata.phone,
+                specialization: user.user_metadata.specialization,
+                license_number: user.user_metadata.license_number
+              });
+              
+              if (psychError) {
+                console.error('=== ERROR CREATING PSYCHOLOGIST ===', psychError);
+              } else {
+                console.log('=== PSYCHOLOGIST CREATED SUCCESSFULLY ===');
+              }
             }
           }
         } else if (userType === 'patient') {
@@ -101,10 +110,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             .from('patients')
             .select('*')
             .eq('id', user.id)
-            .single();
+            .maybeSingle();
             
           if (!existingPatient && user.user_metadata.first_name && user.user_metadata.professional_code) {
-            console.log('Creating patient profile from metadata with code:', user.user_metadata.professional_code);
+            console.log('=== CREATING PATIENT FROM METADATA ===');
             
             // Validate professional code and get psychologist ID
             const { data: psychologistId, error: validateError } = await supabase.rpc('validate_professional_code', { 
@@ -112,12 +121,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             });
             
             if (validateError) {
-              console.error('Error validating professional code:', validateError);
+              console.error('=== ERROR VALIDATING CODE ===', validateError);
               return;
             }
             
             if (psychologistId) {
-              console.log('Professional code validated, psychologist ID:', psychologistId);
+              console.log('=== CODE VALIDATED, PSYCHOLOGIST ID ===', psychologistId);
               
               const { error: patientError } = await supabase.from('patients').insert({
                 id: user.id,
@@ -129,16 +138,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               });
               
               if (patientError) {
-                console.error('Error creating patient profile:', patientError);
+                console.error('=== ERROR CREATING PATIENT ===', patientError);
               } else {
-                console.log('Patient profile created successfully');
+                console.log('=== PATIENT CREATED SUCCESSFULLY ===');
                 toast({
                   title: "Registro completado",
                   description: "Tu perfil de paciente ha sido creado exitosamente",
                 });
               }
             } else {
-              console.error('Invalid professional code:', user.user_metadata.professional_code);
+              console.error('=== INVALID PROFESSIONAL CODE ===', user.user_metadata.professional_code);
               toast({
                 title: "Error",
                 description: "Código profesional inválido",
@@ -147,21 +156,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
           }
         }
+      } else {
+        console.log('=== NO PROFILE EXISTS, CREATING BASE PROFILE ===');
+        // Create base profile if it doesn't exist
+        const { error: createProfileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            email: user.email!,
+            user_type: user.user_metadata.user_type || 'patient'
+          });
+          
+        if (createProfileError) {
+          console.error('=== ERROR CREATING BASE PROFILE ===', createProfileError);
+        } else {
+          console.log('=== BASE PROFILE CREATED ===');
+        }
       }
     } catch (error) {
-      console.error('Error handling post sign-in profile:', error);
+      console.error('=== EXCEPTION IN POST SIGN-IN PROFILE ===', error);
     }
   };
 
   const signIn = async (email: string, password: string) => {
-    console.log('Attempting sign in for:', email);
+    console.log('=== ATTEMPTING SIGN IN ===', email);
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     
     if (error) {
-      console.error('Sign in error:', error);
+      console.error('=== SIGN IN ERROR ===', error);
       
       if (error.message.includes('Email not confirmed')) {
         toast({
@@ -185,7 +210,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } else if (data.user) {
       // Verificar si el email está confirmado
       if (!data.user.email_confirmed_at) {
-        console.log('User email not confirmed, signing out');
+        console.log('=== EMAIL NOT CONFIRMED, SIGNING OUT ===');
         await supabase.auth.signOut();
         toast({
           title: "Email no verificado",
@@ -195,7 +220,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return { data: null, error: { message: "Email not confirmed" } };
       }
       
-      console.log('Sign in successful and email confirmed');
+      console.log('=== SIGN IN SUCCESSFUL ===');
       toast({
         title: "Inicio de sesión exitoso",
         description: "Bienvenido a PsiConnect",
@@ -206,7 +231,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signUp = async (email: string, password: string, userType: 'psychologist' | 'patient', additionalData?: any) => {
-    console.log('Attempting sign up for:', email, 'as', userType);
+    console.log('=== ATTEMPTING SIGN UP ===', email, 'as', userType);
     console.log('Additional data:', additionalData);
     
     try {
@@ -224,7 +249,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
       
       if (error) {
-        console.error('Sign up error:', error);
+        console.error('=== SIGN UP ERROR ===', error);
         toast({
           title: "Error al crear cuenta",
           description: error.message,
@@ -233,12 +258,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return { data, error };
       }
       
-      console.log('User created successfully:', data.user?.id);
+      console.log('=== USER CREATED SUCCESSFULLY ===', data.user?.id);
       
       if (data.user) {
         // Crear el perfil manualmente si el trigger no funcionó
         try {
-          console.log('Creating profile manually...');
+          console.log('=== CREATING PROFILE MANUALLY ===');
           const { error: profileError } = await supabase
             .from('profiles')
             .insert({
@@ -248,12 +273,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             });
           
           if (profileError) {
-            console.log('Profile creation error (might already exist):', profileError);
+            console.log('=== PROFILE CREATION ERROR (MIGHT EXIST) ===', profileError);
           } else {
-            console.log('Profile created successfully');
+            console.log('=== PROFILE CREATED SUCCESSFULLY ===');
           }
         } catch (profileCreationError) {
-          console.error('Exception creating profile:', profileCreationError);
+          console.error('=== EXCEPTION CREATING PROFILE ===', profileCreationError);
         }
         
         // Cerrar sesión inmediatamente para evitar auto-login
@@ -261,7 +286,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         // Enviar SOLO nuestro email personalizado de verificación
         try {
-          console.log('Sending custom verification email...');
+          console.log('=== SENDING CUSTOM VERIFICATION EMAIL ===');
           
           // Crear un token de verificación seguro con información del usuario
           const verificationData = {
@@ -290,21 +315,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           });
           
           if (emailError) {
-            console.error('Error sending verification email:', emailError);
+            console.error('=== ERROR SENDING VERIFICATION EMAIL ===', emailError);
             toast({
               title: "Cuenta creada",
               description: "Tu cuenta fue creada pero hubo un error enviando el email de verificación. Contacta con soporte.",
               variant: "destructive"
             });
           } else {
-            console.log('Custom verification email sent successfully');
+            console.log('=== VERIFICATION EMAIL SENT SUCCESSFULLY ===');
             toast({
               title: "¡Cuenta creada exitosamente!",
               description: "Te hemos enviado un email de verificación. Por favor revisa tu bandeja de entrada y haz clic en el enlace para verificar tu cuenta.",
             });
           }
         } catch (emailError) {
-          console.error('Exception sending verification email:', emailError);
+          console.error('=== EXCEPTION SENDING VERIFICATION EMAIL ===', emailError);
           toast({
             title: "Cuenta creada",
             description: "Tu cuenta fue creada pero hubo un error enviando el email de verificación. Contacta con soporte.",
@@ -315,7 +340,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       return { data, error };
     } catch (error: any) {
-      console.error('Exception in sign up:', error);
+      console.error('=== EXCEPTION IN SIGN UP ===', error);
       toast({
         title: "Error al crear cuenta",
         description: error.message || "Ocurrió un error inesperado",
@@ -326,7 +351,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut = async () => {
-    console.log('Signing out');
+    console.log('=== SIGNING OUT ===');
     
     try {
       // Clear browser storage to prevent auth limbo states
@@ -338,7 +363,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       await supabase.auth.signOut({ scope: 'global' });
     } catch (error) {
-      console.error('Error during sign out:', error);
+      console.error('=== ERROR DURING SIGN OUT ===', error);
     }
   };
 
