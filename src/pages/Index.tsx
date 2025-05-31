@@ -12,6 +12,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { DashboardOverview } from "@/components/DashboardOverview";
 import { ProfileSetup } from "@/components/ProfileSetup";
 import { TrialExpiredModal } from "@/components/TrialExpiredModal";
+import { Calendar } from "@/components/CalendarView";
 import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
@@ -91,7 +92,7 @@ const Index = () => {
         case "patients":
           return <PatientManagement />;
         case "calendar":
-          return <div className="text-center py-8"><p className="text-slate-600">Vista de calendario próximamente</p></div>;
+          return <Calendar />;
         case "messages":
           return <MessagingHub />;
         case "affiliates":
