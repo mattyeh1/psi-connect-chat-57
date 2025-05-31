@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -63,6 +62,7 @@ export const PatientPortal = () => {
 
   useEffect(() => {
     if (patient?.id) {
+      console.log('Patient data:', patient); // Debug log
       fetchPatientData();
     }
   }, [patient]);
@@ -79,6 +79,7 @@ export const PatientPortal = () => {
       setError(null);
       
       console.log('Fetching patient data for:', patient.id);
+      console.log('Patient psychologist_id:', patient.psychologist_id); // Debug log
       
       // Crear fecha actual en formato ISO para comparación
       const now = new Date();
@@ -438,6 +439,13 @@ export const PatientPortal = () => {
                   patientId={patient.id}
                   onSuccess={fetchPatientData} 
                 />
+              )}
+              {patient && !patient.psychologist_id && (
+                <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <p className="text-yellow-800 text-sm">
+                    No tienes un psicólogo asignado. Contacta con el administrador.
+                  </p>
+                </div>
               )}
             </div>
           </CardContent>

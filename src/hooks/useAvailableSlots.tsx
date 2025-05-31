@@ -18,12 +18,22 @@ export const useAvailableSlots = ({ psychologistId, selectedDate }: UseAvailable
     "17:00", "17:30", "18:00", "18:30", "19:00", "19:30"
   ];
 
+  // Función para validar si es un UUID válido
+  const isValidUUID = (uuid: string) => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
+  };
+
   useEffect(() => {
-    // Validar que tenemos los datos necesarios antes de hacer la consulta
-    if (psychologistId && psychologistId.trim() !== '' && selectedDate) {
+    // Validar que tenemos los datos necesarios y que el UUID es válido
+    if (psychologistId && psychologistId.trim() !== '' && selectedDate && isValidUUID(psychologistId)) {
       fetchBookedSlots();
     } else {
-      console.log('Missing psychologistId or selectedDate:', { psychologistId, selectedDate });
+      console.log('Invalid psychologistId or selectedDate:', { 
+        psychologistId, 
+        selectedDate, 
+        isValidUUID: psychologistId ? isValidUUID(psychologistId) : false 
+      });
       setBookedSlots([]);
       setLoading(false);
     }
@@ -31,8 +41,12 @@ export const useAvailableSlots = ({ psychologistId, selectedDate }: UseAvailable
 
   const fetchBookedSlots = async () => {
     // Validación adicional antes de hacer la consulta
-    if (!psychologistId || psychologistId.trim() === '' || !selectedDate) {
-      console.log('Invalid parameters for fetchBookedSlots:', { psychologistId, selectedDate });
+    if (!psychologistId || psychologistId.trim() === '' || !selectedDate || !isValidUUID(psychologistId)) {
+      console.log('Invalid parameters for fetchBookedSlots:', { 
+        psychologistId, 
+        selectedDate,
+        isValidUUID: psychologistId ? isValidUUID(psychologistId) : false
+      });
       setBookedSlots([]);
       setLoading(false);
       return;
