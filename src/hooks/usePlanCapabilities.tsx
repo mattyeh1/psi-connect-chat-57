@@ -39,11 +39,28 @@ export const usePlanCapabilities = () => {
         }
 
         console.log('Plan capabilities:', data);
-        // Convertir la respuesta JSON a PlanCapabilities
-        if (data && typeof data === 'object') {
-          setCapabilities(data as PlanCapabilities);
+        
+        // Validación segura del JSON con conversión a PlanCapabilities
+        if (data && typeof data === 'object' && !Array.isArray(data)) {
+          const planData = data as Record<string, unknown>;
+          const validCapabilities: PlanCapabilities = {
+            seo_profile: Boolean(planData.seo_profile),
+            advanced_reports: Boolean(planData.advanced_reports),
+            early_access: Boolean(planData.early_access),
+            priority_support: Boolean(planData.priority_support),
+            visibility_consulting: Boolean(planData.visibility_consulting),
+            basic_features: Boolean(planData.basic_features)
+          };
+          setCapabilities(validCapabilities);
         } else {
-          setCapabilities(null);
+          setCapabilities({
+            seo_profile: false,
+            advanced_reports: false,
+            early_access: false,
+            priority_support: false,
+            visibility_consulting: false,
+            basic_features: false
+          });
         }
       } catch (err) {
         console.error('Error in fetchCapabilities:', err);
