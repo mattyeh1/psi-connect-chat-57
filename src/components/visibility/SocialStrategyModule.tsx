@@ -2,518 +2,354 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
-import { CheckCircle, X, Users, Calendar, Target, Lightbulb, FileText, Image, Video } from 'lucide-react';
-import { useProfile } from '@/hooks/useProfile';
+import { CheckCircle, AlertCircle, Save, Edit, X } from 'lucide-react';
+import { useVisibilityData } from '@/hooks/useVisibilityData';
 
 interface SocialStrategyModuleProps {
   onComplete: (score: number) => void;
   currentScore: number;
 }
 
-interface SocialPlatform {
-  id: string;
-  name: string;
-  description: string;
-  status: 'active' | 'inactive' | 'planned';
-  importance: 'high' | 'medium' | 'low';
-  points: number;
-  contentTypes: string[];
-}
+const SOCIAL_PLATFORMS = [
+  { id: 'instagram', name: 'Instagram', icon: '📷' },
+  { id: 'facebook', name: 'Facebook', icon: '👥' },
+  { id: 'linkedin', name: 'LinkedIn', icon: '💼' },
+  { id: 'youtube', name: 'YouTube', icon: '🎥' },
+  { id: 'tiktok', name: 'TikTok', icon: '🎵' },
+  { id: 'twitter', name: 'Twitter/X', icon: '🐦' },
+  { id: 'whatsapp', name: 'WhatsApp Business', icon: '💬' },
+  { id: 'telegram', name: 'Telegram', icon: '✈️' }
+];
 
-interface ContentIdea {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  platforms: string[];
-  estimated_reach: string;
-}
+const POSTING_FREQUENCIES = [
+  { value: 'daily', label: 'Diario' },
+  { value: 'weekly', label: 'Semanal' },
+  { value: 'biweekly', label: 'Quincenal' },
+  { value: 'monthly', label: 'Mensual' },
+  { value: 'occasional', label: 'Ocasional' }
+];
 
 export const SocialStrategyModule = ({ onComplete, currentScore }: SocialStrategyModuleProps) => {
-  const { psychologist } = useProfile();
-  const [platforms, setPlatforms] = useState<SocialPlatform[]>([]);
-  const [contentIdeas, setContentIdeas] = useState<ContentIdea[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-
-  useEffect(() => {
-    const platformList: SocialPlatform[] = [
-      {
-        id: 'instagram',
-        name: 'Instagram',
-        description: 'Plataforma visual ideal para contenido educativo',
-        status: 'inactive',
-        importance: 'high',
-        points: 30,
-        contentTypes: ['Posts educativos', 'Stories', 'Reels', 'IGTV']
-      },
-      {
-        id: 'facebook',
-        name: 'Facebook',
-        description: 'Red social con mayor alcance en Argentina',
-        status: 'inactive',
-        importance: 'high',
-        points: 25,
-        contentTypes: ['Artículos', 'Videos', 'Eventos', 'Grupos']
-      },
-      {
-        id: 'linkedin',
-        name: 'LinkedIn',
-        description: 'Red profesional para networking',
-        status: 'inactive',
-        importance: 'medium',
-        points: 20,
-        contentTypes: ['Artículos profesionales', 'Posts', 'Networking']
-      },
-      {
-        id: 'youtube',
-        name: 'YouTube',
-        description: 'Videos educativos sobre salud mental',
-        status: 'inactive',
-        importance: 'medium',
-        points: 15,
-        contentTypes: ['Videos educativos', 'Webinars', 'Entrevistas']
-      },
-      {
-        id: 'tiktok',
-        name: 'TikTok',
-        description: 'Contenido breve para audiencia joven',
-        status: 'inactive',
-        importance: 'low',
-        points: 10,
-        contentTypes: ['Videos cortos', 'Tips rápidos', 'Tendencias']
-      }
-    ];
-
-    const specialization = psychologist?.specialization || 'psicología general';
-    
-    const contentList: ContentIdea[] = [
-      {
-        id: 'anxiety_tips',
-        title: 'Tips para manejar la ansiedad',
-        description: 'Técnicas de respiración y mindfulness',
-        category: 'Educativo',
-        platforms: ['instagram', 'facebook', 'tiktok'],
-        estimated_reach: 'Alto'
-      },
-      {
-        id: 'therapy_myths',
-        title: 'Mitos sobre la terapia psicológica',
-        description: 'Desmitificar creencias sobre ir al psicólogo',
-        category: 'Educativo',
-        platforms: ['instagram', 'facebook', 'linkedin'],
-        estimated_reach: 'Medio'
-      },
-      {
-        id: 'self_care',
-        title: 'Rutinas de autocuidado',
-        description: 'Hábitos diarios para el bienestar mental',
-        category: 'Bienestar',
-        platforms: ['instagram', 'facebook'],
-        estimated_reach: 'Alto'
-      },
-      {
-        id: 'specialization_content',
-        title: `Contenido sobre ${specialization}`,
-        description: `Posts específicos sobre tu especialización`,
-        category: 'Especialización',
-        platforms: ['instagram', 'facebook', 'linkedin'],
-        estimated_reach: 'Medio'
-      },
-      {
-        id: 'office_tour',
-        title: 'Tour por el consultorio',
-        description: 'Mostrar el espacio terapéutico',
-        category: 'Personal',
-        platforms: ['instagram', 'facebook'],
-        estimated_reach: 'Medio'
-      },
-      {
-        id: 'patient_testimonials',
-        title: 'Testimonios de pacientes',
-        description: 'Experiencias anónimas (con permiso)',
-        category: 'Testimonios',
-        platforms: ['facebook', 'linkedin'],
-        estimated_reach: 'Alto'
-      },
-      {
-        id: 'mental_health_awareness',
-        title: 'Días de concientización',
-        description: 'Contenido para fechas especiales de salud mental',
-        category: 'Fechas especiales',
-        platforms: ['instagram', 'facebook', 'linkedin'],
-        estimated_reach: 'Alto'
-      },
-      {
-        id: 'qa_sessions',
-        title: 'Sesiones de preguntas y respuestas',
-        description: 'Responder consultas frecuentes',
-        category: 'Interactivo',
-        platforms: ['instagram', 'facebook'],
-        estimated_reach: 'Medio'
-      }
-    ];
-
-    setPlatforms(platformList);
-    setContentIdeas(contentList);
-  }, [psychologist]);
-
-  const handlePlatformStatusChange = (platformId: string, newStatus: 'active' | 'inactive' | 'planned') => {
-    setPlatforms(prev => prev.map(platform => 
-      platform.id === platformId ? { ...platform, status: newStatus } : platform
-    ));
-  };
+  const { socialPlatforms, updateSocialPlatform, saveModuleScore, loading } = useVisibilityData();
+  const [editingPlatform, setEditingPlatform] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    profile_url: '',
+    posting_frequency: '',
+    target_audience: '',
+    content_strategy: ''
+  });
 
   const calculateScore = () => {
-    const totalPoints = platforms.reduce((acc, platform) => acc + platform.points, 0);
-    const earnedPoints = platforms.reduce((acc, platform) => {
-      if (platform.status === 'active') return acc + platform.points;
-      if (platform.status === 'planned') return acc + (platform.points * 0.3);
-      return acc;
-    }, 0);
-    return Math.round((earnedPoints / totalPoints) * 100);
+    const activePlatforms = socialPlatforms.filter(p => p.status === 'active').length;
+    const plannedPlatforms = socialPlatforms.filter(p => p.status === 'planned').length;
+    
+    // Puntuación basada en plataformas activas y planificadas
+    const activeScore = activePlatforms * 15; // 15 puntos por plataforma activa
+    const plannedScore = plannedPlatforms * 5; // 5 puntos por plataforma planificada
+    
+    const totalScore = Math.min(activeScore + plannedScore, 100);
+    return totalScore;
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <CheckCircle className="w-5 h-5 text-green-500" />;
-      case 'planned':
-        return <div className="w-5 h-5 border-2 border-yellow-500 rounded-full animate-pulse" />;
-      default:
-        return <X className="w-5 h-5 text-red-500" />;
+  const handleEdit = (platformId: string) => {
+    const platform = socialPlatforms.find(p => p.platform_id === platformId);
+    if (platform) {
+      setFormData({
+        profile_url: platform.profile_url || '',
+        posting_frequency: platform.posting_frequency || '',
+        target_audience: platform.target_audience || '',
+        content_strategy: platform.content_strategy ? JSON.stringify(platform.content_strategy) : ''
+      });
+    } else {
+      setFormData({
+        profile_url: '',
+        posting_frequency: '',
+        target_audience: '',
+        content_strategy: ''
+      });
+    }
+    setEditingPlatform(platformId);
+  };
+
+  const handleSave = async (platformId: string, status: 'inactive' | 'planned' | 'active') => {
+    const platform = SOCIAL_PLATFORMS.find(p => p.id === platformId);
+    if (!platform) return;
+
+    let contentStrategy = {};
+    try {
+      if (formData.content_strategy) {
+        contentStrategy = JSON.parse(formData.content_strategy);
+      }
+    } catch (e) {
+      contentStrategy = { strategy: formData.content_strategy };
+    }
+
+    const result = await updateSocialPlatform({
+      platform_id: platformId,
+      platform_name: platform.name,
+      status: status,
+      profile_url: formData.profile_url,
+      posting_frequency: formData.posting_frequency,
+      target_audience: formData.target_audience,
+      content_strategy: contentStrategy
+    });
+
+    if (!result.error) {
+      const newScore = calculateScore();
+      await saveModuleScore('social', newScore, { platforms: socialPlatforms });
+      onComplete(newScore);
+      setEditingPlatform(null);
+      setFormData({
+        profile_url: '',
+        posting_frequency: '',
+        target_audience: '',
+        content_strategy: ''
+      });
     }
   };
 
-  const getImportanceColor = (importance: string) => {
-    switch (importance) {
-      case 'high': return 'text-red-600 bg-red-100';
-      case 'medium': return 'text-yellow-600 bg-yellow-100';
-      default: return 'text-green-600 bg-green-100';
-    }
+  const handleCancel = () => {
+    setEditingPlatform(null);
+    setFormData({
+      profile_url: '',
+      posting_frequency: '',
+      target_audience: '',
+      content_strategy: ''
+    });
   };
 
-  const filteredContent = selectedCategory === 'all' 
-    ? contentIdeas 
-    : contentIdeas.filter(idea => idea.category === selectedCategory);
+  const getPlatformStatus = (platformId: string) => {
+    const platform = socialPlatforms.find(p => p.platform_id === platformId);
+    return platform ? platform.status : 'inactive';
+  };
+
+  const getPlatformData = (platformId: string) => {
+    return socialPlatforms.find(p => p.platform_id === platformId);
+  };
 
   const score = calculateScore();
-  const activeCount = platforms.filter(p => p.status === 'active').length;
-  const plannedCount = platforms.filter(p => p.status === 'planned').length;
+  const isComplete = score >= 60;
 
-  const categories = ['all', ...Array.from(new Set(contentIdeas.map(idea => idea.category)))];
+  const activePlatforms = socialPlatforms.filter(p => p.status === 'active').length;
+  const plannedPlatforms = socialPlatforms.filter(p => p.status === 'planned').length;
 
   return (
     <div className="space-y-6">
-      {/* Resumen de estrategia social */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-blue-500" />
-            Estrategia de Redes Sociales
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
+          <div className="flex items-center justify-between">
             <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm text-slate-600">Presencia en redes sociales</span>
-                <span className={`text-lg font-bold ${score >= 80 ? 'text-green-600' : score >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
-                  {score}%
-                </span>
-              </div>
+              <CardTitle className="flex items-center gap-2">
+                {isComplete ? (
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                ) : (
+                  <AlertCircle className="w-5 h-5 text-orange-500" />
+                )}
+                Estrategia de Redes Sociales
+              </CardTitle>
+              <p className="text-sm text-slate-600 mt-1">
+                Planificación de contenido y presencia en redes sociales
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-purple-600">{score}%</div>
+              <div className="text-xs text-slate-500">{activePlatforms} activas, {plannedPlatforms} planificadas</div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            <div>
               <Progress value={score} className="h-3" />
-            </div>
-            
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="p-3 border rounded-lg">
-                <div className="text-lg font-bold text-green-600">{activeCount}</div>
-                <div className="text-xs text-slate-600">Activas</div>
-              </div>
-              <div className="p-3 border rounded-lg">
-                <div className="text-lg font-bold text-yellow-600">{plannedCount}</div>
-                <div className="text-xs text-slate-600">Planificadas</div>
-              </div>
-              <div className="p-3 border rounded-lg">
-                <div className="text-lg font-bold text-slate-600">{platforms.length}</div>
-                <div className="text-xs text-slate-600">Disponibles</div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Plataformas sociales */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Plataformas Recomendadas</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {platforms.map((platform) => (
-              <div 
-                key={platform.id}
-                className={`p-4 border rounded-lg ${
-                  platform.status === 'active' ? 'border-green-200 bg-green-50' :
-                  platform.status === 'planned' ? 'border-yellow-200 bg-yellow-50' :
-                  'border-slate-200'
-                }`}
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-start gap-3">
-                    {getStatusIcon(platform.status)}
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-medium">{platform.name}</h4>
-                        <span className={`px-2 py-1 text-xs rounded-full ${getImportanceColor(platform.importance)}`}>
-                          {platform.importance === 'high' ? 'Alta prioridad' : 
-                           platform.importance === 'medium' ? 'Media prioridad' : 'Baja prioridad'}
-                        </span>
-                      </div>
-                      <p className="text-sm text-slate-600 mb-2">{platform.description}</p>
-                      <div className="flex flex-wrap gap-1">
-                        {platform.contentTypes.map((type, index) => (
-                          <span key={index} className="px-2 py-1 text-xs bg-slate-100 rounded">
-                            {type}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-sm font-medium text-slate-500">{platform.points} pts</span>
-                  </div>
-                </div>
-                
-                <div className="flex gap-2">
-                  {platform.status === 'inactive' && (
-                    <>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => handlePlatformStatusChange(platform.id, 'planned')}
-                      >
-                        <Calendar className="w-3 h-3 mr-1" />
-                        Planificar
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="bg-green-500 hover:bg-green-600 text-white"
-                        onClick={() => handlePlatformStatusChange(platform.id, 'active')}
-                      >
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                        Activar
-                      </Button>
-                    </>
-                  )}
-                  
-                  {platform.status === 'planned' && (
-                    <>
-                      <Button
-                        size="sm"
-                        className="bg-green-500 hover:bg-green-600 text-white"
-                        onClick={() => handlePlatformStatusChange(platform.id, 'active')}
-                      >
-                        Activar ahora
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handlePlatformStatusChange(platform.id, 'inactive')}
-                      >
-                        Cancelar
-                      </Button>
-                    </>
-                  )}
-                  
-                  {platform.status === 'active' && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handlePlatformStatusChange(platform.id, 'inactive')}
-                    >
-                      Desactivar
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Ideas de contenido */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-purple-500" />
-            Ideas de Contenido Profesional
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {/* Filtros de categoría */}
-            <div className="flex flex-wrap gap-2">
-              {categories.map((category) => (
-                <button
-                  key={category}
-                  className={`px-3 py-1 text-sm rounded-full border ${
-                    selectedCategory === category 
-                      ? 'bg-blue-500 text-white border-blue-500' 
-                      : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
-                  }`}
-                  onClick={() => setSelectedCategory(category)}
-                >
-                  {category === 'all' ? 'Todas' : category}
-                </button>
-              ))}
-            </div>
-            
-            {/* Lista de ideas */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredContent.map((idea) => (
-                <div key={idea.id} className="p-4 border rounded-lg hover:bg-slate-50">
-                  <div className="space-y-2">
-                    <div className="flex items-start justify-between">
-                      <h4 className="font-medium text-sm">{idea.title}</h4>
-                      <span className={`px-2 py-1 text-xs rounded ${
-                        idea.estimated_reach === 'Alto' ? 'bg-green-100 text-green-700' :
-                        idea.estimated_reach === 'Medio' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-slate-100 text-slate-700'
-                      }`}>
-                        {idea.estimated_reach} alcance
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-600">{idea.description}</p>
-                    <div className="flex flex-wrap gap-1">
-                      {idea.platforms.map((platform) => (
-                        <span key={platform} className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded">
-                          {platforms.find(p => p.id === platform)?.name}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Calendario de contenido */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-green-500" />
-            Planificador de Contenido
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <p className="text-sm text-slate-600">
-              Frecuencia recomendada para cada plataforma activa:
-            </p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {platforms.filter(p => p.status === 'active' || p.status === 'planned').map((platform) => (
-                <div key={platform.id} className="p-3 border rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    {getStatusIcon(platform.status)}
-                    <span className="font-medium text-sm">{platform.name}</span>
-                  </div>
-                  <div className="text-xs text-slate-600 space-y-1">
-                    {platform.id === 'instagram' && (
-                      <>
-                        <div>• Posts: 3-4 por semana</div>
-                        <div>• Stories: Diario</div>
-                        <div>• Reels: 2-3 por semana</div>
-                      </>
-                    )}
-                    {platform.id === 'facebook' && (
-                      <>
-                        <div>• Posts: 2-3 por semana</div>
-                        <div>• Artículos: 1 por semana</div>
-                        <div>• Videos: 1-2 por semana</div>
-                      </>
-                    )}
-                    {platform.id === 'linkedin' && (
-                      <>
-                        <div>• Posts profesionales: 2-3 por semana</div>
-                        <div>• Artículos: 1 por semana</div>
-                      </>
-                    )}
-                    {platform.id === 'youtube' && (
-                      <>
-                        <div>• Videos educativos: 1 por semana</div>
-                        <div>• Shorts: 2-3 por semana</div>
-                      </>
-                    )}
-                    {platform.id === 'tiktok' && (
-                      <>
-                        <div>• Videos cortos: 3-5 por semana</div>
-                        <div>• Participar en tendencias</div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Recomendaciones */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Lightbulb className="w-5 h-5 text-yellow-500" />
-            Recomendaciones de Estrategia
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {score < 30 && (
-              <div className="p-3 border border-red-200 rounded-lg bg-red-50">
-                <p className="text-sm text-red-700">
-                  <strong>Comienza gradualmente:</strong> No actives todas las redes a la vez. 
-                  Empieza con Instagram y Facebook, que tienen mayor alcance en Argentina.
-                </p>
-              </div>
-            )}
-            
-            <div className="p-3 border border-blue-200 rounded-lg bg-blue-50">
-              <p className="text-sm text-blue-700">
-                <strong>Contenido ético:</strong> Siempre respeta la confidencialidad. 
-                Nunca publiques información que pueda identificar pacientes.
+              <p className="text-sm text-slate-600 mt-2">
+                {score >= 60 ? '¡Excelente! Tienes una buena estrategia social.' :
+                 score >= 30 ? 'Buen progreso, considera activar más plataformas.' :
+                 'Necesitas desarrollar tu presencia en redes sociales.'}
               </p>
             </div>
-            
-            <div className="p-3 border border-green-200 rounded-lg bg-green-50">
-              <p className="text-sm text-green-700">
-                <strong>Consistencia es clave:</strong> Es mejor publicar poco pero constante 
-                que publicar mucho y luego abandonar las redes.
-              </p>
+
+            <div className="grid gap-4">
+              {SOCIAL_PLATFORMS.map((platform) => {
+                const status = getPlatformStatus(platform.id);
+                const platformData = getPlatformData(platform.id);
+                const isEditing = editingPlatform === platform.id;
+
+                return (
+                  <Card key={platform.id} className="border">
+                    <CardContent className="p-4">
+                      {!isEditing ? (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl">{platform.icon}</span>
+                            <div>
+                              <div className="font-medium">{platform.name}</div>
+                              <div className="text-sm text-slate-600">
+                                {status === 'active' ? (
+                                  <span className="text-green-600">Activa</span>
+                                ) : status === 'planned' ? (
+                                  <span className="text-yellow-600">Planificada</span>
+                                ) : (
+                                  <span className="text-gray-500">Inactiva</span>
+                                )}
+                                {platformData?.posting_frequency && (
+                                  <span> • {POSTING_FREQUENCIES.find(f => f.value === platformData.posting_frequency)?.label}</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            {status === 'inactive' && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleSave(platform.id, 'planned')}
+                                  disabled={loading}
+                                >
+                                  Planificar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleEdit(platform.id)}
+                                  className="bg-purple-500 hover:bg-purple-600"
+                                >
+                                  Activar
+                                </Button>
+                              </>
+                            )}
+                            {(status === 'planned' || status === 'active') && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleEdit(platform.id)}
+                                >
+                                  <Edit className="w-3 h-3 mr-1" />
+                                  Editar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleSave(platform.id, 'inactive')}
+                                  disabled={loading}
+                                >
+                                  Desactivar
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-3 mb-4">
+                            <span className="text-2xl">{platform.icon}</span>
+                            <h4 className="font-medium">Configurar {platform.name}</h4>
+                          </div>
+
+                          <div className="grid gap-4">
+                            <div>
+                              <Label htmlFor="profile_url">URL del Perfil</Label>
+                              <Input
+                                id="profile_url"
+                                value={formData.profile_url}
+                                onChange={(e) => setFormData(prev => ({ ...prev, profile_url: e.target.value }))}
+                                placeholder={`https://${platform.id}.com/tu-perfil`}
+                              />
+                            </div>
+
+                            <div>
+                              <Label htmlFor="posting_frequency">Frecuencia de Publicación</Label>
+                              <Select value={formData.posting_frequency} onValueChange={(value) => setFormData(prev => ({ ...prev, posting_frequency: value }))}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecciona frecuencia" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {POSTING_FREQUENCIES.map((freq) => (
+                                    <SelectItem key={freq.value} value={freq.value}>
+                                      {freq.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div>
+                              <Label htmlFor="target_audience">Audiencia Objetivo</Label>
+                              <Input
+                                id="target_audience"
+                                value={formData.target_audience}
+                                onChange={(e) => setFormData(prev => ({ ...prev, target_audience: e.target.value }))}
+                                placeholder="Ej: Adultos jóvenes con ansiedad, padres de familia, etc."
+                              />
+                            </div>
+
+                            <div>
+                              <Label htmlFor="content_strategy">Estrategia de Contenido</Label>
+                              <Textarea
+                                id="content_strategy"
+                                value={formData.content_strategy}
+                                onChange={(e) => setFormData(prev => ({ ...prev, content_strategy: e.target.value }))}
+                                placeholder="Describe qué tipo de contenido vas a compartir, temas principales, etc."
+                                rows={3}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex gap-3 pt-4">
+                            <Button
+                              onClick={() => handleSave(platform.id, 'planned')}
+                              disabled={loading}
+                              variant="outline"
+                            >
+                              Guardar como Planificada
+                            </Button>
+                            <Button
+                              onClick={() => handleSave(platform.id, 'active')}
+                              disabled={loading}
+                              className="bg-purple-500 hover:bg-purple-600"
+                            >
+                              <Save className="w-4 h-4 mr-2" />
+                              Activar Plataforma
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={handleCancel}
+                              disabled={loading}
+                            >
+                              <X className="w-4 h-4 mr-2" />
+                              Cancelar
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
-            
-            <div className="p-3 border border-purple-200 rounded-lg bg-purple-50">
-              <p className="text-sm text-purple-700">
-                <strong>Interacción profesional:</strong> Responde comentarios de manera 
-                profesional y deriva consultas específicas a consulta privada.
-              </p>
-            </div>
+
+            <Card className="bg-purple-50 border-purple-200">
+              <CardContent className="p-4">
+                <h4 className="font-medium text-purple-700 mb-2">💡 Tips para una estrategia social efectiva:</h4>
+                <ul className="text-sm text-purple-600 space-y-1">
+                  <li>• Publica contenido educativo sobre salud mental</li>
+                  <li>• Comparte tips de bienestar y autocuidado</li>
+                  <li>• Mantén un tono profesional pero cercano</li>
+                  <li>• Responde a comentarios y mensajes prontamente</li>
+                  <li>• Usa hashtags relevantes para alcanzar más audiencia</li>
+                  <li>• Programa contenido con anticipación</li>
+                </ul>
+              </CardContent>
+            </Card>
           </div>
         </CardContent>
       </Card>
-
-      {/* Botón de completar */}
-      <div className="flex justify-end">
-        <Button 
-          onClick={() => onComplete(score)}
-          className="bg-green-500 hover:bg-green-600"
-        >
-          Completar Estrategia Social ({score}% implementado)
-        </Button>
-      </div>
     </div>
   );
 };

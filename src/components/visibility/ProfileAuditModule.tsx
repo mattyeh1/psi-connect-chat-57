@@ -4,351 +4,264 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
-import { CheckCircle, AlertCircle, X, Lightbulb, User, Phone, MapPin, FileText } from 'lucide-react';
+import { CheckCircle, AlertCircle, Edit, Save, X } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
+import { useVisibilityData } from '@/hooks/useVisibilityData';
 
 interface ProfileAuditModuleProps {
   onComplete: (score: number) => void;
   currentScore: number;
 }
 
-interface AuditItem {
-  id: string;
-  title: string;
-  description: string;
-  status: 'complete' | 'incomplete' | 'warning';
-  points: number;
-  fixable: boolean;
-}
-
 export const ProfileAuditModule = ({ onComplete, currentScore }: ProfileAuditModuleProps) => {
   const { psychologist } = useProfile();
-  const [auditItems, setAuditItems] = useState<AuditItem[]>([]);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editValues, setEditValues] = useState({
+  const { updatePsychologistProfile, saveModuleScore, loading } = useVisibilityData();
+  const [editMode, setEditMode] = useState(false);
+  const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
-    phone: '',
     specialization: '',
+    phone: '',
     license_number: ''
   });
 
   useEffect(() => {
     if (psychologist) {
-      setEditValues({
+      setFormData({
         first_name: psychologist.first_name || '',
         last_name: psychologist.last_name || '',
-        phone: psychologist.phone || '',
         specialization: psychologist.specialization || '',
+        phone: psychologist.phone || '',
         license_number: psychologist.license_number || ''
       });
-
-      const items: AuditItem[] = [
-        {
-          id: 'basic_info',
-          title: 'Información básica completa',
-          description: 'Nombre y apellido están completados',
-          status: (psychologist.first_name && psychologist.last_name) ? 'complete' : 'incomplete',
-          points: 20,
-          fixable: true
-        },
-        {
-          id: 'phone',
-          title: 'Teléfono de contacto',
-          description: 'Número de teléfono para que pacientes puedan contactarte',
-          status: psychologist.phone ? 'complete' : 'incomplete',
-          points: 15,
-          fixable: true
-        },
-        {
-          id: 'specialization',
-          title: 'Especialización definida',
-          description: 'Tu área de especialización está especificada',
-          status: psychologist.specialization ? 'complete' : 'incomplete',
-          points: 25,
-          fixable: true
-        },
-        {
-          id: 'license',
-          title: 'Número de matrícula',
-          description: 'Número de matrícula profesional para credibilidad',
-          status: psychologist.license_number ? 'complete' : 'warning',
-          points: 20,
-          fixable: true
-        },
-        {
-          id: 'professional_code',
-          title: 'Código profesional generado',
-          description: 'Sistema ha generado tu código único',
-          status: psychologist.professional_code ? 'complete' : 'incomplete',
-          points: 10,
-          fixable: false
-        },
-        {
-          id: 'specialization_keywords',
-          title: 'Palabras clave en especialización',
-          description: 'Tu especialización contiene términos específicos para SEO',
-          status: (psychologist.specialization && psychologist.specialization.length > 10) ? 'complete' : 'warning',
-          points: 10,
-          fixable: true
-        }
-      ];
-
-      setAuditItems(items);
     }
   }, [psychologist]);
 
   const calculateScore = () => {
-    const totalPoints = auditItems.reduce((acc, item) => acc + item.points, 0);
-    const earnedPoints = auditItems.reduce((acc, item) => {
-      if (item.status === 'complete') return acc + item.points;
-      if (item.status === 'warning') return acc + (item.points * 0.5);
-      return acc;
-    }, 0);
-    return Math.round((earnedPoints / totalPoints) * 100);
+    let score = 0;
+    let maxScore = 100;
+
+    // Nombre completo (20 puntos)
+    if (formData.first_name && formData.last_name) score += 20;
+
+    // Especialización (25 puntos)
+    if (formData.specialization && formData.specialization.length > 10) score += 25;
+
+    // Teléfono (15 puntos)
+    if (formData.phone && formData.phone.length >= 10) score += 15;
+
+    // Número de licencia (20 puntos)
+    if (formData.license_number) score += 20;
+
+    // Código profesional (20 puntos) - automático si tiene psychologist
+    if (psychologist?.professional_code) score += 20;
+
+    return Math.round((score / maxScore) * 100);
   };
 
-  const handleSaveChanges = () => {
-    console.log('=== SAVING PROFILE CHANGES ===');
-    console.log('Edit values:', editValues);
-    // Aquí se implementaría la lógica para guardar los cambios
-    setIsEditing(false);
+  const handleSave = async () => {
+    const result = await updatePsychologistProfile(formData);
     
-    // Simular actualización del psychologist object
-    setTimeout(() => {
-      window.location.reload(); // Para refrescar los datos
-    }, 1000);
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'complete':
-        return <CheckCircle className="w-5 h-5 text-green-500" />;
-      case 'warning':
-        return <AlertCircle className="w-5 h-5 text-yellow-500" />;
-      default:
-        return <X className="w-5 h-5 text-red-500" />;
+    if (!result.error) {
+      const newScore = calculateScore();
+      await saveModuleScore('profile', newScore, formData);
+      onComplete(newScore);
+      setEditMode(false);
     }
   };
 
+  const handleCancel = () => {
+    if (psychologist) {
+      setFormData({
+        first_name: psychologist.first_name || '',
+        last_name: psychologist.last_name || '',
+        specialization: psychologist.specialization || '',
+        phone: psychologist.phone || '',
+        license_number: psychologist.license_number || ''
+      });
+    }
+    setEditMode(false);
+  };
+
   const score = calculateScore();
+  const isComplete = score >= 80;
+
+  const auditItems = [
+    {
+      label: 'Nombre completo',
+      completed: !!(formData.first_name && formData.last_name),
+      value: `${formData.first_name} ${formData.last_name}`.trim() || 'No completado',
+      field: 'name'
+    },
+    {
+      label: 'Especialización',
+      completed: !!(formData.specialization && formData.specialization.length > 10),
+      value: formData.specialization || 'No especificada',
+      field: 'specialization'
+    },
+    {
+      label: 'Teléfono de contacto',
+      completed: !!(formData.phone && formData.phone.length >= 10),
+      value: formData.phone || 'No proporcionado',
+      field: 'phone'
+    },
+    {
+      label: 'Número de licencia',
+      completed: !!formData.license_number,
+      value: formData.license_number || 'No proporcionado',
+      field: 'license_number'
+    },
+    {
+      label: 'Código profesional',
+      completed: !!psychologist?.professional_code,
+      value: psychologist?.professional_code || 'Generando...',
+      field: 'professional_code'
+    }
+  ];
 
   return (
     <div className="space-y-6">
-      {/* Resumen de puntuación */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="w-5 h-5 text-blue-500" />
-            Auditoría de Perfil Profesional
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                {isComplete ? (
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                ) : (
+                  <AlertCircle className="w-5 h-5 text-orange-500" />
+                )}
+                Auditoría de Perfil Profesional
+              </CardTitle>
+              <p className="text-sm text-slate-600 mt-1">
+                Completitud y optimización de tu información profesional
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-blue-600">{score}%</div>
+              <div className="text-xs text-slate-500">Completitud</div>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm text-slate-600">Puntuación del perfil</span>
-                <span className={`text-lg font-bold ${score >= 80 ? 'text-green-600' : score >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
-                  {score}%
-                </span>
-              </div>
               <Progress value={score} className="h-3" />
+              <p className="text-sm text-slate-600 mt-2">
+                {score >= 80 ? '¡Excelente! Tu perfil está bien optimizado.' :
+                 score >= 60 ? 'Buen progreso, falta poco para optimizar completamente.' :
+                 'Tu perfil necesita más información para mejorar la visibilidad.'}
+              </p>
             </div>
-            
-            <div className="flex gap-4 text-sm">
-              <div className="flex items-center gap-1">
-                <CheckCircle className="w-4 h-4 text-green-500" />
-                <span>{auditItems.filter(item => item.status === 'complete').length} Completos</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <AlertCircle className="w-4 h-4 text-yellow-500" />
-                <span>{auditItems.filter(item => item.status === 'warning').length} Advertencias</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <X className="w-4 h-4 text-red-500" />
-                <span>{auditItems.filter(item => item.status === 'incomplete').length} Faltantes</span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Lista de verificación */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de Verificación</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {auditItems.map((item) => (
-              <div 
-                key={item.id}
-                className={`p-4 border rounded-lg ${
-                  item.status === 'complete' ? 'border-green-200 bg-green-50' :
-                  item.status === 'warning' ? 'border-yellow-200 bg-yellow-50' :
-                  'border-red-200 bg-red-50'
-                }`}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3">
-                    {getStatusIcon(item.status)}
-                    <div>
-                      <h4 className="font-medium">{item.title}</h4>
-                      <p className="text-sm text-slate-600">{item.description}</p>
+            {editMode ? (
+              <div className="space-y-4 border rounded-lg p-4 bg-slate-50">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="first_name">Nombre</Label>
+                    <Input
+                      id="first_name"
+                      value={formData.first_name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, first_name: e.target.value }))}
+                      placeholder="Tu nombre"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="last_name">Apellido</Label>
+                    <Input
+                      id="last_name"
+                      value={formData.last_name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, last_name: e.target.value }))}
+                      placeholder="Tu apellido"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="specialization">Especialización</Label>
+                  <Textarea
+                    id="specialization"
+                    value={formData.specialization}
+                    onChange={(e) => setFormData(prev => ({ ...prev, specialization: e.target.value }))}
+                    placeholder="Ej: Psicólogo clínico especializado en terapia cognitivo-conductual para el tratamiento de ansiedad y depresión"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="phone">Teléfono</Label>
+                    <Input
+                      id="phone"
+                      value={formData.phone}
+                      onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                      placeholder="+54 11 1234-5678"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="license_number">Número de Matrícula</Label>
+                    <Input
+                      id="license_number"
+                      value={formData.license_number}
+                      onChange={(e) => setFormData(prev => ({ ...prev, license_number: e.target.value }))}
+                      placeholder="Ej: MP 12345"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button 
+                    onClick={handleSave} 
+                    disabled={loading}
+                    className="bg-green-500 hover:bg-green-600"
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    {loading ? 'Guardando...' : 'Guardar Cambios'}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleCancel}
+                    disabled={loading}
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {auditItems.map((item, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      {item.completed ? (
+                        <CheckCircle className="w-5 h-5 text-green-500" />
+                      ) : (
+                        <AlertCircle className="w-5 h-5 text-orange-500" />
+                      )}
+                      <div>
+                        <div className="font-medium">{item.label}</div>
+                        <div className="text-sm text-slate-600">{item.value}</div>
+                      </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-sm font-medium text-slate-500">{item.points} pts</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+                ))}
 
-      {/* Editor de perfil */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Editar Información del Perfil</span>
-            <Button 
-              variant={isEditing ? "secondary" : "default"}
-              onClick={() => setIsEditing(!isEditing)}
-            >
-              {isEditing ? "Cancelar" : "Editar Perfil"}
-            </Button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isEditing ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="first_name">Nombre</Label>
-                  <Input
-                    id="first_name"
-                    value={editValues.first_name}
-                    onChange={(e) => setEditValues(prev => ({ ...prev, first_name: e.target.value }))}
-                    placeholder="Tu nombre"
-                  />
+                <div className="pt-4">
+                  <Button 
+                    onClick={() => setEditMode(true)}
+                    className="bg-blue-500 hover:bg-blue-600"
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Editar Perfil
+                  </Button>
                 </div>
-                <div>
-                  <Label htmlFor="last_name">Apellido</Label>
-                  <Input
-                    id="last_name"
-                    value={editValues.last_name}
-                    onChange={(e) => setEditValues(prev => ({ ...prev, last_name: e.target.value }))}
-                    placeholder="Tu apellido"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="phone">Teléfono</Label>
-                <Input
-                  id="phone"
-                  value={editValues.phone}
-                  onChange={(e) => setEditValues(prev => ({ ...prev, phone: e.target.value }))}
-                  placeholder="+54 11 1234-5678"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="specialization">Especialización</Label>
-                <Input
-                  id="specialization"
-                  value={editValues.specialization}
-                  onChange={(e) => setEditValues(prev => ({ ...prev, specialization: e.target.value }))}
-                  placeholder="Ej: Psicología clínica, terapia cognitivo-conductual"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="license_number">Número de Matrícula</Label>
-                <Input
-                  id="license_number"
-                  value={editValues.license_number}
-                  onChange={(e) => setEditValues(prev => ({ ...prev, license_number: e.target.value }))}
-                  placeholder="Número de matrícula profesional"
-                />
-              </div>
-              
-              <Button onClick={handleSaveChanges} className="w-full">
-                Guardar Cambios
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm text-slate-600">
-                <User className="w-4 h-4" />
-                <span>{psychologist?.first_name} {psychologist?.last_name}</span>
-              </div>
-              {psychologist?.phone && (
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <Phone className="w-4 h-4" />
-                  <span>{psychologist.phone}</span>
-                </div>
-              )}
-              {psychologist?.specialization && (
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <FileText className="w-4 h-4" />
-                  <span>{psychologist.specialization}</span>
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Recomendaciones */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Lightbulb className="w-5 h-5 text-yellow-500" />
-            Recomendaciones
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {score < 60 && (
-              <div className="p-3 border border-red-200 rounded-lg bg-red-50">
-                <p className="text-sm text-red-700">
-                  <strong>Prioridad Alta:</strong> Tu perfil necesita información básica para ser efectivo. 
-                  Completa nombre, teléfono y especialización como mínimo.
-                </p>
-              </div>
-            )}
-            {score >= 60 && score < 80 && (
-              <div className="p-3 border border-yellow-200 rounded-lg bg-yellow-50">
-                <p className="text-sm text-yellow-700">
-                  <strong>Casi listo:</strong> Agrega tu número de matrícula y mejora la descripción 
-                  de tu especialización con palabras clave específicas.
-                </p>
-              </div>
-            )}
-            {score >= 80 && (
-              <div className="p-3 border border-green-200 rounded-lg bg-green-50">
-                <p className="text-sm text-green-700">
-                  <strong>¡Excelente!</strong> Tu perfil está bien optimizado. 
-                  Considera expandir tu especialización con más detalles para SEO.
-                </p>
               </div>
             )}
           </div>
         </CardContent>
       </Card>
-
-      {/* Botón de completar */}
-      <div className="flex justify-end">
-        <Button 
-          onClick={() => onComplete(score)}
-          className="bg-green-500 hover:bg-green-600"
-        >
-          Completar Auditoría ({score}% completado)
-        </Button>
-      </div>
     </div>
   );
 };

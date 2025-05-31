@@ -21,14 +21,17 @@ interface ModuleStatus {
 }
 
 export const VisibilityConsulting = () => {
+  const { getModuleScore } = useVisibilityData();
   const [analysisStarted, setAnalysisStarted] = useState(false);
   const [activeModule, setActiveModule] = useState<ModuleType>(null);
-  const [moduleStatus, setModuleStatus] = useState<ModuleStatus>({
-    profile: { completed: false, score: 0 },
-    seo: { completed: false, score: 0 },
-    presence: { completed: false, score: 0 },
-    social: { completed: false, score: 0 }
-  });
+
+  // Cargar puntuaciones reales desde la base de datos
+  const moduleStatus = {
+    profile: getModuleScore('profile'),
+    seo: getModuleScore('seo'),
+    presence: getModuleScore('presence'),
+    social: getModuleScore('social')
+  };
 
   const handleStartAnalysis = () => {
     setAnalysisStarted(true);
@@ -36,11 +39,8 @@ export const VisibilityConsulting = () => {
     setActiveModule('profile');
   };
 
-  const handleModuleComplete = (module: keyof ModuleStatus, score: number) => {
-    setModuleStatus(prev => ({
-      ...prev,
-      [module]: { completed: true, score }
-    }));
+  const handleModuleComplete = (module: keyof typeof moduleStatus, score: number) => {
+    // Las puntuaciones ya se guardan en los módulos individuales
     setActiveModule(null);
   };
 

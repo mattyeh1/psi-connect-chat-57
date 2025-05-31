@@ -627,6 +627,192 @@ export type Database = {
         }
         Relationships: []
       }
+      psychologist_directories: {
+        Row: {
+          created_at: string
+          directory_id: string
+          directory_name: string
+          id: string
+          notes: string | null
+          profile_url: string | null
+          psychologist_id: string
+          registration_date: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          directory_id: string
+          directory_name: string
+          id?: string
+          notes?: string | null
+          profile_url?: string | null
+          psychologist_id: string
+          registration_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          directory_id?: string
+          directory_name?: string
+          id?: string
+          notes?: string | null
+          profile_url?: string | null
+          psychologist_id?: string
+          registration_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "psychologist_directories_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_admin_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "psychologist_directories_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "psychologist_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "psychologist_directories_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "psychologists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      psychologist_seo_config: {
+        Row: {
+          created_at: string
+          custom_url: string | null
+          description: string | null
+          id: string
+          keywords: string | null
+          local_seo: string | null
+          psychologist_id: string
+          structured_data: Json | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          custom_url?: string | null
+          description?: string | null
+          id?: string
+          keywords?: string | null
+          local_seo?: string | null
+          psychologist_id: string
+          structured_data?: Json | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          custom_url?: string | null
+          description?: string | null
+          id?: string
+          keywords?: string | null
+          local_seo?: string | null
+          psychologist_id?: string
+          structured_data?: Json | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "psychologist_seo_config_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: true
+            referencedRelation: "affiliate_admin_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "psychologist_seo_config_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: true
+            referencedRelation: "psychologist_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "psychologist_seo_config_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: true
+            referencedRelation: "psychologists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      psychologist_social_strategy: {
+        Row: {
+          content_strategy: Json | null
+          created_at: string
+          id: string
+          platform_id: string
+          platform_name: string
+          posting_frequency: string | null
+          profile_url: string | null
+          psychologist_id: string
+          status: string
+          target_audience: string | null
+          updated_at: string
+        }
+        Insert: {
+          content_strategy?: Json | null
+          created_at?: string
+          id?: string
+          platform_id: string
+          platform_name: string
+          posting_frequency?: string | null
+          profile_url?: string | null
+          psychologist_id: string
+          status?: string
+          target_audience?: string | null
+          updated_at?: string
+        }
+        Update: {
+          content_strategy?: Json | null
+          created_at?: string
+          id?: string
+          platform_id?: string
+          platform_name?: string
+          posting_frequency?: string | null
+          profile_url?: string | null
+          psychologist_id?: string
+          status?: string
+          target_audience?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "psychologist_social_strategy_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_admin_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "psychologist_social_strategy_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "psychologist_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "psychologist_social_strategy_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "psychologists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       psychologists: {
         Row: {
           affiliate_code_id: string | null
@@ -746,6 +932,64 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      visibility_module_scores: {
+        Row: {
+          completed: boolean
+          created_at: string
+          id: string
+          last_updated: string
+          module_data: Json | null
+          module_type: string
+          psychologist_id: string
+          score: number
+          updated_at: string
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          id?: string
+          last_updated?: string
+          module_data?: Json | null
+          module_type: string
+          psychologist_id: string
+          score?: number
+          updated_at?: string
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          id?: string
+          last_updated?: string
+          module_data?: Json | null
+          module_type?: string
+          psychologist_id?: string
+          score?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visibility_module_scores_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_admin_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visibility_module_scores_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "psychologist_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visibility_module_scores_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "psychologists"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

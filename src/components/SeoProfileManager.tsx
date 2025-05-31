@@ -5,60 +5,45 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Search, Globe, Star, Save, Eye } from 'lucide-react';
+import { Search, Globe, Save, Eye } from 'lucide-react';
 import { PlanGate } from './PlanGate';
 import { useProfile } from '@/hooks/useProfile';
+import { useVisibilityData } from '@/hooks/useVisibilityData';
 
 export const SeoProfileManager = () => {
   const { psychologist } = useProfile();
-  const [seoTitle, setSeoTitle] = useState('');
-  const [seoDescription, setSeoDescription] = useState('');
-  const [keywords, setKeywords] = useState('');
-  const [customUrl, setCustomUrl] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  // Generar URL automática basada en el nombre del psicólogo
-  const generateAutoUrl = () => {
-    if (psychologist?.first_name && psychologist?.last_name) {
-      const firstName = psychologist.first_name.toLowerCase().replace(/\s+/g, '-');
-      const lastName = psychologist.last_name.toLowerCase().replace(/\s+/g, '-');
-      return `dr-${firstName}-${lastName}`;
-    }
-    return 'mi-perfil';
-  };
+  const { seoConfig, saveSeoConfig, loading } = useVisibilityData();
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    keywords: '',
+    custom_url: ''
+  });
 
   useEffect(() => {
-    if (psychologist) {
-      // Auto-completar campos si están vacíos
-      if (!seoTitle) {
-        setSeoTitle(`Dr. ${psychologist.first_name} ${psychologist.last_name} - Psicólogo Profesional`);
-      }
-      if (!seoDescription) {
-        setSeoDescription(`Consulta psicológica profesional con Dr. ${psychologist.first_name} ${psychologist.last_name}. ${psychologist.specialization || 'Especialista en terapia psicológica'}.`);
-      }
-      if (!customUrl) {
-        setCustomUrl(generateAutoUrl());
-      }
+    if (seoConfig) {
+      setFormData({
+        title: seoConfig.title || '',
+        description: seoConfig.description || '',
+        keywords: seoConfig.keywords || '',
+        custom_url: seoConfig.custom_url || ''
+      });
+    } else if (psychologist) {
+      // Auto-completar con datos del psicólogo si no hay configuración previa
+      setFormData(prev => ({
+        ...prev,
+        title: prev.title || `Dr. ${psychologist.first_name} ${psychologist.last_name} - Psicólogo Profesional`,
+        description: prev.description || `Consulta psicológica profesional con Dr. ${psychologist.first_name} ${psychologist.last_name}. ${psychologist.specialization || 'Especialista en terapia psicológica'}.`,
+        custom_url: prev.custom_url || `dr-${psychologist.first_name?.toLowerCase()}-${psychologist.last_name?.toLowerCase()}`.replace(/\s+/g, '-')
+      }));
     }
-  }, [psychologist]);
+  }, [seoConfig, psychologist]);
 
   const handleSave = async () => {
-    setSaving(true);
-    // Aquí iría la lógica para guardar en la base de datos
-    console.log('Guardando configuración SEO:', {
-      seoTitle,
-      seoDescription, 
-      keywords,
-      customUrl
-    });
-    
-    // Simular guardado
-    setTimeout(() => {
-      setSaving(false);
-    }, 1000);
+    await saveSeoConfig(formData);
   };
 
-  const finalUrl = customUrl || generateAutoUrl();
+  const finalUrl = formData.custom_url || 'mi-perfil';
 
   return (
     <PlanGate capability="seo_profile">
@@ -75,34 +60,43 @@ export const SeoProfileManager = () => {
               <Label htmlFor="seo-title">Título SEO</Label>
               <Input 
                 id="seo-title"
-                value={seoTitle}
-                onChange={(e) => setSeoTitle(e.target.value)}
+                value={formData.title}
+                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                 placeholder="Ej: Psicólogo especialista en terapia cognitiva en Buenos Aires"
                 className="mt-1"
               />
+              <p className="text-xs text-slate-500 mt-1">
+                {formData.title.length}/60 caracteres (óptimo: 30-60)
+              </p>
             </div>
             
             <div>
               <Label htmlFor="seo-description">Descripción SEO</Label>
               <Textarea 
                 id="seo-description"
-                value={seoDescription}
-                onChange={(e) => setSeoDescription(e.target.value)}
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 placeholder="Describe tu especialidad y servicios para aparecer en búsquedas de Google..."
                 className="mt-1"
                 rows={3}
               />
+              <p className="text-xs text-slate-500 mt-1">
+                {formData.description.length}/160 caracteres (óptimo: 120-160)
+              </p>
             </div>
 
             <div>
               <Label htmlFor="keywords">Palabras Clave</Label>
               <Input 
                 id="keywords"
-                value={keywords}
-                onChange={(e) => setKeywords(e.target.value)}
+                value={formData.keywords}
+                onChange={(e) => setFormData(prev => ({ ...prev, keywords: e.target.value }))}
                 placeholder="psicólogo, terapia, ansiedad, depresión..."
                 className="mt-1"
               />
+              <p className="text-xs text-slate-500 mt-1">
+                Separa con comas. Actual: {formData.keywords ? formData.keywords.split(',').length : 0} palabras
+              </p>
             </div>
 
             <div>
@@ -111,8 +105,8 @@ export const SeoProfileManager = () => {
                 <span className="text-sm text-slate-500">psiconnect.com/perfil/</span>
                 <Input 
                   id="custom-url"
-                  value={customUrl}
-                  onChange={(e) => setCustomUrl(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
+                  value={formData.custom_url}
+                  onChange={(e) => setFormData(prev => ({ ...prev, custom_url: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') }))}
                   placeholder="dr-juan-perez"
                   className="flex-1"
                 />
@@ -133,11 +127,11 @@ export const SeoProfileManager = () => {
           <div className="flex gap-3">
             <Button 
               onClick={handleSave}
-              disabled={saving}
+              disabled={loading}
               className="bg-purple-500 hover:bg-purple-600"
             >
               <Save className="w-4 h-4 mr-2" />
-              {saving ? 'Guardando...' : 'Guardar Cambios SEO'}
+              {loading ? 'Guardando...' : 'Guardar Cambios SEO'}
             </Button>
             <Button variant="outline">
               <Eye className="w-4 h-4 mr-2" />
