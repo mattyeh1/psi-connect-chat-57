@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Heart, Shield, Users, MessageCircle, Calendar, Star, CheckCircle, Award, TrendingUp, Clock, Globe, Zap, Crown } from "lucide-react";
@@ -19,7 +20,7 @@ export const LandingPage = () => {
             </h1>
           </div>
           <div className="flex gap-4">
-            <Link to="/app">
+            <Link to="/auth">
               <Button variant="outline" className="hover:scale-105 hover:shadow-lg transition-all duration-300 hover:border-blue-300">
                 Iniciar Sesión
               </Button>
