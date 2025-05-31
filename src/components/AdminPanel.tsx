@@ -36,6 +36,20 @@ export const AdminPanel = () => {
   const [newPlanType, setNewPlanType] = useState<string>('');
   const [updating, setUpdating] = useState(false);
 
+  // Auto-refresh cada 3 segundos mientras esté actualizando
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (updating) {
+      interval = setInterval(() => {
+        console.log('Auto-refreshing admin data...');
+        forceRefresh();
+      }, 3000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [updating, forceRefresh]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
@@ -86,21 +100,15 @@ export const AdminPanel = () => {
         throw error;
       }
 
-      // Esperar un momento para que la DB se actualice
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Disparar eventos de actualización
-      window.dispatchEvent(new CustomEvent('adminPlanUpdated', {
-        detail: { psychologistId: selectedPsychologist, newStatus }
-      }));
-
       toast({
         title: "Estado actualizado",
         description: "El estado de suscripción ha sido actualizado exitosamente",
       });
 
-      // Refrescar datos
-      await forceRefresh();
+      // Refrescar inmediatamente y múltiples veces
+      setTimeout(() => forceRefresh(), 100);
+      setTimeout(() => forceRefresh(), 1000);
+      setTimeout(() => forceRefresh(), 3000);
       
       // Limpiar formulario
       setSelectedPsychologist('');
@@ -115,7 +123,7 @@ export const AdminPanel = () => {
         variant: "destructive"
       });
     } finally {
-      setUpdating(false);
+      setTimeout(() => setUpdating(false), 5000); // Mantener updating por 5 segundos
     }
   };
 
@@ -143,21 +151,15 @@ export const AdminPanel = () => {
         throw error;
       }
 
-      // Esperar un momento para que la DB se actualice
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Disparar eventos de actualización
-      window.dispatchEvent(new CustomEvent('adminPlanUpdated', {
-        detail: { psychologistId: selectedPsychologist, additionalDays: trialDays }
-      }));
-
       toast({
         title: "Trial actualizado",
         description: `Se han agregado ${trialDays} días al trial`,
       });
 
-      // Refrescar datos
-      await forceRefresh();
+      // Refrescar inmediatamente y múltiples veces
+      setTimeout(() => forceRefresh(), 100);
+      setTimeout(() => forceRefresh(), 1000);
+      setTimeout(() => forceRefresh(), 3000);
       
       // Limpiar formulario
       setSelectedPsychologist('');
@@ -171,7 +173,7 @@ export const AdminPanel = () => {
         variant: "destructive"
       });
     } finally {
-      setUpdating(false);
+      setTimeout(() => setUpdating(false), 5000);
     }
   };
 
@@ -187,12 +189,13 @@ export const AdminPanel = () => {
 
     try {
       setUpdating(true);
-      console.log('=== UPDATING PLAN TYPE ===');
+      console.log('=== INICIANDO ACTUALIZACIÓN DE PLAN ===');
       console.log('Psychologist ID:', selectedPsychologist);
       console.log('New plan type:', newPlanType);
 
-      // Actualizar DIRECTAMENTE en la tabla psychologists con timestamp
-      const { error } = await supabase
+      // 1. ACTUALIZAR DIRECTAMENTE LA TABLA
+      console.log('Paso 1: Actualizando tabla psychologists...');
+      const { error: updateError } = await supabase
         .from('psychologists')
         .update({ 
           plan_type: newPlanType,
@@ -200,17 +203,16 @@ export const AdminPanel = () => {
         })
         .eq('id', selectedPsychologist);
 
-      if (error) {
-        console.error('Error updating plan type:', error);
-        throw error;
+      if (updateError) {
+        console.error('Error updating plan type:', updateError);
+        throw updateError;
       }
 
-      console.log('Plan type updated successfully in database');
+      // 2. ESPERAR Y VERIFICAR
+      console.log('Paso 2: Esperando actualización...');
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // ESPERAR MÁS TIEMPO para asegurar que la DB se actualice
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Verificar que el cambio se aplicó REALMENTE
+      console.log('Paso 3: Verificando actualización...');
       const { data: verification, error: verifyError } = await supabase
         .from('psychologists')
         .select('plan_type')
@@ -222,52 +224,38 @@ export const AdminPanel = () => {
         throw new Error('No se pudo verificar la actualización');
       }
 
-      console.log('VERIFIED: Plan type in DB is now:', verification?.plan_type);
+      console.log('VERIFICACIÓN: Plan type en DB es:', verification?.plan_type);
 
       if (verification?.plan_type !== newPlanType) {
-        throw new Error(`El plan no se actualizó correctamente. Esperado: ${newPlanType}, Actual: ${verification?.plan_type}`);
+        throw new Error(`Plan no se actualizó. Esperado: ${newPlanType}, Actual: ${verification?.plan_type}`);
       }
 
-      // AHORA SÍ disparar eventos con MÚLTIPLES intentos
-      const eventDetail = { 
-        psychologistId: selectedPsychologist, 
-        newPlan: newPlanType,
-        timestamp: Date.now()
-      };
+      // 3. FORZAR MÚLTIPLES REFRESHES
+      console.log('Paso 4: Forzando refreshes múltiples...');
       
-      console.log('Dispatching events with verified update:', eventDetail);
-
-      // Disparar INMEDIATAMENTE múltiples eventos
-      window.dispatchEvent(new CustomEvent('adminPlanUpdated', { detail: eventDetail }));
-      window.dispatchEvent(new CustomEvent('planUpdated', { detail: eventDetail }));
-      window.dispatchEvent(new CustomEvent('forceRefreshCapabilities', { detail: eventDetail }));
+      // Refresh inmediato
+      forceRefresh();
       
-      // Y también con delays para asegurar propagación
+      // Refreshes con delays
       setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('adminPlanUpdated', { detail: eventDetail }));
-        window.dispatchEvent(new CustomEvent('planUpdated', { detail: eventDetail }));
-      }, 100);
+        console.log('Refresh 1 segundo...');
+        forceRefresh();
+      }, 1000);
       
       setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('adminPlanUpdated', { detail: eventDetail }));
-        window.dispatchEvent(new CustomEvent('forceRefreshCapabilities', { detail: eventDetail }));
-      }, 500);
+        console.log('Refresh 3 segundos...');
+        forceRefresh();
+      }, 3000);
+      
+      setTimeout(() => {
+        console.log('Refresh 5 segundos...');
+        forceRefresh();
+      }, 5000);
 
       toast({
-        title: "Plan actualizado exitosamente",
-        description: `El plan de ${newPlanType.toUpperCase()} ha sido aplicado y verificado`,
+        title: "¡Plan actualizado exitosamente!",
+        description: `El plan ${newPlanType.toUpperCase()} ha sido aplicado y verificado`,
       });
-
-      // Forzar refresh del admin con múltiples intentos
-      setTimeout(async () => {
-        console.log('Forcing admin refresh...');
-        await forceRefresh();
-      }, 1000);
-
-      setTimeout(async () => {
-        console.log('Second admin refresh...');
-        await forceRefresh();
-      }, 2000);
       
       // Limpiar formulario
       setSelectedPsychologist('');
@@ -281,7 +269,8 @@ export const AdminPanel = () => {
         variant: "destructive"
       });
     } finally {
-      setUpdating(false);
+      // Mantener el estado "updating" por más tiempo para que siga auto-refrescando
+      setTimeout(() => setUpdating(false), 8000);
     }
   };
 
@@ -337,6 +326,11 @@ export const AdminPanel = () => {
             Panel de Administración
           </h1>
           <p className="text-slate-600">Gestión de psicólogos y suscripciones</p>
+          {updating && (
+            <div className="mt-2 text-orange-600 font-semibold animate-pulse">
+              🔄 Actualizando datos... La tabla se refrescará automáticamente
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -474,7 +468,7 @@ export const AdminPanel = () => {
                   <SelectContent>
                     {psychologistStats.map((psychologist) => (
                       <SelectItem key={psychologist.id} value={psychologist.id}>
-                        Dr. {psychologist.first_name} {psychologist.last_name}
+                        Dr. {psychologist.first_name} {psychologist.last_name} - Plan: {psychologist.plan_type?.toUpperCase() || 'UNKNOWN'}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -499,7 +493,7 @@ export const AdminPanel = () => {
                 disabled={updating || !selectedPsychologist || !newPlanType}
                 className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
               >
-                {updating ? 'Actualizando...' : 'Cambiar Plan ⚡'}
+                {updating ? '🔄 Cambiando Plan...' : 'Cambiar Plan ⚡'}
               </Button>
             </CardContent>
           </Card>
@@ -558,9 +552,10 @@ export const AdminPanel = () => {
             <CardTitle className="flex items-center gap-2">
               <Users className="w-5 h-5" />
               Lista de Psicólogos
+              {updating && <span className="text-orange-500 animate-pulse">🔄</span>}
             </CardTitle>
             <Button onClick={forceRefresh} variant="outline" size="sm">
-              Actualizar
+              Actualizar Manualmente
             </Button>
           </CardHeader>
           <CardContent>
@@ -591,6 +586,9 @@ export const AdminPanel = () => {
                       </td>
                       <td className="p-2">
                         {getPlanBadge(psychologist.plan_type)}
+                        <div className="text-xs text-gray-500 mt-1">
+                          Raw: {psychologist.plan_type || 'null'}
+                        </div>
                       </td>
                       <td className="p-2">
                         {getStatusBadge(psychologist.subscription_status, psychologist.is_expired)}
