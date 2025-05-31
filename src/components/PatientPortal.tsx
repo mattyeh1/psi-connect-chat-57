@@ -1,200 +1,136 @@
+
 import { useState, useEffect } from "react";
+import { useProfile } from "@/hooks/useProfile";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Calendar, Clock, MessageSquare, User, Search, Phone, FileText, X } from "lucide-react";
-import { useProfile } from "@/hooks/useProfile";
-import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
-import { AppointmentRequestForm } from "./AppointmentRequestForm";
-import { MeetingLinksCard } from "./MeetingLinksCard";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar, Clock, MessageSquare, FileText, User, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import { PatientMessaging } from "./PatientMessaging";
-import { CancelAppointmentModal } from "./CancelAppointmentModal";
+import { DocumentsSection } from "./DocumentsSection";
+import { PatientAppointmentRequestForm } from "./PatientAppointmentRequestForm";
 import { toast } from "@/hooks/use-toast";
 
 interface Appointment {
   id: string;
-  patient_id: string;
-  psychologist_id: string;
   appointment_date: string;
-  duration_minutes: number;
+  type: string;
+  status: string;
+  notes?: string;
+  meeting_url?: string;
+}
+
+interface AppointmentRequest {
+  id: string;
+  preferred_date: string;
+  preferred_time: string;
   type: string;
   status: string;
   notes?: string;
   created_at: string;
-  updated_at: string;
 }
-
-interface Message {
-  id: string;
-  sender_id: string;
-  conversation_id: string;
-  content: string;
-  message_type?: string;
-  read_at?: string;
-  created_at: string;
-}
-
-interface Stats {
-  nextAppointment: Appointment | null;
-  unreadMessages: number;
-  totalSessions: number;
-}
-
-type PatientView = "dashboard" | "messages";
 
 export const PatientPortal = () => {
-  const { patient } = useProfile();
-  const { signOut } = useAuth();
-  const [currentView, setCurrentView] = useState<PatientView>("dashboard");
+  const { patient, loading: profileLoading } = useProfile();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [stats, setStats] = useState<Stats>({
-    nextAppointment: null,
-    unreadMessages: 0,
-    totalSessions: 0
-  });
+  const [appointmentRequests, setAppointmentRequests] = useState<AppointmentRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
+  const [nextAppointment, setNextAppointment] = useState<Appointment | null>(null);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   useEffect(() => {
     if (patient?.id) {
-      console.log('Patient data:', patient); // Debug log
       fetchPatientData();
     }
   }, [patient]);
 
   const fetchPatientData = async () => {
-    if (!patient?.id) {
-      setError("No se pudo identificar al paciente");
-      setLoading(false);
-      return;
-    }
+    if (!patient?.id) return;
 
     try {
-      setLoading(true);
-      setError(null);
-      
       console.log('Fetching patient data for:', patient.id);
-      console.log('Patient psychologist_id:', patient.psychologist_id); // Debug log
-      
-      // Crear fecha actual en formato ISO para comparación
-      const now = new Date();
-      const currentDateTime = now.toISOString();
-      
-      // Fetch upcoming appointments (including cancelled ones to show status)
+      console.log('Patient psychologist_id:', patient.psychologist_id);
+
+      setLoading(true);
+
+      // Fetch confirmed appointments
       const { data: appointmentsData, error: appointmentsError } = await supabase
         .from('appointments')
         .select('*')
         .eq('patient_id', patient.id)
-        .gte('appointment_date', currentDateTime)
-        .in('status', ['scheduled', 'confirmed', 'accepted', 'cancelled'])
+        .in('status', ['scheduled', 'confirmed', 'accepted'])
         .order('appointment_date', { ascending: true });
 
       if (appointmentsError) {
         console.error('Error fetching appointments:', appointmentsError);
-        throw new Error('Error al cargar las citas');
+      } else {
+        console.log('Fetched appointments:', appointmentsData);
+        setAppointments(appointmentsData || []);
+        
+        // Find next appointment
+        const now = new Date();
+        const upcoming = (appointmentsData || []).find(apt => 
+          new Date(apt.appointment_date) > now
+        );
+        setNextAppointment(upcoming || null);
+        console.log('Next appointment:', upcoming);
       }
 
-      console.log('Fetched appointments:', appointmentsData);
-      const validAppointments = appointmentsData || [];
-      setAppointments(validAppointments);
-
-      // Fetch recent messages from conversations where patient is involved
-      const { data: conversationsData, error: conversationsError } = await supabase
-        .from('conversations')
-        .select(`
-          id,
-          messages!inner(*)
-        `)
+      // Fetch appointment requests
+      const { data: requestsData, error: requestsError } = await supabase
+        .from('appointment_requests')
+        .select('*')
         .eq('patient_id', patient.id)
-        .order('last_message_at', { ascending: false });
+        .order('created_at', { ascending: false });
 
-      if (conversationsError) {
-        console.error('Error fetching conversations:', conversationsError);
+      if (requestsError) {
+        console.error('Error fetching appointment requests:', requestsError);
+      } else {
+        setAppointmentRequests(requestsData || []);
       }
 
-      // Extract messages from conversations
-      const allMessages: Message[] = [];
-      if (conversationsData) {
-        conversationsData.forEach(conversation => {
-          if (conversation.messages && Array.isArray(conversation.messages)) {
-            allMessages.push(...conversation.messages);
-          }
-        });
+      // Fetch unread messages count
+      if (patient.psychologist_id) {
+        const { data: conversations } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('patient_id', patient.id)
+          .eq('psychologist_id', patient.psychologist_id);
+
+        if (conversations && conversations.length > 0) {
+          const { data: messages } = await supabase
+            .from('messages')
+            .select('id')
+            .eq('conversation_id', conversations[0].id)
+            .neq('sender_id', patient.id)
+            .is('read_at', null);
+
+          setUnreadMessages(messages?.length || 0);
+          console.log('Unread messages count:', messages?.length || 0);
+        }
       }
-
-      // Sort messages by creation date (most recent first) and limit to 5
-      const sortedMessages = allMessages
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .slice(0, 5);
-
-      setMessages(sortedMessages);
-
-      // Calculate stats
-      const nextAppointment = validAppointments.length > 0 ? validAppointments[0] : null;
-      const unreadMessages = sortedMessages.filter(msg => !msg.read_at && msg.sender_id !== patient.id).length;
-
-      console.log('Next appointment:', nextAppointment);
-      console.log('Unread messages count:', unreadMessages);
-
-      // Fetch total completed sessions
-      const { data: completedSessions, error: completedError } = await supabase
-        .from('appointments')
-        .select('*', { count: 'exact' })
-        .eq('patient_id', patient.id)
-        .eq('status', 'completed');
-
-      if (completedError) {
-        console.error('Error fetching completed sessions:', completedError);
-      }
-
-      setStats({
-        nextAppointment,
-        unreadMessages,
-        totalSessions: completedSessions?.length || 0
-      });
 
     } catch (error) {
       console.error('Error fetching patient data:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      setError(errorMessage);
       toast({
         title: "Error",
-        description: errorMessage,
+        description: "No se pudieron cargar los datos",
         variant: "destructive"
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      setIsLoggingOut(true);
-      console.log('Logging out patient');
-      await signOut();
-    } catch (error) {
-      console.error('Error logging out:', error);
-      toast({
-        title: "Error",
-        description: "Hubo un problema al cerrar sesión",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoggingOut(false);
     }
   };
 
   const formatDate = (dateString: string) => {
     try {
-      return new Date(dateString).toLocaleDateString('es-ES', { 
-        day: 'numeric', 
-        month: 'short',
-        year: 'numeric'
+      return new Date(dateString).toLocaleDateString('es-ES', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
       });
     } catch {
       return 'Fecha inválida';
@@ -203,317 +139,278 @@ export const PatientPortal = () => {
 
   const formatTime = (dateString: string) => {
     try {
-      return new Date(dateString).toLocaleTimeString('es-ES', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
+      return new Date(dateString).toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit'
       });
     } catch {
       return 'Hora inválida';
     }
   };
 
-  const formatDateLong = (dateString: string) => {
-    try {
-      return new Date(dateString).toLocaleDateString('es-ES');
-    } catch {
-      return 'Fecha inválida';
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      "confirmed": "Confirmada",
-      "accepted": "Confirmada",
-      "scheduled": "Programada",
-      "pending": "Pendiente",
-      "completed": "Completada",
-      "cancelled": "Cancelada"
-    };
-    return labels[status] || status;
-  };
-
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      "confirmed": "bg-green-100 text-green-700",
-      "accepted": "bg-green-100 text-green-700",
-      "scheduled": "bg-blue-100 text-blue-700",
-      "pending": "bg-yellow-100 text-yellow-700",
-      "completed": "bg-gray-100 text-gray-700",
-      "cancelled": "bg-red-100 text-red-700"
-    };
-    return colors[status] || "bg-gray-100 text-gray-700";
-  };
-
   const getTypeLabel = (type: string) => {
-    const types: Record<string, string> = {
-      "individual": "Terapia Individual",
-      "couple": "Terapia de Pareja", 
-      "family": "Terapia Familiar",
-      "evaluation": "Evaluación",
-      "follow_up": "Seguimiento"
+    const labels: Record<string, string> = {
+      individual: "Terapia Individual",
+      couple: "Terapia de Pareja", 
+      family: "Terapia Familiar",
+      evaluation: "Evaluación",
+      follow_up: "Seguimiento"
     };
-    return types[type] || type;
+    return labels[type] || type;
   };
 
-  const handleNavigateToMessages = () => {
-    setCurrentView("messages");
+  const getStatusBadge = (status: string) => {
+    const config = {
+      pending: { label: "Pendiente", variant: "secondary" as const, icon: AlertCircle },
+      approved: { label: "Aprobada", variant: "default" as const, icon: CheckCircle },
+      rejected: { label: "Rechazada", variant: "destructive" as const, icon: XCircle }
+    };
+
+    const { label, variant, icon: Icon } = config[status as keyof typeof config] || 
+      { label: status, variant: "secondary" as const, icon: AlertCircle };
+
+    return (
+      <Badge variant={variant} className="flex items-center gap-1">
+        <Icon className="w-3 h-3" />
+        {label}
+      </Badge>
+    );
   };
 
-  const handleBackToDashboard = () => {
-    setCurrentView("dashboard");
-  };
+  if (profileLoading || loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-emerald-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600">Cargando portal del paciente...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!patient) {
     return (
-      <div className="max-w-6xl mx-auto space-y-6">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600">Cargando perfil de paciente...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="max-w-6xl mx-auto space-y-6">
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="p-6 text-center">
-            <p className="text-red-700 font-medium mb-2">Error al cargar datos</p>
-            <p className="text-red-600 text-sm mb-4">{error}</p>
-            <button 
-              onClick={fetchPatientData}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-            >
-              Reintentar
-            </button>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-emerald-50 flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-8 text-center">
+            <p className="text-slate-600">No se pudo cargar la información del paciente</p>
           </CardContent>
         </Card>
       </div>
     );
-  }
-
-  if (loading) {
-    return (
-      <div className="max-w-6xl mx-auto space-y-6">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600">Cargando información...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (currentView === "messages") {
-    return <PatientMessaging onBack={handleBackToDashboard} />;
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      {/* Meeting Links Card */}
-      <MeetingLinksCard />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-emerald-50">
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-slate-800">
+            Hola, {patient.first_name}
+          </h1>
+          <p className="text-slate-600 mt-1">
+            Bienvenido a tu portal personal
+          </p>
+        </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="border-0 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600 mb-1">Próxima Cita</p>
-                {stats.nextAppointment ? (
-                  <>
-                    <p className="text-2xl font-bold text-slate-800">
-                      {formatDate(stats.nextAppointment.appointment_date)}
-                    </p>
-                    <p className="text-sm text-slate-600">
-                      {formatTime(stats.nextAppointment.appointment_date)}
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-2xl font-bold text-slate-800">--</p>
-                    <p className="text-sm text-slate-600">Sin citas programadas</p>
-                  </>
-                )}
-              </div>
-              <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="overview">Resumen</TabsTrigger>
+            <TabsTrigger value="appointments">Citas</TabsTrigger>
+            <TabsTrigger value="messages">Mensajes</TabsTrigger>
+            <TabsTrigger value="documents">Documentos</TabsTrigger>
+          </TabsList>
 
-        <Card className="border-0 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600 mb-1">Mensajes Nuevos</p>
-                <p className="text-2xl font-bold text-slate-800">{stats.unreadMessages}</p>
-                <p className="text-sm text-slate-600">Sin leer</p>
-              </div>
-              <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 flex items-center justify-center">
-                <MessageSquare className="w-6 h-6 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600 mb-1">Sesiones Realizadas</p>
-                <p className="text-2xl font-bold text-slate-800">{stats.totalSessions}</p>
-                <p className="text-sm text-slate-600">Total</p>
-              </div>
-              <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 flex items-center justify-center">
-                <Clock className="w-6 h-6 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Upcoming Appointments */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-slate-800">
-              <Calendar className="w-5 h-5" />
-              Próximas Citas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {appointments.length > 0 ? (
-                appointments.slice(0, 3).map((appointment) => (
-                  <div key={appointment.id} className="flex items-center justify-between p-4 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-emerald-500 rounded-lg flex items-center justify-center text-white font-semibold text-sm">
-                        {new Date(appointment.appointment_date).getDate()}
+          <TabsContent value="overview" className="space-y-6">
+            {/* Quick Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="border-0 shadow-lg">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Próxima Cita</CardTitle>
+                  <Clock className="h-4 w-4 text-blue-600" />
+                </CardHeader>
+                <CardContent>
+                  {nextAppointment ? (
+                    <div>
+                      <div className="text-lg font-bold">
+                        {formatDate(nextAppointment.appointment_date)}
                       </div>
-                      <div>
-                        <p className="font-semibold text-slate-800 capitalize">
-                          {getTypeLabel(appointment.type)}
-                        </p>
-                        <p className="text-sm text-slate-600">
-                          {formatTime(appointment.appointment_date)} - {appointment.duration_minutes} min
-                        </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}>
-                            {getStatusLabel(appointment.status)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      {appointment.status !== 'cancelled' && appointment.status !== 'completed' && (
-                        <CancelAppointmentModal
-                          appointmentId={appointment.id}
-                          onCancelled={fetchPatientData}
-                          trigger={
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="border-red-200 text-red-700 hover:bg-red-50"
-                            >
-                              <X className="w-4 h-4 mr-1" />
-                              Cancelar
-                            </Button>
-                          }
-                        />
-                      )}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-8 text-slate-500">
-                  <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p>No tienes citas programadas</p>
-                  <p className="text-sm">Solicita una nueva cita usando el botón de abajo</p>
-                </div>
-              )}
-              {patient && patient.psychologist_id && (
-                <AppointmentRequestForm 
-                  psychologistId={patient.psychologist_id}
-                  patientId={patient.id}
-                  onSuccess={fetchPatientData} 
-                />
-              )}
-              {patient && !patient.psychologist_id && (
-                <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                  <p className="text-yellow-800 text-sm">
-                    No tienes un psicólogo asignado. Contacta con el administrador.
-                  </p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Recent Messages */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-slate-800">
-              <MessageSquare className="w-5 h-5" />
-              Mensajes Recientes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {messages.length > 0 ? (
-                messages.map((message) => (
-                  <div key={message.id} className="p-4 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer">
-                    <div className="flex justify-between items-start mb-2">
-                      <p className="font-semibold text-slate-800 text-sm">
-                        {message.sender_id === patient?.id ? 'Tú' : 'Tu psicólogo'}
+                      <p className="text-xs text-muted-foreground">
+                        {formatTime(nextAppointment.appointment_date)} - {getTypeLabel(nextAppointment.type)}
                       </p>
-                      <div className="flex items-center gap-2">
-                        <p className="text-xs text-slate-500">
-                          {formatDateLong(message.created_at)}
-                        </p>
-                        {!message.read_at && message.sender_id !== patient?.id && (
-                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="text-lg font-bold">Sin citas</div>
+                      <p className="text-xs text-muted-foreground">
+                        No tienes citas programadas
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-lg">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Mensajes</CardTitle>
+                  <MessageSquare className="h-4 w-4 text-emerald-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-lg font-bold">{unreadMessages}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {unreadMessages === 0 ? 'No hay mensajes nuevos' : 'Mensajes nuevos'}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-lg">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Solicitudes</CardTitle>
+                  <Calendar className="h-4 w-4 text-purple-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-lg font-bold">
+                    {appointmentRequests.filter(req => req.status === 'pending').length}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Solicitudes pendientes
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Appointment Requests Status */}
+            {appointmentRequests.length > 0 && (
+              <Card className="border-0 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5" />
+                    Estado de Solicitudes
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {appointmentRequests.slice(0, 3).map((request) => (
+                      <div key={request.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">
+                            {formatDate(request.preferred_date)} a las {request.preferred_time}
+                          </p>
+                          <p className="text-xs text-slate-600">
+                            {getTypeLabel(request.type)}
+                          </p>
+                        </div>
+                        {getStatusBadge(request.status)}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="appointments" className="space-y-6">
+            <Card className="border-0 shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5" />
+                  Solicitar Nueva Cita
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <PatientAppointmentRequestForm onRequestCreated={fetchPatientData} />
+              </CardContent>
+            </Card>
+
+            {/* Confirmed Appointments */}
+            {appointments.length > 0 && (
+              <Card className="border-0 shadow-lg">
+                <CardHeader>
+                  <CardTitle>Citas Confirmadas</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {appointments.map((appointment) => (
+                      <div key={appointment.id} className="p-4 border border-slate-200 rounded-lg">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-semibold text-slate-800">
+                              {formatDate(appointment.appointment_date)}
+                            </h4>
+                            <p className="text-sm text-slate-600">
+                              {formatTime(appointment.appointment_date)} - {getTypeLabel(appointment.type)}
+                            </p>
+                            {appointment.notes && (
+                              <p className="text-sm text-slate-500 mt-1">
+                                {appointment.notes}
+                              </p>
+                            )}
+                          </div>
+                          <Badge variant="default">
+                            {appointment.status === 'scheduled' ? 'Programada' : 
+                             appointment.status === 'confirmed' ? 'Confirmada' : 'Aceptada'}
+                          </Badge>
+                        </div>
+                        {appointment.meeting_url && (
+                          <div className="mt-3">
+                            <Button 
+                              size="sm" 
+                              onClick={() => window.open(appointment.meeting_url, '_blank')}
+                              className="bg-emerald-600 hover:bg-emerald-700"
+                            >
+                              Unirse a la reunión
+                            </Button>
+                          </div>
                         )}
                       </div>
-                    </div>
-                    <p className="text-sm text-slate-600 line-clamp-2">{message.content}</p>
+                    ))}
                   </div>
-                ))
-              ) : (
-                <div className="text-center py-8 text-slate-500">
-                  <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p>No tienes mensajes</p>
-                  <p className="text-sm">Aquí aparecerán los mensajes de tu psicólogo</p>
-                </div>
-              )}
-              <button 
-                onClick={handleNavigateToMessages}
-                className="w-full p-3 bg-gradient-to-r from-blue-500 to-emerald-500 text-white rounded-lg hover:shadow-lg transition-all duration-200"
-              >
-                Ver todos los mensajes
-              </button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                </CardContent>
+              </Card>
+            )}
 
-      {/* Documents */}
-      <Card className="border-0 shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-slate-800">
-            <FileText className="w-5 h-5" />
-            Documentos y Formularios
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-slate-500">
-            <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p>No hay documentos disponibles</p>
-            <p className="text-sm">Los documentos y formularios aparecerán aquí cuando tu psicólogo los comparta</p>
-          </div>
-        </CardContent>
-      </Card>
+            {/* Appointment Requests */}
+            {appointmentRequests.length > 0 && (
+              <Card className="border-0 shadow-lg">
+                <CardHeader>
+                  <CardTitle>Historial de Solicitudes</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {appointmentRequests.map((request) => (
+                      <div key={request.id} className="p-4 border border-slate-200 rounded-lg">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-semibold text-slate-800">
+                              {formatDate(request.preferred_date)}
+                            </h4>
+                            <p className="text-sm text-slate-600">
+                              {request.preferred_time} - {getTypeLabel(request.type)}
+                            </p>
+                            {request.notes && (
+                              <p className="text-sm text-slate-500 mt-1">
+                                {request.notes}
+                              </p>
+                            )}
+                          </div>
+                          {getStatusBadge(request.status)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="messages">
+            <PatientMessaging />
+          </TabsContent>
+
+          <TabsContent value="documents">
+            <DocumentsSection />
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 };

@@ -39,6 +39,41 @@ export const AppointmentRequests = ({ onRequestProcessed }: AppointmentRequestsP
   useEffect(() => {
     if (psychologist?.id) {
       fetchRequests();
+      
+      // Set up real-time subscription for new appointment requests
+      const channel = supabase
+        .channel('appointment-requests-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'appointment_requests',
+            filter: `psychologist_id=eq.${psychologist.id}`
+          },
+          (payload) => {
+            console.log('New appointment request received:', payload);
+            fetchRequests(); // Refresh the list when a new request comes in
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'appointment_requests',
+            filter: `psychologist_id=eq.${psychologist.id}`
+          },
+          (payload) => {
+            console.log('Appointment request updated:', payload);
+            fetchRequests(); // Refresh when status changes
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [psychologist]);
 
@@ -341,7 +376,7 @@ export const AppointmentRequests = ({ onRequestProcessed }: AppointmentRequestsP
           <div className="text-center py-8 text-slate-500">
             <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
             <p>No hay solicitudes de citas pendientes</p>
-            <p className="text-sm">Las nuevas solicitudes aparecerán aquí</p>
+            <p className="text-sm">Las nuevas solicitudes aparecerán aquí automáticamente</p>
           </div>
         ) : (
           <div className="space-y-4">
