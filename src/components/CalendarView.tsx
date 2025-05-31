@@ -47,24 +47,24 @@ export const Calendar = () => {
     if (psychologist?.id) {
       fetchAppointments();
     }
-  }, [psychologist?.id, selectedDate.toDateString()]); // Use toDateString to avoid infinite loops
+  }, [psychologist?.id, selectedDate.toDateString()]);
 
   const fetchAppointments = async () => {
     if (!psychologist?.id) return;
 
     try {
       setLoading(true);
-      console.log('Fetching appointments for psychologist:', psychologist.id);
-      console.log('Selected date:', selectedDate.toISOString());
+      console.log('Calendar: Fetching appointments for psychologist:', psychologist.id);
+      console.log('Calendar: Selected date:', selectedDate.toDateString());
 
-      // Create date range in local timezone
+      // Create date range in UTC to match database format
       const startOfDay = new Date(selectedDate);
       startOfDay.setHours(0, 0, 0, 0);
       
       const endOfDay = new Date(selectedDate);
       endOfDay.setHours(23, 59, 59, 999);
 
-      console.log('Date range:', {
+      console.log('Calendar: Date range for query:', {
         start: startOfDay.toISOString(),
         end: endOfDay.toISOString()
       });
@@ -82,7 +82,7 @@ export const Calendar = () => {
         .order('appointment_date', { ascending: true });
 
       if (error) {
-        console.error('Error fetching appointments:', error);
+        console.error('Calendar: Error fetching appointments:', error);
         toast({
           title: "Error",
           description: "No se pudieron cargar las citas",
@@ -92,25 +92,33 @@ export const Calendar = () => {
         return;
       }
 
-      console.log('Fetched appointments for selected date:', data);
+      console.log('Calendar: Raw data from database:', data);
+      console.log('Calendar: Number of appointments found:', data?.length || 0);
+      
       if (data && data.length > 0) {
-        data.forEach(apt => {
+        data.forEach((apt, index) => {
           const aptDate = new Date(apt.appointment_date);
-          console.log(`Appointment ${apt.id}:`, {
+          console.log(`Calendar: Appointment ${index + 1}:`, {
+            id: apt.id,
             originalTime: apt.appointment_date,
             localTime: aptDate.toLocaleString(),
             timeOnly: aptDate.toLocaleTimeString('en-GB', { 
               hour: '2-digit', 
               minute: '2-digit',
               hour12: false 
-            })
+            }),
+            status: apt.status,
+            type: apt.type,
+            patient: apt.patient
           });
         });
+      } else {
+        console.log('Calendar: No appointments found for this date');
       }
       
       setAppointments(data || []);
     } catch (error) {
-      console.error('Error fetching appointments:', error);
+      console.error('Calendar: Exception fetching appointments:', error);
       toast({
         title: "Error",
         description: "Error inesperado al cargar las citas",
@@ -136,7 +144,7 @@ export const Calendar = () => {
       mapping[aptTime] = apt;
     });
     
-    console.log('Appointment mapping created:', mapping);
+    console.log('Calendar: Appointment mapping created:', mapping);
     return mapping;
   }, [appointments]);
 
@@ -208,7 +216,7 @@ export const Calendar = () => {
     if (day) {
       const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
       setSelectedDate(newDate);
-      console.log('Selected new date:', newDate.toISOString());
+      console.log('Calendar: Selected new date:', newDate.toISOString());
     }
   };
 
@@ -324,6 +332,28 @@ export const Calendar = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
+              {/* Debug info */}
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Debug Calendar:</strong> {appointments.length} citas encontradas para {formatSelectedDate()}
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  Psicólogo ID: {psychologist?.id} | Estado: {loading ? 'Cargando' : 'Cargado'}
+                </p>
+                {appointments.length > 0 && (
+                  <p className="text-xs text-green-600 mt-1">
+                    Citas: {appointments.map(apt => {
+                      const time = new Date(apt.appointment_date).toLocaleTimeString('en-GB', { 
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        hour12: false 
+                      });
+                      return `${time} (${apt.status})`;
+                    }).join(', ')}
+                  </p>
+                )}
+              </div>
+
               {loading ? (
                 <div className="text-center py-8">
                   <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
