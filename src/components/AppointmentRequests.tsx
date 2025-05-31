@@ -247,6 +247,19 @@ export const AppointmentRequests = ({
 
   const formatDate = (dateString: string) => {
     try {
+      // Si es una fecha en formato YYYY-MM-DD, crear la fecha directamente sin UTC
+      if (dateString.includes('-') && dateString.split('-').length === 3) {
+        const [year, month, day] = dateString.split('-');
+        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        return date.toLocaleDateString('es-ES', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+      }
+      
+      // Para fechas con timestamp completo
       return new Date(dateString).toLocaleDateString('es-ES', {
         weekday: 'long',
         year: 'numeric',

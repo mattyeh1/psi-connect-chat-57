@@ -18,7 +18,6 @@ export const useAvailableSlots = ({ psychologistId, selectedDate }: UseAvailable
     "17:00", "17:30", "18:00", "18:30", "19:00", "19:30"
   ];
 
-  // Función para validar si es un UUID válido
   const isValidUUID = (uuid: string) => {
     if (!uuid || typeof uuid !== 'string') return false;
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -26,7 +25,6 @@ export const useAvailableSlots = ({ psychologistId, selectedDate }: UseAvailable
   };
 
   const fetchBookedSlots = useCallback(async () => {
-    // Validar parámetros antes de hacer la consulta
     if (!psychologistId || 
         psychologistId.trim() === '' || 
         !selectedDate || 
@@ -46,17 +44,19 @@ export const useAvailableSlots = ({ psychologistId, selectedDate }: UseAvailable
       setLoading(true);
       console.log('Fetching booked slots for:', { psychologistId, selectedDate });
 
-      // Create date range for the selected date in local timezone
-      const selectedDay = new Date(selectedDate + 'T00:00:00');
-      const startOfDay = new Date(selectedDay);
+      // Crear el rango de fechas para el día seleccionado en zona horaria local
+      const [year, month, day] = selectedDate.split('-');
+      const startOfDay = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
       startOfDay.setHours(0, 0, 0, 0);
       
-      const endOfDay = new Date(selectedDay);
+      const endOfDay = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
       endOfDay.setHours(23, 59, 59, 999);
 
       console.log('Date range for query:', {
         start: startOfDay.toISOString(),
-        end: endOfDay.toISOString()
+        end: endOfDay.toISOString(),
+        localStart: startOfDay.toString(),
+        localEnd: endOfDay.toString()
       });
 
       const { data, error } = await supabase
@@ -91,10 +91,9 @@ export const useAvailableSlots = ({ psychologistId, selectedDate }: UseAvailable
     } finally {
       setLoading(false);
     }
-  }, [psychologistId, selectedDate]); // Memoize with dependencies
+  }, [psychologistId, selectedDate]);
 
   useEffect(() => {
-    // Solo hacer fetch si tenemos datos válidos
     if (psychologistId && 
         psychologistId.trim() !== '' && 
         selectedDate && 
@@ -111,7 +110,7 @@ export const useAvailableSlots = ({ psychologistId, selectedDate }: UseAvailable
       setBookedSlots([]);
       setLoading(false);
     }
-  }, [fetchBookedSlots]); // Only depend on the memoized function
+  }, [fetchBookedSlots]);
 
   const isSlotAvailable = (time: string) => {
     return !bookedSlots.includes(time);

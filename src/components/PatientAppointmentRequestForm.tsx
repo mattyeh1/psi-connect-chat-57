@@ -25,7 +25,10 @@ export const PatientAppointmentRequestForm = ({ onRequestCreated }: PatientAppoi
 
   const getMinDate = () => {
     const today = new Date();
-    return today.toISOString().split('T')[0];
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   const timeSlots = [
@@ -64,10 +67,11 @@ export const PatientAppointmentRequestForm = ({ onRequestCreated }: PatientAppoi
     setLoading(true);
 
     try {
+      // Asegurar que la fecha se mantenga en formato local sin conversión a UTC
       const requestData = {
         patient_id: patient.id,
         psychologist_id: patient.psychologist_id,
-        preferred_date: formData.preferredDate,
+        preferred_date: formData.preferredDate, // Mantener como string de fecha local
         preferred_time: formData.preferredTime,
         type: formData.type,
         status: 'pending',
@@ -77,8 +81,8 @@ export const PatientAppointmentRequestForm = ({ onRequestCreated }: PatientAppoi
       console.log('Creating appointment request with data:', requestData);
       console.log('Patient ID:', patient.id);
       console.log('Psychologist ID:', patient.psychologist_id);
+      console.log('Selected date (local):', formData.preferredDate);
 
-      // Crear solicitud de cita
       const { data: insertedData, error: requestError } = await supabase
         .from('appointment_requests')
         .insert(requestData)
@@ -97,31 +101,6 @@ export const PatientAppointmentRequestForm = ({ onRequestCreated }: PatientAppoi
       }
 
       console.log('✅ Appointment request created successfully:', insertedData);
-
-      // Verificar que la solicitud se guardó correctamente
-      const { data: verifyData, error: verifyError } = await supabase
-        .from('appointment_requests')
-        .select('*')
-        .eq('id', insertedData.id)
-        .single();
-
-      if (verifyError) {
-        console.error('Error verifying appointment request:', verifyError);
-      } else {
-        console.log('✅ Verified appointment request exists:', verifyData);
-      }
-
-      // Verificar que aparece para el psicólogo
-      const { data: psychRequests, error: psychError } = await supabase
-        .from('appointment_requests')
-        .select('*')
-        .eq('psychologist_id', patient.psychologist_id);
-
-      if (psychError) {
-        console.error('Error checking psychologist requests:', psychError);
-      } else {
-        console.log('✅ All requests for psychologist:', psychRequests);
-      }
 
       toast({
         title: "Solicitud enviada",
@@ -162,6 +141,21 @@ export const PatientAppointmentRequestForm = ({ onRequestCreated }: PatientAppoi
     return labels[type] || type;
   };
 
+  const formatSelectedDate = (dateString: string) => {
+    if (!dateString) return "";
+    
+    // Crear fecha directamente del string sin conversión UTC
+    const [year, month, day] = dateString.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    
+    return date.toLocaleDateString('es-ES', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
   if (!patient?.psychologist_id) {
     return (
       <div className="text-center text-red-600 p-4">
@@ -196,6 +190,11 @@ export const PatientAppointmentRequestForm = ({ onRequestCreated }: PatientAppoi
             required
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           />
+          {formData.preferredDate && (
+            <p className="text-sm text-slate-600">
+              Fecha seleccionada: {formatSelectedDate(formData.preferredDate)}
+            </p>
+          )}
         </div>
 
         <div className="space-y-2">
