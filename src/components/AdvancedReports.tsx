@@ -3,30 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-import { Download, Calendar, Users, TrendingUp, FileText, Filter } from 'lucide-react';
+import { Download, Calendar, Users, TrendingUp, FileText, Filter, AlertCircle } from 'lucide-react';
 import { PlanGate } from './PlanGate';
-
-const monthlyData = [
-  { month: 'Ene', appointments: 24, patients: 18, revenue: 15000 },
-  { month: 'Feb', appointments: 32, patients: 22, revenue: 20000 },
-  { month: 'Mar', appointments: 28, patients: 20, revenue: 18000 },
-  { month: 'Abr', appointments: 35, patients: 25, revenue: 22000 },
-  { month: 'May', appointments: 42, patients: 28, revenue: 26000 },
-  { month: 'Jun', appointments: 38, patients: 30, revenue: 24000 }
-];
-
-const appointmentTypes = [
-  { name: 'Individual', value: 65, color: '#3B82F6' },
-  { name: 'Pareja', value: 25, color: '#10B981' },
-  { name: 'Familiar', value: 10, color: '#F59E0B' }
-];
-
-const patientProgress = [
-  { week: 'Sem 1', satisfaction: 7.2, progress: 6.8 },
-  { week: 'Sem 2', satisfaction: 7.8, progress: 7.2 },
-  { week: 'Sem 3', satisfaction: 8.1, progress: 7.8 },
-  { week: 'Sem 4', satisfaction: 8.5, progress: 8.2 }
-];
 
 export const AdvancedReports = () => {
   return (
@@ -49,20 +27,36 @@ export const AdvancedReports = () => {
           </div>
         </div>
 
-        {/* Métricas principales */}
+        {/* Estado sin datos */}
+        <Card className="border-2 border-dashed border-slate-300">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+              <BarChart className="w-8 h-8 text-slate-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-slate-700 mb-2">Sin datos suficientes</h3>
+            <p className="text-slate-500 text-center max-w-md mb-4">
+              Los reportes avanzados se generarán automáticamente cuando tengas más citas y actividad en tu práctica.
+            </p>
+            <div className="flex items-center gap-2 text-sm text-slate-600">
+              <AlertCircle className="w-4 h-4" />
+              <span>Se requieren al menos 10 citas para generar reportes</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Métricas básicas disponibles */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="border-l-4 border-l-blue-500">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-slate-600">Citas este mes</p>
-                  <p className="text-2xl font-bold text-blue-600">38</p>
+                  <p className="text-2xl font-bold text-blue-600">0</p>
                 </div>
                 <Calendar className="w-8 h-8 text-blue-500" />
               </div>
               <div className="flex items-center mt-2">
-                <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                <span className="text-sm text-green-600">+12% vs mes anterior</span>
+                <span className="text-sm text-slate-500">Comienza agendando citas</span>
               </div>
             </CardContent>
           </Card>
@@ -72,13 +66,12 @@ export const AdvancedReports = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-slate-600">Pacientes activos</p>
-                  <p className="text-2xl font-bold text-green-600">30</p>
+                  <p className="text-2xl font-bold text-green-600">0</p>
                 </div>
                 <Users className="w-8 h-8 text-green-500" />
               </div>
               <div className="flex items-center mt-2">
-                <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                <span className="text-sm text-green-600">+8% vs mes anterior</span>
+                <span className="text-sm text-slate-500">Invita a tus primeros pacientes</span>
               </div>
             </CardContent>
           </Card>
@@ -88,13 +81,12 @@ export const AdvancedReports = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-slate-600">Satisfacción</p>
-                  <p className="text-2xl font-bold text-purple-600">8.5/10</p>
+                  <p className="text-2xl font-bold text-purple-600">-</p>
                 </div>
-                <Badge className="bg-purple-100 text-purple-700">Excelente</Badge>
+                <Badge className="bg-slate-100 text-slate-700">Sin datos</Badge>
               </div>
               <div className="flex items-center mt-2">
-                <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                <span className="text-sm text-green-600">+0.3 vs mes anterior</span>
+                <span className="text-sm text-slate-500">Se calculará automáticamente</span>
               </div>
             </CardContent>
           </Card>
@@ -104,129 +96,87 @@ export const AdvancedReports = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-slate-600">Ingresos</p>
-                  <p className="text-2xl font-bold text-orange-600">$24,000</p>
+                  <p className="text-2xl font-bold text-orange-600">$0</p>
                 </div>
                 <FileText className="w-8 h-8 text-orange-500" />
               </div>
               <div className="flex items-center mt-2">
-                <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                <span className="text-sm text-green-600">+15% vs mes anterior</span>
+                <span className="text-sm text-slate-500">Configura tus tarifas</span>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Gráficos */}
+        {/* Información sobre funcionalidades */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Tendencia mensual */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart className="w-5 h-5 text-blue-500" />
-                Tendencia Mensual
+                Análisis de Tendencias
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={monthlyData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="appointments" fill="#3B82F6" name="Citas" />
-                  <Bar dataKey="patients" fill="#10B981" name="Pacientes" />
-                </BarChart>
-              </ResponsiveContainer>
+            <CardContent className="flex flex-col items-center py-8">
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-3">
+                <TrendingUp className="w-6 h-6 text-blue-500" />
+              </div>
+              <p className="text-slate-600 text-center">
+                Visualiza el crecimiento de tu práctica mes a mes
+              </p>
             </CardContent>
           </Card>
 
-          {/* Distribución de tipos de terapia */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <PieChart className="w-5 h-5 text-green-500" />
-                Tipos de Terapia
+                Distribución por Tipo
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={appointmentTypes}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    dataKey="value"
-                    label={({ name, value }) => `${name}: ${value}%`}
-                  >
-                    {appointmentTypes.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+            <CardContent className="flex flex-col items-center py-8">
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-3">
+                <Users className="w-6 h-6 text-green-500" />
+              </div>
+              <p className="text-slate-600 text-center">
+                Analiza qué tipos de terapia son más frecuentes
+              </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Progreso de pacientes */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <LineChart className="w-5 h-5 text-purple-500" />
-              Progreso Promedio de Pacientes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={patientProgress}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="week" />
-                <YAxis domain={[0, 10]} />
-                <Tooltip />
-                <Line 
-                  type="monotone" 
-                  dataKey="satisfaction" 
-                  stroke="#8B5CF6" 
-                  strokeWidth={2}
-                  name="Satisfacción"
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="progress" 
-                  stroke="#06B6D4" 
-                  strokeWidth={2}
-                  name="Progreso"
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
         {/* Acciones rápidas */}
         <Card>
           <CardHeader>
-            <CardTitle>Acciones Rápidas</CardTitle>
+            <CardTitle>Primeros Pasos para Generar Reportes</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-3">
-              <Button variant="outline" size="sm">
-                <Download className="w-4 h-4 mr-2" />
-                Exportar Reporte Mensual
-              </Button>
-              <Button variant="outline" size="sm">
-                <FileText className="w-4 h-4 mr-2" />
-                Reporte de Pacientes
-              </Button>
-              <Button variant="outline" size="sm">
-                <Calendar className="w-4 h-4 mr-2" />
-                Análisis de Citas
-              </Button>
-              <Button variant="outline" size="sm">
-                <TrendingUp className="w-4 h-4 mr-2" />
-                Proyecciones
-              </Button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <h4 className="font-medium text-slate-800">Para comenzar necesitas:</h4>
+                <ul className="space-y-2 text-sm text-slate-600">
+                  <li className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    Registrar al menos 10 citas
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    Completar información de pacientes
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                    Configurar tipos de terapia
+                  </li>
+                </ul>
+              </div>
+              <div className="space-y-3">
+                <h4 className="font-medium text-slate-800">Funcionalidades disponibles:</h4>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="outline">Análisis mensual</Badge>
+                  <Badge variant="outline">Métricas de satisfacción</Badge>
+                  <Badge variant="outline">Proyecciones de ingresos</Badge>
+                  <Badge variant="outline">Exportación PDF</Badge>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
