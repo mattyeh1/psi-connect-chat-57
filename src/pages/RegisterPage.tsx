@@ -95,7 +95,7 @@ export const RegisterPage = () => {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent mb-4">
-            Únete a PsiConnect
+            Únete a ProConnection
           </h1>
           <p className="text-lg text-slate-600 max-w-2xl mx-auto">
             Crea tu cuenta y comienza a gestionar tu práctica profesional con las mejores herramientas del mercado
@@ -209,7 +209,7 @@ export const RegisterPage = () => {
         <div className="max-w-4xl mx-auto mt-16">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-slate-800 mb-4">
-              ¿Por qué elegir PsiConnect?
+              ¿Por qué elegir ProConnection?
             </h2>
           </div>
           

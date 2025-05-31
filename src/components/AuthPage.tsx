@@ -390,7 +390,7 @@ export const AuthPage = ({ affiliateCode, registrationOnly = false }: AuthPagePr
             {isSignUp ? "Crear Cuenta" : "Iniciar Sesión"}
           </CardTitle>
           <p className="text-slate-600 mt-2">
-            {isSignUp ? "Únete a nuestra plataforma profesional" : "Bienvenido de vuelta a PsiConnect"}
+            {isSignUp ? "Únete a nuestra plataforma profesional" : "Bienvenido de vuelta a ProConnection"}
           </p>
         </CardHeader>
         <CardContent>

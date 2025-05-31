@@ -1,4 +1,3 @@
-
 import { useState, useEffect, createContext, useContext } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -223,7 +222,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log('=== SIGN IN SUCCESSFUL ===');
       toast({
         title: "Inicio de sesión exitoso",
-        description: "Bienvenido a PsiConnect",
+        description: "Bienvenido a ProConnection",
       });
     }
     
