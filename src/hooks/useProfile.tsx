@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -59,8 +60,15 @@ export const useProfile = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('useProfile effect triggered:', { 
+      userId: user?.id, 
+      cachedUserId: profileCache.userId,
+      dataFetched: profileCache.dataFetched 
+    });
+
     if (!user) {
       // Limpiar estado cuando no hay usuario
+      console.log('No user found, clearing state');
       setProfile(null);
       setPsychologist(null);
       setPatient(null);
@@ -76,16 +84,21 @@ export const useProfile = () => {
       return;
     }
 
-    // IMPORTANTE: Si el usuario cambió, limpiar cache y hacer fetch nuevo
+    // Si el usuario cambió, limpiar cache y hacer fetch nuevo
     if (profileCache.userId !== user.id) {
       console.log('User ID changed, clearing cache and fetching new profile');
       profileCache = {
         profile: null,
         psychologist: null,
         patient: null,
-        userId: null,
+        userId: user.id,
         dataFetched: false
       };
+      setProfile(null);
+      setPsychologist(null);
+      setPatient(null);
+      setLoading(true);
+      setError(null);
       fetchProfile();
       return;
     }
@@ -101,13 +114,15 @@ export const useProfile = () => {
     }
 
     // Solo hacer fetch si no tenemos datos en cache
-    if (!profileCache.dataFetched || profileCache.userId !== user.id) {
+    if (!profileCache.dataFetched) {
+      console.log('No cached data, fetching profile for user:', user.id);
       fetchProfile();
     }
   }, [user?.id]); // Solo depender del ID del usuario
 
   const fetchProfile = async () => {
     if (!user) {
+      console.log('No user in fetchProfile');
       setLoading(false);
       return;
     }
@@ -129,6 +144,8 @@ export const useProfile = () => {
         throw new Error('No se pudo cargar el perfil');
       }
       
+      console.log('Profile fetched successfully:', profileData);
+      
       const typedProfile: Profile = {
         ...profileData,
         user_type: profileData.user_type as 'psychologist' | 'patient' | 'admin'
@@ -140,6 +157,7 @@ export const useProfile = () => {
 
       // Fetch specific role data
       if (typedProfile.user_type === 'psychologist') {
+        console.log('Fetching psychologist data for:', user.id);
         const { data: psychResult, error: psychError } = await supabase
           .from('psychologists')
           .select('*')
@@ -150,10 +168,12 @@ export const useProfile = () => {
           console.error('Error fetching psychologist data:', psychError);
           setError('Error al cargar datos del psicólogo');
         } else {
+          console.log('Psychologist data fetched:', psychResult);
           psychData = psychResult;
           setPsychologist(psychResult);
         }
       } else if (typedProfile.user_type === 'patient') {
+        console.log('Fetching patient data for:', user.id);
         const { data: patientResult, error: patientError } = await supabase
           .from('patients')
           .select('*')
@@ -164,6 +184,7 @@ export const useProfile = () => {
           console.error('Error fetching patient data:', patientError);
           setError('Error al cargar datos del paciente');
         } else {
+          console.log('Patient data fetched:', patientResult);
           patientData = patientResult;
           setPatient(patientResult);
         }
@@ -178,8 +199,10 @@ export const useProfile = () => {
         dataFetched: true
       };
 
+      console.log('Profile data cached successfully');
+
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('Error in fetchProfile:', error);
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       setError(errorMessage);
       toast({
@@ -327,6 +350,7 @@ export const useProfile = () => {
   };
 
   const clearCache = () => {
+    console.log('Clearing profile cache');
     profileCache = {
       profile: null,
       psychologist: null,
@@ -337,6 +361,7 @@ export const useProfile = () => {
   };
 
   const refetch = () => {
+    console.log('Refetching profile data');
     profileCache.dataFetched = false;
     fetchProfile();
   };

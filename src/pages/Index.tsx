@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -64,7 +63,6 @@ const Index = () => {
 
   const handleNavigateToMessages = (patientId?: string) => {
     setCurrentView("messages");
-    // You could add logic here to select the specific patient's conversation
     console.log('Navigating to messages for patient:', patientId);
   };
 
@@ -91,11 +89,12 @@ const Index = () => {
 
   // Show loading during initial authentication check
   if (authLoading) {
+    console.log('Auth loading...');
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600">Cargando...</p>
+          <p className="text-slate-600">Verificando autenticación...</p>
         </div>
       </div>
     );
@@ -103,11 +102,13 @@ const Index = () => {
 
   // Show auth page if not logged in
   if (!user) {
+    console.log('No user, showing auth page');
     return <AuthPage />;
   }
 
   // Show loading while profile is being fetched (but only if we don't have any profile data yet)
   if (profileLoading && !profile) {
+    console.log('Profile loading...');
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
@@ -120,12 +121,13 @@ const Index = () => {
 
   // If no profile exists after loading is complete, show auth page
   if (!profileLoading && !profile) {
+    console.log('No profile found after loading complete');
     return <AuthPage />;
   }
 
   // Handle admin users differently - redirect them to admin login/dashboard
   if (profile && profile.user_type === 'admin') {
-    // For admin users, redirect to admin interface
+    console.log('Admin user detected, redirecting...');
     window.location.href = '/admin/dashboard';
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
@@ -152,7 +154,6 @@ const Index = () => {
       });
       
       // If psychologist has complete profile data, NEVER ask for profile setup again
-      // regardless of subscription status
       if (hasCompleteProfile) {
         console.log('Psychologist has complete profile, skipping profile setup');
         return false;
@@ -162,6 +163,10 @@ const Index = () => {
     } else if (profile.user_type === 'patient') {
       // Check if patient profile exists and has required fields
       const hasCompleteProfile = patient && patient.first_name && patient.last_name && patient.psychologist_id;
+      console.log('Checking patient profile setup:', {
+        hasCompleteProfile,
+        patient
+      });
       return !hasCompleteProfile;
     }
     
@@ -171,6 +176,7 @@ const Index = () => {
   
   // Only show profile setup if we're not loading and actually need setup
   if (!profileLoading && needsProfileSetup()) {
+    console.log('Profile setup needed');
     return (
       <ProfileSetup 
         userType={profile.user_type as 'psychologist' | 'patient'} 
@@ -184,11 +190,12 @@ const Index = () => {
 
   // If we're still loading profile but have a profile, show loading state
   if (profileLoading) {
+    console.log('Still loading profile with existing profile data');
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600">Cargando perfil...</p>
+          <p className="text-slate-600">Actualizando perfil...</p>
         </div>
       </div>
     );
