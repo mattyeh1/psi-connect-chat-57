@@ -102,7 +102,7 @@ export const SeoProfileManager = () => {
             <div>
               <Label htmlFor="custom-url">URL Personalizada</Label>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-sm text-slate-500">psiconnect.com/perfil/</span>
+                <span className="text-sm text-slate-500">proconnection.me/perfil/</span>
                 <Input 
                   id="custom-url"
                   value={formData.custom_url}
@@ -120,7 +120,7 @@ export const SeoProfileManager = () => {
               <span className="font-medium">URL de tu perfil público</span>
             </div>
             <p className="text-sm text-green-600 font-mono">
-              psiconnect.com/perfil/{finalUrl}
+              proconnection.me/perfil/{finalUrl}
             </p>
           </div>
 

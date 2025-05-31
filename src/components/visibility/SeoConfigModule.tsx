@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -112,7 +111,7 @@ export const SeoConfigModule = ({ onComplete, currentScore }: SeoConfigModulePro
     {
       label: 'URL Personalizada',
       completed: !!(formData.custom_url && formData.custom_url.length >= 5),
-      value: formData.custom_url ? `psiconnect.com/perfil/${formData.custom_url}` : 'No configurada',
+      value: formData.custom_url ? `proconnection.me/perfil/${formData.custom_url}` : 'No configurada',
       optimal: 'URL amigable'
     }
   ];
@@ -210,7 +209,7 @@ export const SeoConfigModule = ({ onComplete, currentScore }: SeoConfigModulePro
               <div>
                 <Label htmlFor="custom-url">URL Personalizada</Label>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-sm text-slate-500">psiconnect.com/perfil/</span>
+                  <span className="text-sm text-slate-500">proconnection.me/perfil/</span>
                   <Input
                     id="custom-url"
                     value={formData.custom_url}
@@ -249,7 +248,7 @@ export const SeoConfigModule = ({ onComplete, currentScore }: SeoConfigModulePro
                   <span className="font-medium">URL de tu perfil público</span>
                 </div>
                 <p className="text-sm text-green-600 font-mono">
-                  psiconnect.com/perfil/{formData.custom_url}
+                  proconnection.me/perfil/{formData.custom_url}
                 </p>
               </div>
             )}

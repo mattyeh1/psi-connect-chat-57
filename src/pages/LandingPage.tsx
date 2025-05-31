@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Heart, Shield, Users, MessageCircle, Calendar, Star, CheckCircle, Award, TrendingUp, Clock, Globe, Zap, Crown } from "lucide-react";
@@ -16,7 +15,7 @@ export const LandingPage = () => {
               <Heart className="w-6 h-6 text-white group-hover:animate-pulse" />
             </div>
             <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent hover:from-purple-600 hover:to-pink-600 transition-all duration-500">
-              PsiConnect
+              ProConnection
             </h1>
           </div>
           <div className="flex gap-4">
@@ -55,7 +54,7 @@ export const LandingPage = () => {
           
           <ScrollAnimationWrapper animation="fade-up" delay={200}>
             <p className="text-xl text-slate-600 mb-8 leading-relaxed">
-              PsiConnect es la plataforma integral que une a psicólogos y pacientes 
+              ProConnection es la plataforma integral que une a psicólogos y pacientes 
               en un entorno seguro, profesional y tecnológicamente avanzado.
             </p>
           </ScrollAnimationWrapper>
@@ -81,7 +80,7 @@ export const LandingPage = () => {
             <div className="relative group">
               <img 
                 src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
-                alt="Profesional de la salud mental usando PsiConnect"
+                alt="Profesional de la salud mental usando ProConnection"
                 className="rounded-2xl shadow-2xl mx-auto max-w-4xl w-full transform group-hover:scale-105 transition-all duration-500 group-hover:shadow-3xl"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-2xl group-hover:from-black/10 transition-all duration-500"></div>
@@ -134,7 +133,7 @@ export const LandingPage = () => {
         <ScrollAnimationWrapper animation="fade-up">
           <div className="text-center mb-16">
             <h3 className="text-3xl font-bold text-slate-800 mb-4 hover:text-blue-600 transition-colors duration-300">
-              ¿Por qué elegir PsiConnect?
+              ¿Por qué elegir ProConnection?
             </h3>
             <p className="text-lg text-slate-600 max-w-2xl mx-auto">
               Ofrecemos las herramientas más avanzadas para facilitar la conexión 
@@ -218,7 +217,7 @@ export const LandingPage = () => {
             <ScrollAnimationWrapper animation="fade-up">
               <div className="text-center mb-16">
                 <h3 className="text-3xl font-bold text-slate-800 mb-4 hover:text-blue-600 transition-colors duration-300">
-                  ¿Cómo funciona PsiConnect?
+                  ¿Cómo funciona ProConnection?
                 </h3>
                 <p className="text-lg text-slate-600 max-w-2xl mx-auto">
                   Simplificamos el proceso para que puedas enfocarte en lo que realmente importa: 
@@ -276,7 +275,7 @@ export const LandingPage = () => {
               Lo que dicen nuestros usuarios
             </h3>
             <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-              Miles de profesionales ya confían en PsiConnect para mejorar 
+              Miles de profesionales ya confían en ProConnection para mejorar 
               su práctica y brindar mejor atención a sus pacientes.
             </p>
           </div>
@@ -301,7 +300,7 @@ export const LandingPage = () => {
                   ))}
                 </div>
                 <p className="text-slate-600">
-                  "PsiConnect ha transformado completamente mi práctica. La gestión de pacientes 
+                  "ProConnection ha transformado completamente mi práctica. La gestión de pacientes 
                   es mucho más eficiente y mis pacientes están más satisfechos."
                 </p>
               </CardContent>
@@ -326,7 +325,7 @@ export const LandingPage = () => {
                   ))}
                 </div>
                 <p className="text-slate-600">
-                  "La seguridad y privacidad que ofrece PsiConnect me da total tranquilidad. 
+                  "La seguridad y privacidad que ofrece ProConnection me da total tranquilidad. 
                   Mis pacientes confían plenamente en la plataforma."
                 </p>
               </CardContent>
@@ -417,7 +416,7 @@ export const LandingPage = () => {
               <div className="relative group">
                 <img 
                   src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
-                  alt="Profesional usando PsiConnect"
+                  alt="Profesional usando ProConnection"
                   className="rounded-2xl shadow-2xl group-hover:scale-105 group-hover:shadow-3xl transition-all duration-500"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-2xl group-hover:from-black/10 transition-all duration-500"></div>
@@ -554,7 +553,7 @@ export const LandingPage = () => {
               ¿Listo para revolucionar tu práctica?
             </h3>
             <p className="text-xl text-blue-100 mb-8 hover:text-white transition-colors duration-300">
-              Únete a cientos de profesionales que ya confían en PsiConnect 
+              Únete a cientos de profesionales que ya confían en ProConnection 
               para brindar la mejor atención a sus pacientes.
             </p>
             <div className="flex justify-center gap-4">
@@ -581,7 +580,7 @@ export const LandingPage = () => {
                   <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-emerald-500 rounded-lg flex items-center justify-center group-hover:rotate-12 transition-transform duration-300">
                     <Heart className="w-5 h-5 text-white group-hover:animate-pulse" />
                   </div>
-                  <h4 className="text-xl font-bold group-hover:text-blue-400 transition-colors duration-300">PsiConnect</h4>
+                  <h4 className="text-xl font-bold group-hover:text-blue-400 transition-colors duration-300">ProConnection</h4>
                 </div>
                 <p className="text-slate-400 group-hover:text-slate-300 transition-colors duration-300">
                   Conectando profesionales de la salud mental con sus pacientes.
@@ -617,7 +616,7 @@ export const LandingPage = () => {
             </div>
 
             <div className="border-t border-slate-700 mt-8 pt-8 text-center text-slate-400 hover:text-slate-300 transition-colors duration-300">
-              <p>&copy; 2024 PsiConnect. Todos los derechos reservados.</p>
+              <p>&copy; 2024 ProConnection. Todos los derechos reservados.</p>
             </div>
           </div>
         </footer>
