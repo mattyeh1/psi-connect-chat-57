@@ -56,6 +56,8 @@ export const PublicProfilePage = () => {
     queryFn: async () => {
       if (!profileUrl) throw new Error('No profile URL provided');
       
+      console.log('=== FETCHING PROFILE ===', profileUrl);
+      
       const { data, error } = await supabase
         .from('public_psychologist_profiles')
         .select(`
@@ -66,8 +68,17 @@ export const PublicProfilePage = () => {
         .eq('is_active', true)
         .maybeSingle();
 
-      if (error) throw error;
-      if (!data) throw new Error('Profile not found');
+      if (error) {
+        console.error('=== PROFILE FETCH ERROR ===', error);
+        throw error;
+      }
+      if (!data) {
+        console.log('=== PROFILE NOT FOUND ===');
+        throw new Error('Profile not found');
+      }
+      
+      console.log('=== PROFILE FOUND ===', data);
+      console.log('=== PLAN TYPE ===', data.psychologist?.plan_type);
       
       return data as PublicProfileData;
     },
@@ -111,12 +122,20 @@ export const PublicProfilePage = () => {
     );
   }
 
-  const isPro = profile.psychologist?.plan_type === 'pro';
+  // Verificar plan del psicólogo
+  const planType = profile.psychologist?.plan_type;
+  const isPro = planType === 'pro';
+  
+  console.log('=== RENDERING TEMPLATE ===');
+  console.log('Plan type:', planType);
+  console.log('Is Pro:', isPro);
   
   // Renderizar template según el plan
   if (isPro) {
+    console.log('=== RENDERING PRO TEMPLATE ===');
     return <ProProfileTemplate profile={profile} />;
   } else {
+    console.log('=== RENDERING PLUS TEMPLATE ===');
     return <PlusProfileTemplate profile={profile} />;
   }
 };

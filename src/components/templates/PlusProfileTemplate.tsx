@@ -66,68 +66,63 @@ export const PlusProfileTemplate = ({ profile }: PlusProfileTemplateProps) => {
         <meta property="og:type" content="profile" />
       </Helmet>
 
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        <div className="max-w-4xl mx-auto px-6 py-12">
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-4xl mx-auto px-6 py-8">
           
-          {/* Header Section */}
-          <Card className="mb-8 bg-gradient-to-r from-white to-blue-50/30 border-blue-100 shadow-lg">
-            <CardContent className="p-8">
+          {/* Header Section - PLUS VERSION */}
+          <Card className="mb-6 border shadow-sm">
+            <CardContent className="p-6">
               <div className="flex flex-col md:flex-row gap-6 items-start">
                 <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+                  <div className="flex items-center gap-3 mb-3">
+                    <h1 className="text-2xl font-bold text-gray-900">
                       {displayName}
                     </h1>
-                    <Badge className="bg-gradient-to-r from-blue-500 to-emerald-500 text-white">
-                      Profesional Plus
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                      Plus
                     </Badge>
                   </div>
                   
-                  <p className="text-xl mb-4 text-blue-600">
+                  <p className="text-lg mb-3 text-blue-600 font-medium">
                     {profile.psychologist.specialization || 'Psicólogo'}
                   </p>
                   
-                  {location && (
-                    <div className="flex items-center gap-2 text-slate-600 mb-2">
-                      <MapPin className="w-4 h-4" />
-                      <span>{location}</span>
-                    </div>
-                  )}
-                  
-                  {profile.years_experience && (
-                    <div className="flex items-center gap-2 text-slate-600 mb-4">
-                      <Clock className="w-4 h-4" />
-                      <span>{profile.years_experience} años de experiencia</span>
-                    </div>
-                  )}
+                  <div className="space-y-2">
+                    {location && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <MapPin className="w-4 h-4" />
+                        <span>{location}</span>
+                      </div>
+                    )}
+                    
+                    {profile.years_experience && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <Clock className="w-4 h-4" />
+                        <span>{profile.years_experience} años de experiencia</span>
+                      </div>
+                    )}
 
-                  {profile.view_count > 0 && (
-                    <div className="flex items-center gap-2 text-slate-500 text-sm">
-                      <Eye className="w-4 h-4" />
-                      <span>{profile.view_count} visualizaciones</span>
-                    </div>
-                  )}
+                    {profile.view_count > 0 && (
+                      <div className="flex items-center gap-2 text-gray-500 text-sm">
+                        <Eye className="w-4 h-4" />
+                        <span>{profile.view_count} visualizaciones</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex flex-col gap-3">
-                  {profile.psychologist.phone && (
-                    <Button variant="outline" className="flex items-center gap-2">
-                      <Phone className="w-4 h-4" />
-                      Llamar
-                    </Button>
-                  )}
-                  
-                  {email && (
-                    <Button variant="outline" className="flex items-center gap-2">
-                      <Mail className="w-4 h-4" />
-                      Contactar
-                    </Button>
-                  )}
-                  
-                  <Button className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700">
+                  <Button className="bg-blue-600 hover:bg-blue-700">
                     <Calendar className="w-4 h-4 mr-2" />
                     Agendar Cita
                   </Button>
+                  
+                  {profile.psychologist.phone && (
+                    <Button variant="outline">
+                      <Phone className="w-4 h-4 mr-2" />
+                      Contactar
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -135,12 +130,12 @@ export const PlusProfileTemplate = ({ profile }: PlusProfileTemplateProps) => {
 
           {/* Bio Section */}
           {bio && (
-            <Card className="mb-8 border-blue-100">
+            <Card className="mb-6">
               <CardContent className="p-6">
-                <h2 className="text-xl font-semibold mb-4 text-blue-700">
+                <h2 className="text-xl font-semibold mb-4 text-gray-900">
                   Sobre mí
                 </h2>
-                <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">
+                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
                   {bio}
                 </p>
               </CardContent>
@@ -149,17 +144,17 @@ export const PlusProfileTemplate = ({ profile }: PlusProfileTemplateProps) => {
 
           {/* Specialties */}
           {specialties.length > 0 && (
-            <Card className="mb-8 border-blue-100">
+            <Card className="mb-6">
               <CardContent className="p-6">
-                <h2 className="text-xl font-semibold mb-4 text-blue-700">
+                <h2 className="text-xl font-semibold mb-4 text-gray-900">
                   Especialidades
                 </h2>
                 <div className="flex flex-wrap gap-2">
                   {specialties.map((specialty: string, index: number) => (
                     <Badge
                       key={index}
-                      variant="secondary"
-                      className="bg-blue-50 text-blue-700 hover:bg-blue-100"
+                      variant="outline"
+                      className="border-blue-200 text-blue-700"
                     >
                       {specialty}
                     </Badge>
@@ -169,17 +164,17 @@ export const PlusProfileTemplate = ({ profile }: PlusProfileTemplateProps) => {
             </Card>
           )}
 
-          {/* Additional Info Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Session & Language Info */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             
             {/* Session Info */}
             {(sessionFormat || sessionDuration || pricingInfo) && (
-              <Card className="border-blue-100">
+              <Card>
                 <CardContent className="p-6">
-                  <h3 className="font-semibold mb-3 text-blue-700">
+                  <h3 className="font-semibold mb-3 text-gray-900">
                     Información de Sesiones
                   </h3>
-                  <div className="space-y-2 text-sm text-slate-600">
+                  <div className="space-y-2 text-sm text-gray-600">
                     {sessionFormat && (
                       <p><span className="font-medium">Formato:</span> {sessionFormat}</p>
                     )}
@@ -196,9 +191,9 @@ export const PlusProfileTemplate = ({ profile }: PlusProfileTemplateProps) => {
 
             {/* Languages */}
             {languages.length > 0 && (
-              <Card className="border-blue-100">
+              <Card>
                 <CardContent className="p-6">
-                  <h3 className="font-semibold mb-3 text-blue-700">
+                  <h3 className="font-semibold mb-3 text-gray-900">
                     Idiomas
                   </h3>
                   <div className="flex flex-wrap gap-2">
@@ -213,21 +208,18 @@ export const PlusProfileTemplate = ({ profile }: PlusProfileTemplateProps) => {
             )}
           </div>
 
-          {/* Contact Section */}
-          <Card className="mt-8 bg-gradient-to-r from-blue-50 to-blue-100 border-blue-100">
+          {/* Call to Action */}
+          <Card className="bg-blue-50 border-blue-200">
             <CardContent className="p-6 text-center">
-              <h2 className="text-xl font-semibold mb-4 text-blue-700">
-                ¿Listo para comenzar tu proceso terapéutico?
+              <h2 className="text-xl font-semibold mb-3 text-gray-900">
+                ¿Listo para comenzar?
               </h2>
-              <p className="text-slate-600 mb-6">
+              <p className="text-gray-600 mb-6">
                 Agenda una cita y da el primer paso hacia tu bienestar emocional.
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button
-                  size="lg"
-                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
-                >
+                <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
                   <Calendar className="w-5 h-5 mr-2" />
                   Agendar Primera Cita
                 </Button>
@@ -235,7 +227,7 @@ export const PlusProfileTemplate = ({ profile }: PlusProfileTemplateProps) => {
                 {website && (
                   <Button variant="outline" size="lg">
                     <ExternalLink className="w-4 h-4 mr-2" />
-                    Visitar Sitio Web
+                    Sitio Web
                   </Button>
                 )}
               </div>
