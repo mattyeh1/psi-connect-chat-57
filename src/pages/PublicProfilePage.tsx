@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useExpandedPublicProfiles } from '@/hooks/useExpandedPublicProfiles';
@@ -84,8 +83,24 @@ export const PublicProfilePage = () => {
         const profileData = await getPublicProfileByUrlDetailed(profileUrl);
         
         if (profileData) {
-          setProfile(profileData);
-          console.log('=== EXPANDED PROFILE LOADED ===', profileData);
+          // Parse selected_specialties if it's a JSON string
+          let parsedSpecialties = profileData.selected_specialties;
+          if (typeof profileData.selected_specialties === 'string') {
+            try {
+              parsedSpecialties = JSON.parse(profileData.selected_specialties);
+            } catch (e) {
+              console.warn('Failed to parse selected_specialties JSON:', e);
+              parsedSpecialties = [];
+            }
+          }
+          
+          const formattedProfile: PublicProfileData = {
+            ...profileData,
+            selected_specialties: Array.isArray(parsedSpecialties) ? parsedSpecialties : []
+          };
+          
+          setProfile(formattedProfile);
+          console.log('=== EXPANDED PROFILE LOADED ===', formattedProfile);
         } else {
           setNotFound(true);
         }
