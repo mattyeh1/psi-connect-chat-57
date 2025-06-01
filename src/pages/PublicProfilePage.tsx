@@ -1,9 +1,5 @@
-<<<<<<< HEAD
-import { useEffect, useState } from 'react';
-=======
 
 import { useState, useEffect } from 'react';
->>>>>>> parent of bbf9548 (Implement Jitsi Meet creation)
 import { useParams } from 'react-router-dom';
 import { useExpandedPublicProfiles } from '@/hooks/useExpandedPublicProfiles';
 import { Card, CardContent } from '@/components/ui/card';
@@ -74,41 +70,10 @@ export const PublicProfilePage = () => {
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-<<<<<<< HEAD
-    if (profileUrl) {
-      fetchPublicProfile(profileUrl);
-    }
-  }, [profileUrl]);
-
-  const fetchPublicProfile = async (url: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const { data, error: fetchError } = await supabase
-        .from('public_profiles')
-        .select(`
-          *,
-          specialties (
-            id,
-            name,
-            category,
-            icon
-          )
-        `)
-        .eq('custom_url', url)
-        .eq('is_active', true)
-        .single();
-
-      if (fetchError) {
-        console.error('Error fetching public profile:', fetchError);
-        setError('Perfil no encontrado');
-=======
     const loadProfile = async () => {
       if (!profileUrl) {
         setNotFound(true);
         setLoading(false);
->>>>>>> parent of 7f16e39 (Fix: Handle 404 error on root path)
         return;
       }
 
@@ -132,24 +97,8 @@ export const PublicProfilePage = () => {
       }
     };
 
-<<<<<<< HEAD
-      const profileData: PublicProfileData = {
-        ...data,
-        selected_specialties: selectedSpecialties
-      };
-
-      setProfile(profileData);
-    } catch (err) {
-      console.error('Error fetching public profile:', err);
-      setError('Error al cargar el perfil');
-    } finally {
-      setLoading(false);
-    }
-  };
-=======
     loadProfile();
   }, [profileUrl]);
->>>>>>> parent of 7f16e39 (Fix: Handle 404 error on root path)
 
   if (loading) {
     return (
