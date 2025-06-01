@@ -9,6 +9,20 @@ import { Badge } from "@/components/ui/badge";
 import { MapPin, Clock, Star, Eye, Calendar, Phone, Mail, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+interface ProfileData {
+  selected_specialties?: string[];
+  location?: string;
+  languages?: string[];
+  session_format?: string;
+  session_duration?: number;
+  pricing_info?: string;
+  education?: string;
+  certifications?: string;
+  email?: string;
+  website?: string;
+  [key: string]: any;
+}
+
 interface PublicProfileData {
   id: string;
   custom_url: string;
@@ -100,18 +114,23 @@ export const PublicProfilePage = () => {
   }
 
   const isPro = profile.psychologist?.plan_type === 'pro';
+  const isPlus = profile.psychologist?.plan_type === 'plus';
   const displayName = `${profile.psychologist.first_name} ${profile.psychologist.last_name}`;
-  const specialties = profile.profile_data?.selected_specialties || [];
+  
+  // Hacer casting seguro del profile_data
+  const profileData: ProfileData = (profile.profile_data as ProfileData) || {};
+  
+  const specialties = profileData.selected_specialties || [];
   const bio = profile.about_description || '';
-  const location = profile.profile_data?.location || '';
-  const email = profile.profile_data?.email || '';
-  const website = profile.profile_data?.website || '';
-  const languages = profile.profile_data?.languages || [];
-  const sessionFormat = profile.profile_data?.session_format || '';
-  const sessionDuration = profile.profile_data?.session_duration || 60;
-  const pricingInfo = profile.profile_data?.pricing_info || '';
-  const education = profile.profile_data?.education || '';
-  const certifications = profile.profile_data?.certifications || '';
+  const location = profileData.location || '';
+  const email = profileData.email || '';
+  const website = profileData.website || '';
+  const languages = profileData.languages || [];
+  const sessionFormat = profileData.session_format || '';
+  const sessionDuration = profileData.session_duration || 60;
+  const pricingInfo = profileData.pricing_info || '';
+  const education = profileData.education || '';
+  const certifications = profileData.certifications || '';
 
   return (
     <>
@@ -124,16 +143,16 @@ export const PublicProfilePage = () => {
         <meta property="og:type" content="profile" />
       </Helmet>
 
-      <div className={`min-h-screen ${isPro ? 'bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50' : 'bg-slate-50'}`}>
+      <div className={`min-h-screen ${isPro ? 'bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50' : isPlus ? 'bg-gradient-to-br from-slate-50 to-blue-50' : 'bg-slate-50'}`}>
         <div className="max-w-4xl mx-auto px-6 py-12">
           
           {/* Header Section */}
-          <Card className={`mb-8 ${isPro ? 'bg-gradient-to-r from-white to-blue-50/50 border-blue-200 shadow-xl' : 'bg-white shadow-md'}`}>
+          <Card className={`mb-8 ${isPro ? 'bg-gradient-to-r from-white to-blue-50/50 border-blue-200 shadow-xl' : isPlus ? 'bg-gradient-to-r from-white to-blue-50/30 border-blue-100 shadow-lg' : 'bg-white shadow-md'}`}>
             <CardContent className="p-8">
               <div className="flex flex-col md:flex-row gap-6 items-start">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <h1 className={`text-3xl font-bold ${isPro ? 'bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent' : 'text-slate-800'}`}>
+                    <h1 className={`text-3xl font-bold ${isPro ? 'bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent' : isPlus ? 'bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent' : 'text-slate-800'}`}>
                       {displayName}
                     </h1>
                     {isPro && (
@@ -141,9 +160,14 @@ export const PublicProfilePage = () => {
                         Profesional Pro
                       </Badge>
                     )}
+                    {isPlus && !isPro && (
+                      <Badge className="bg-gradient-to-r from-blue-500 to-emerald-500 text-white">
+                        Profesional Plus
+                      </Badge>
+                    )}
                   </div>
                   
-                  <p className={`text-xl mb-4 ${isPro ? 'text-blue-700' : 'text-slate-600'}`}>
+                  <p className={`text-xl mb-4 ${isPro ? 'text-blue-700' : isPlus ? 'text-blue-600' : 'text-slate-600'}`}>
                     {profile.psychologist.specialization || 'Psicólogo'}
                   </p>
                   
@@ -184,7 +208,7 @@ export const PublicProfilePage = () => {
                     </Button>
                   )}
                   
-                  <Button className={isPro ? 'bg-gradient-to-r from-blue-500 to-emerald-500 hover:from-blue-600 hover:to-emerald-600' : ''}>
+                  <Button className={isPro ? 'bg-gradient-to-r from-blue-500 to-emerald-500 hover:from-blue-600 hover:to-emerald-600' : isPlus ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700' : ''}>
                     <Calendar className="w-4 h-4 mr-2" />
                     Agendar Cita
                   </Button>
@@ -195,9 +219,9 @@ export const PublicProfilePage = () => {
 
           {/* Bio Section */}
           {bio && (
-            <Card className={`mb-8 ${isPro ? 'border-blue-200' : ''}`}>
+            <Card className={`mb-8 ${isPro ? 'border-blue-200' : isPlus ? 'border-blue-100' : ''}`}>
               <CardContent className="p-6">
-                <h2 className={`text-xl font-semibold mb-4 ${isPro ? 'text-blue-800' : 'text-slate-800'}`}>
+                <h2 className={`text-xl font-semibold mb-4 ${isPro ? 'text-blue-800' : isPlus ? 'text-blue-700' : 'text-slate-800'}`}>
                   Sobre mí
                 </h2>
                 <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">
@@ -209,9 +233,9 @@ export const PublicProfilePage = () => {
 
           {/* Specialties */}
           {specialties.length > 0 && (
-            <Card className={`mb-8 ${isPro ? 'border-blue-200' : ''}`}>
+            <Card className={`mb-8 ${isPro ? 'border-blue-200' : isPlus ? 'border-blue-100' : ''}`}>
               <CardContent className="p-6">
-                <h2 className={`text-xl font-semibold mb-4 ${isPro ? 'text-blue-800' : 'text-slate-800'}`}>
+                <h2 className={`text-xl font-semibold mb-4 ${isPro ? 'text-blue-800' : isPlus ? 'text-blue-700' : 'text-slate-800'}`}>
                   Especialidades
                 </h2>
                 <div className="flex flex-wrap gap-2">
@@ -219,7 +243,7 @@ export const PublicProfilePage = () => {
                     <Badge
                       key={index}
                       variant="secondary"
-                      className={isPro ? 'bg-blue-100 text-blue-800 hover:bg-blue-200' : ''}
+                      className={isPro ? 'bg-blue-100 text-blue-800 hover:bg-blue-200' : isPlus ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : ''}
                     >
                       {specialty}
                     </Badge>
@@ -248,9 +272,9 @@ export const PublicProfilePage = () => {
             
             {/* Session Info */}
             {(sessionFormat || sessionDuration || pricingInfo) && (
-              <Card className={isPro ? 'border-blue-200' : ''}>
+              <Card className={isPro ? 'border-blue-200' : isPlus ? 'border-blue-100' : ''}>
                 <CardContent className="p-6">
-                  <h3 className={`font-semibold mb-3 ${isPro ? 'text-blue-800' : 'text-slate-800'}`}>
+                  <h3 className={`font-semibold mb-3 ${isPro ? 'text-blue-800' : isPlus ? 'text-blue-700' : 'text-slate-800'}`}>
                     Información de Sesiones
                   </h3>
                   <div className="space-y-2 text-sm text-slate-600">
@@ -270,9 +294,9 @@ export const PublicProfilePage = () => {
 
             {/* Languages */}
             {languages.length > 0 && (
-              <Card className={isPro ? 'border-blue-200' : ''}>
+              <Card className={isPro ? 'border-blue-200' : isPlus ? 'border-blue-100' : ''}>
                 <CardContent className="p-6">
-                  <h3 className={`font-semibold mb-3 ${isPro ? 'text-blue-800' : 'text-slate-800'}`}>
+                  <h3 className={`font-semibold mb-3 ${isPro ? 'text-blue-800' : isPlus ? 'text-blue-700' : 'text-slate-800'}`}>
                     Idiomas
                   </h3>
                   <div className="flex flex-wrap gap-2">
@@ -312,9 +336,9 @@ export const PublicProfilePage = () => {
           </div>
 
           {/* Contact Section */}
-          <Card className={`mt-8 ${isPro ? 'bg-gradient-to-r from-blue-50 to-emerald-50 border-blue-200' : ''}`}>
+          <Card className={`mt-8 ${isPro ? 'bg-gradient-to-r from-blue-50 to-emerald-50 border-blue-200' : isPlus ? 'bg-gradient-to-r from-blue-50 to-blue-100 border-blue-100' : ''}`}>
             <CardContent className="p-6 text-center">
-              <h2 className={`text-xl font-semibold mb-4 ${isPro ? 'text-blue-800' : 'text-slate-800'}`}>
+              <h2 className={`text-xl font-semibold mb-4 ${isPro ? 'text-blue-800' : isPlus ? 'text-blue-700' : 'text-slate-800'}`}>
                 ¿Listo para comenzar tu proceso terapéutico?
               </h2>
               <p className="text-slate-600 mb-6">
@@ -324,7 +348,7 @@ export const PublicProfilePage = () => {
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button
                   size="lg"
-                  className={isPro ? 'bg-gradient-to-r from-blue-500 to-emerald-500 hover:from-blue-600 hover:to-emerald-600' : ''}
+                  className={isPro ? 'bg-gradient-to-r from-blue-500 to-emerald-500 hover:from-blue-600 hover:to-emerald-600' : isPlus ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700' : ''}
                 >
                   <Calendar className="w-5 h-5 mr-2" />
                   Agendar Primera Cita

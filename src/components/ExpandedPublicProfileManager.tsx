@@ -35,6 +35,20 @@ interface FormData {
   languages: string;
 }
 
+interface ProfileData {
+  selected_specialties?: string[];
+  location?: string;
+  languages?: string[];
+  session_format?: string;
+  session_duration?: number;
+  pricing_info?: string;
+  education?: string;
+  certifications?: string;
+  email?: string;
+  website?: string;
+  [key: string]: any;
+}
+
 const professionTypes = [
   { value: 'psychologist', label: 'Psicólogo/a' },
   { value: 'doctor', label: 'Médico/a' },
@@ -109,8 +123,8 @@ export const ExpandedPublicProfileManager = () => {
     if (profile) {
       setCurrentProfileId(profile.id);
       
-      // Cargar datos del profile_data
-      const profileData = profile.profile_data || {};
+      // Hacer casting seguro del profile_data
+      const profileData: ProfileData = (profile.profile_data as ProfileData) || {};
       const languagesArray = profileData.languages || [];
       
       reset({
