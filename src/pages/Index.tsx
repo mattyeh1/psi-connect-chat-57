@@ -19,6 +19,7 @@ import { ProfileSetup } from "@/components/ProfileSetup";
 import { TrialExpiredModal } from "@/components/TrialExpiredModal";
 import { LandingPage } from "@/pages/LandingPage";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 
 type ViewType = "dashboard" | "patients" | "calendar" | "messages" | "affiliates" | "seo" | "reports" | "support" | "early-access" | "visibility";
 
@@ -42,13 +43,37 @@ export default function Index() {
       profileError 
     });
 
-    // Ya no redirigimos automáticamente - dejamos que usuarios no autenticados vean la landing
-    if (psychologist && psychologist.trial_end_date) {
-      const trialEndDate = new Date(psychologist.trial_end_date);
-      const now = new Date();
-      if (trialEndDate < now) {
-        setShowTrialModal(true);
+    // Verificar si el trial ha expirado usando la función de Supabase
+    const checkTrialStatus = async () => {
+      if (psychologist?.id) {
+        try {
+          // Verificar si el trial ha expirado usando la función de Supabase
+          const { data: isExpired, error } = await supabase.rpc('is_trial_expired', {
+            psychologist_id: psychologist.id
+          });
+
+          if (error) {
+            console.error('Error checking trial status:', error);
+            return;
+          }
+
+          // También verificar directamente el subscription_status
+          const hasExpiredStatus = psychologist.subscription_status === 'expired' || 
+                                 psychologist.subscription_status === 'cancelled';
+
+          // Mostrar modal si el trial ha expirado O si el status es expired/cancelled
+          if (isExpired || hasExpiredStatus) {
+            console.log('Trial expired, showing modal:', { isExpired, hasExpiredStatus, subscription_status: psychologist.subscription_status });
+            setShowTrialModal(true);
+          }
+        } catch (error) {
+          console.error('Error in trial status check:', error);
+        }
       }
+    };
+
+    if (psychologist) {
+      checkTrialStatus();
     }
   }, [user, authLoading, navigate, psychologist, profile, profileError]);
 
@@ -106,7 +131,6 @@ export default function Index() {
     );
   }
 
-  // Show profile setup if patient profile needs completion  
   if (profile?.user_type === 'patient' && (!patient || !patient.first_name || !patient.last_name)) {
     return (
       <ProfileSetup 
