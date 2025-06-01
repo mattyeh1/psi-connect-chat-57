@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useExpandedPublicProfiles } from '@/hooks/useExpandedPublicProfiles';
@@ -83,20 +84,51 @@ export const PublicProfilePage = () => {
         const profileData = await getPublicProfileByUrlDetailed(profileUrl);
         
         if (profileData) {
-          // Parse selected_specialties if it's a JSON string
-          let parsedSpecialties = profileData.selected_specialties;
-          if (typeof profileData.selected_specialties === 'string') {
-            try {
-              parsedSpecialties = JSON.parse(profileData.selected_specialties);
-            } catch (e) {
-              console.warn('Failed to parse selected_specialties JSON:', e);
-              parsedSpecialties = [];
+          // Safely parse selected_specialties with proper type checking
+          let parsedSpecialties: Array<{
+            id: string;
+            name: string;
+            category: string;
+            icon: string;
+          }> = [];
+
+          if (profileData.selected_specialties) {
+            if (typeof profileData.selected_specialties === 'string') {
+              try {
+                const parsed = JSON.parse(profileData.selected_specialties);
+                if (Array.isArray(parsed)) {
+                  parsedSpecialties = parsed.filter(item => 
+                    item && 
+                    typeof item === 'object' && 
+                    typeof item.id === 'string' &&
+                    typeof item.name === 'string' &&
+                    typeof item.category === 'string' &&
+                    typeof item.icon === 'string'
+                  );
+                }
+              } catch (e) {
+                console.warn('Failed to parse selected_specialties JSON:', e);
+              }
+            } else if (Array.isArray(profileData.selected_specialties)) {
+              parsedSpecialties = profileData.selected_specialties.filter(item => 
+                item && 
+                typeof item === 'object' && 
+                typeof (item as any).id === 'string' &&
+                typeof (item as any).name === 'string' &&
+                typeof (item as any).category === 'string' &&
+                typeof (item as any).icon === 'string'
+              ) as Array<{
+                id: string;
+                name: string;
+                category: string;
+                icon: string;
+              }>;
             }
           }
           
           const formattedProfile: PublicProfileData = {
             ...profileData,
-            selected_specialties: Array.isArray(parsedSpecialties) ? parsedSpecialties : []
+            selected_specialties: parsedSpecialties
           };
           
           setProfile(formattedProfile);
