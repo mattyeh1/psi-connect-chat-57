@@ -11,6 +11,7 @@ import { RegisterPage } from '@/pages/RegisterPage';
 import { DemoPage } from '@/pages/DemoPage';
 import { AdminLogin } from '@/pages/AdminLogin';
 import { AdminDashboard } from '@/pages/AdminDashboard';
+import { AdminRedirect } from '@/pages/AdminRedirect';
 import NotFound from '@/pages/NotFound';
 import { Toaster } from '@/components/ui/toaster';
 import { AdminRoute } from '@/components/AdminRoute';
@@ -35,6 +36,7 @@ function App() {
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/demo" element={<DemoPage />} />
               <Route path="/perfil/:profileUrl" element={<PublicProfilePage />} />
+              <Route path="/admin" element={<AdminRedirect />} />
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route 
                 path="/admin/dashboard" 
