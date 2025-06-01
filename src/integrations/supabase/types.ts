@@ -238,6 +238,9 @@ export type Database = {
           id: string
           notes: string | null
           patient_id: string
+          payment_amount: number | null
+          payment_proof_url: string | null
+          payment_status: string | null
           preferred_date: string
           preferred_time: string
           psychologist_id: string
@@ -250,6 +253,9 @@ export type Database = {
           id?: string
           notes?: string | null
           patient_id: string
+          payment_amount?: number | null
+          payment_proof_url?: string | null
+          payment_status?: string | null
           preferred_date: string
           preferred_time: string
           psychologist_id: string
@@ -262,6 +268,9 @@ export type Database = {
           id?: string
           notes?: string | null
           patient_id?: string
+          payment_amount?: number | null
+          payment_proof_url?: string | null
+          payment_status?: string | null
           preferred_date?: string
           preferred_time?: string
           psychologist_id?: string
@@ -737,6 +746,61 @@ export type Database = {
           },
           {
             foreignKeyName: "psychologist_directories_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "psychologists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      psychologist_rates: {
+        Row: {
+          created_at: string
+          currency: string
+          id: string
+          is_active: boolean
+          price: number
+          psychologist_id: string
+          session_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          id?: string
+          is_active?: boolean
+          price: number
+          psychologist_id: string
+          session_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          id?: string
+          is_active?: boolean
+          price?: number
+          psychologist_id?: string
+          session_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "psychologist_rates_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_admin_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "psychologist_rates_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "psychologist_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "psychologist_rates_psychologist_id_fkey"
             columns: ["psychologist_id"]
             isOneToOne: false
             referencedRelation: "psychologists"

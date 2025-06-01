@@ -20,8 +20,9 @@ import { PatientPortal } from "@/components/PatientPortal";
 import { LandingPage } from "@/pages/LandingPage";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { PsychologistRatesManager } from "@/components/PsychologistRatesManager";
 
-type ViewType = "dashboard" | "patients" | "calendar" | "messages" | "affiliates" | "seo" | "reports" | "support" | "early-access" | "visibility";
+type ViewType = "dashboard" | "patients" | "calendar" | "messages" | "affiliates" | "seo" | "reports" | "support" | "early-access" | "visibility" | "rates";
 
 export default function Index() {
   const { user, loading: authLoading } = useAuth();
@@ -195,6 +196,8 @@ export default function Index() {
         return <EarlyAccess />;
       case "visibility":
         return <VisibilityConsulting />;
+      case "rates":
+        return <PsychologistRatesManager />;
       default:
         return <Dashboard onViewChange={handleViewChange} />;
     }
