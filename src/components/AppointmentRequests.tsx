@@ -23,6 +23,9 @@ interface AppointmentRequest {
   status: string;
   created_at: string;
   patient?: Patient | null;
+  payment_proof_url?: string;
+  payment_status?: string;
+  payment_amount?: number;
 }
 
 interface AppointmentRequestsProps {
