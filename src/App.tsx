@@ -29,6 +29,7 @@ function App() {
           <div className="min-h-screen bg-gray-50">
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/app" element={<Index />} />
               <Route path="/landing" element={<LandingPage />} />
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/register" element={<RegisterPage />} />
