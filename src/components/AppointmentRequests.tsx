@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -67,22 +68,18 @@ export const AppointmentRequests = ({
       
       setLoading(true);
 
-      // Fetch properly with patient data
-      const { data, error } = await supabase
+      // First fetch appointment requests
+      const { data: requestsData, error: requestsError } = await supabase
         .from('appointment_requests')
-        .select(`
-          *,
-          patient:patients(first_name, last_name, phone)
-        `)
+        .select('*')
         .eq('psychologist_id', psychologist.id)
         .order('created_at', { ascending: false });
 
-      console.log('AppointmentRequests: Query executed');
-      console.log('AppointmentRequests: Raw query result:', data);
-      console.log('AppointmentRequests: Query error:', error);
+      console.log('AppointmentRequests: Raw requests data:', requestsData);
+      console.log('AppointmentRequests: Requests error:', requestsError);
 
-      if (error) {
-        console.error('AppointmentRequests: Error fetching appointment requests:', error);
+      if (requestsError) {
+        console.error('AppointmentRequests: Error fetching appointment requests:', requestsError);
         toast({
           title: "Error",
           description: "No se pudieron cargar las solicitudes de citas",
@@ -92,21 +89,48 @@ export const AppointmentRequests = ({
         return;
       }
 
-      // Process the data
-      const processedRequests = (data || []).map(request => {
-        console.log('AppointmentRequests: Processing request:', request);
-        return {
-          ...request,
-          patient: request.patient && typeof request.patient === 'object' && 'first_name' in request.patient 
-            ? request.patient as Patient
-            : null
-        };
-      });
+      if (!requestsData || requestsData.length === 0) {
+        console.log('AppointmentRequests: No requests found');
+        setRequests([]);
+        return;
+      }
 
-      console.log('AppointmentRequests: Processed requests:', processedRequests);
-      console.log('AppointmentRequests: Setting requests state with', processedRequests.length, 'items');
+      // Then fetch patient data for each request
+      const requestsWithPatients = await Promise.all(
+        requestsData.map(async (request) => {
+          try {
+            const { data: patientData, error: patientError } = await supabase
+              .from('patients')
+              .select('first_name, last_name, phone')
+              .eq('id', request.patient_id)
+              .single();
+
+            if (patientError) {
+              console.error('AppointmentRequests: Error fetching patient data for', request.patient_id, ':', patientError);
+              return {
+                ...request,
+                patient: null
+              };
+            }
+
+            return {
+              ...request,
+              patient: patientData
+            };
+          } catch (error) {
+            console.error('AppointmentRequests: Exception fetching patient data:', error);
+            return {
+              ...request,
+              patient: null
+            };
+          }
+        })
+      );
+
+      console.log('AppointmentRequests: Processed requests with patients:', requestsWithPatients);
+      console.log('AppointmentRequests: Setting requests state with', requestsWithPatients.length, 'items');
       
-      setRequests(processedRequests);
+      setRequests(requestsWithPatients);
 
     } catch (error) {
       console.error('AppointmentRequests: Exception fetching appointment requests:', error);
