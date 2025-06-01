@@ -9,7 +9,6 @@ import { PatientManagement } from "@/components/PatientManagement";
 import { Calendar } from "@/components/CalendarView";
 import { MessagingHub } from "@/components/MessagingHub";
 import { AffiliateSystem } from "@/components/AffiliateSystem";
-import { UnifiedProfileManager } from "@/components/UnifiedProfileManager";
 import { SeoProfileManager } from "@/components/SeoProfileManager";
 import { AdvancedReports } from "@/components/AdvancedReports";
 import { PrioritySupport } from "@/components/PrioritySupport";
@@ -21,7 +20,7 @@ import { TrialExpiredModal } from "@/components/TrialExpiredModal";
 import { PatientPortal } from "@/components/PatientPortal";
 import { Button } from "@/components/ui/button";
 
-type ViewType = "dashboard" | "patients" | "calendar" | "messages" | "affiliates" | "profile" | "seo" | "reports" | "support" | "early-access" | "visibility";
+type ViewType = "dashboard" | "patients" | "calendar" | "messages" | "affiliates" | "seo" | "reports" | "support" | "early-access" | "visibility";
 
 export default function Index() {
   const { user, loading: authLoading } = useAuth();
@@ -165,8 +164,6 @@ export default function Index() {
         return <Calendar />;
       case "messages":
         return <MessagingHub />;
-      case "profile":
-        return <UnifiedProfileManager />;
       case "affiliates":
         return <AffiliateSystem />;
       case "seo":

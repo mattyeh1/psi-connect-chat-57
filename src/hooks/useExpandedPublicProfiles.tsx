@@ -15,15 +15,6 @@ interface ExpandedProfileData {
   profession_type?: string;
   profile_data?: any;
   specialties?: string[];
-  location?: string;
-  languages?: string[];
-  session_format?: string;
-  session_duration?: number;
-  pricing_info?: string;
-  education?: string;
-  certifications?: string;
-  email?: string;
-  website?: string;
 }
 
 export const useExpandedPublicProfiles = () => {
@@ -32,51 +23,16 @@ export const useExpandedPublicProfiles = () => {
   const createOrUpdateExpandedProfile = async (data: ExpandedProfileData) => {
     setLoading(true);
     try {
-      console.log('=== STARTING PROFILE SAVE ===', data);
+      console.log('=== CREATING/UPDATING EXPANDED PROFILE ===', data);
       
       // Obtener el usuario actual
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error('Usuario no autenticado');
 
-      console.log('=== USER AUTHENTICATED ===', user.user.id);
-
-      // Construir el profile_data completo con TODOS los datos
-      const completeProfileData = {
-        selected_specialties: data.specialties || [],
-        location: data.location || '',
-        languages: data.languages || [],
-        session_format: data.session_format || 'presencial',
-        session_duration: data.session_duration || 60,
-        pricing_info: data.pricing_info || '',
-        education: data.education || '',
-        certifications: data.certifications || '',
-        email: data.email || '',
-        website: data.website || ''
-      };
-
-      console.log('=== COMPLETE PROFILE DATA ===', completeProfileData);
-
-      // Preparar el objeto completo para guardar
-      const profilePayload = {
-        custom_url: data.custom_url.trim(),
-        is_active: data.is_active,
-        seo_title: data.seo_title || '',
-        seo_description: data.seo_description || '',
-        seo_keywords: data.seo_keywords || '',
-        about_description: data.about_description || '',
-        therapeutic_approach: data.therapeutic_approach || '',
-        years_experience: data.years_experience || null,
-        profession_type: data.profession_type || 'psychologist',
-        profile_data: completeProfileData,
-        updated_at: new Date().toISOString()
-      };
-
-      console.log('=== PROFILE PAYLOAD ===', profilePayload);
-
       // Verificar si ya existe un perfil público
       const { data: existingProfile, error: checkError } = await supabase
         .from('public_psychologist_profiles')
-        .select('id, psychologist_id')
+        .select('*')
         .eq('psychologist_id', user.user.id)
         .maybeSingle();
 
@@ -86,52 +42,66 @@ export const useExpandedPublicProfiles = () => {
       }
 
       let result;
+      const profileData = {
+        custom_url: data.custom_url,
+        is_active: data.is_active,
+        seo_title: data.seo_title,
+        seo_description: data.seo_description,
+        seo_keywords: data.seo_keywords,
+        about_description: data.about_description,
+        therapeutic_approach: data.therapeutic_approach,
+        years_experience: data.years_experience,
+        profession_type: data.profession_type || 'psychologist',
+        profile_data: data.profile_data || {},
+        updated_at: new Date().toISOString()
+      };
 
       if (existingProfile) {
-        console.log('=== UPDATING EXISTING PROFILE ===', existingProfile.id);
-        
         // Actualizar perfil existente
         const { data: updatedProfile, error: updateError } = await supabase
           .from('public_psychologist_profiles')
-          .update(profilePayload)
+          .update(profileData)
           .eq('id', existingProfile.id)
-          .select('*')
+          .select()
           .single();
 
-        if (updateError) {
-          console.error('=== UPDATE ERROR ===', updateError);
-          throw updateError;
-        }
-
+        if (updateError) throw updateError;
         result = updatedProfile;
-        console.log('=== PROFILE UPDATED SUCCESSFULLY ===', result);
         
+        toast({
+          title: "Perfil público actualizado",
+          description: "Tu perfil público ha sido actualizado exitosamente",
+        });
       } else {
-        console.log('=== CREATING NEW PROFILE ===');
-        
         // Crear nuevo perfil público
         const { data: newProfile, error: createError } = await supabase
           .from('public_psychologist_profiles')
           .insert({
             psychologist_id: user.user.id,
-            ...profilePayload
+            ...profileData
           })
-          .select('*')
+          .select()
           .single();
 
-        if (createError) {
-          console.error('=== CREATE ERROR ===', createError);
-          throw createError;
-        }
-
+        if (createError) throw createError;
         result = newProfile;
-        console.log('=== PROFILE CREATED SUCCESSFULLY ===', result);
+        
+        toast({
+          title: "Perfil público creado",
+          description: "Tu perfil público ha sido creado exitosamente",
+        });
       }
 
+      console.log('=== EXPANDED PROFILE CREATED/UPDATED ===', result);
       return result;
       
     } catch (error: any) {
-      console.error('=== PROFILE SAVE ERROR ===', error);
+      console.error('=== ERROR MANAGING EXPANDED PROFILE ===', error);
+      toast({
+        title: "Error",
+        description: error.message || "Error al gestionar el perfil público",
+        variant: "destructive"
+      });
       throw error;
     } finally {
       setLoading(false);

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,6 @@ import { useExpandedPublicProfiles } from '@/hooks/useExpandedPublicProfiles';
 import { useSpecialties } from '@/hooks/useSpecialties';
 import { useForm } from 'react-hook-form';
 import { Loader2, Eye, Save, Plus } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
 
 interface FormData {
   custom_url: string;
@@ -24,29 +24,6 @@ interface FormData {
   therapeutic_approach: string;
   years_experience: number | undefined;
   profession_type: string;
-  location: string;
-  session_format: string;
-  session_duration: number;
-  pricing_info: string;
-  education: string;
-  certifications: string;
-  email: string;
-  website: string;
-  languages: string;
-}
-
-interface ProfileData {
-  selected_specialties?: string[];
-  location?: string;
-  languages?: string[];
-  session_format?: string;
-  session_duration?: number;
-  pricing_info?: string;
-  education?: string;
-  certifications?: string;
-  email?: string;
-  website?: string;
-  [key: string]: any;
 }
 
 const professionTypes = [
@@ -61,45 +38,20 @@ const professionTypes = [
   { value: 'coach', label: 'Coach' },
 ];
 
-const sessionFormats = [
-  { value: 'presencial', label: 'Presencial' },
-  { value: 'virtual', label: 'Virtual' },
-  { value: 'hibrido', label: 'Híbrido (Presencial y Virtual)' },
-];
-
-const commonLanguages = [
-  'Español', 'Inglés', 'Portugués', 'Francés', 'Italiano', 'Alemán', 'Catalán', 'Euskera', 'Gallego'
-];
-
 export const ExpandedPublicProfileManager = () => {
   const { createOrUpdateExpandedProfile, getMyExpandedProfile, loading: profileLoading } = useExpandedPublicProfiles();
   const { specialties, loadSpecialties, saveProfileSpecialties, getProfileSpecialties, loading: specialtiesLoading } = useSpecialties();
   
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
-  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
   const [currentProfileId, setCurrentProfileId] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState('');
 
-  const { register, handleSubmit, watch, setValue, reset, formState: { isDirty } } = useForm<FormData>({
+  const { register, handleSubmit, watch, setValue, reset } = useForm<FormData>({
     defaultValues: {
       custom_url: '',
       is_active: true,
       profession_type: 'psychologist',
-      years_experience: undefined,
-      session_duration: 60,
-      location: '',
-      session_format: 'presencial',
-      pricing_info: '',
-      education: '',
-      certifications: '',
-      email: '',
-      website: '',
-      languages: '',
-      seo_title: '',
-      seo_description: '',
-      seo_keywords: '',
-      about_description: '',
-      therapeutic_approach: ''
+      years_experience: undefined
     }
   });
 
@@ -127,11 +79,6 @@ export const ExpandedPublicProfileManager = () => {
     const profile = await getMyExpandedProfile();
     if (profile) {
       setCurrentProfileId(profile.id);
-      
-      // Hacer casting seguro del profile_data
-      const profileData: ProfileData = (profile.profile_data as ProfileData) || {};
-      const languagesArray = profileData.languages || [];
-      
       reset({
         custom_url: profile.custom_url,
         is_active: profile.is_active,
@@ -141,101 +88,31 @@ export const ExpandedPublicProfileManager = () => {
         about_description: profile.about_description || '',
         therapeutic_approach: profile.therapeutic_approach || '',
         years_experience: profile.years_experience || undefined,
-        profession_type: profile.profession_type || 'psychologist',
-        location: profileData.location || '',
-        session_format: profileData.session_format || 'presencial',
-        session_duration: profileData.session_duration || 60,
-        pricing_info: profileData.pricing_info || '',
-        education: profileData.education || '',
-        certifications: profileData.certifications || '',
-        email: profileData.email || '',
-        website: profileData.website || '',
-        languages: languagesArray.join(', ')
+        profession_type: profile.profession_type || 'psychologist'
       });
 
-      // Cargar especialidades existentes
-      const existingSpecialties = profileData.selected_specialties || [];
-      setSelectedSpecialties(existingSpecialties);
-      setSelectedLanguages(languagesArray);
+      // Load specialties for this profile
+      if (profile.id) {
+        const profileSpecialties = await getProfileSpecialties(profile.id);
+        setSelectedSpecialties(profileSpecialties.map((s: any) => s.id));
+      }
     }
   };
 
   const onSubmit = async (formData: FormData) => {
     try {
-      console.log('=== FORM SUBMISSION ===', formData);
-      console.log('=== SELECTED SPECIALTIES ===', selectedSpecialties);
-      console.log('=== SELECTED LANGUAGES ===', selectedLanguages);
-
-      // Validaciones básicas
-      if (!formData.custom_url) {
-        toast({
-          title: "Error",
-          description: "La URL personalizada es obligatoria",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Convertir idiomas de string a array
-      const languagesArray = formData.languages 
-        ? formData.languages.split(',').map(lang => lang.trim()).filter(lang => lang.length > 0)
-        : selectedLanguages;
-
-      // Preparar datos completos para enviar
-      const profileDataToSave = {
-        custom_url: formData.custom_url.trim(),
-        is_active: formData.is_active,
-        seo_title: formData.seo_title || '',
-        seo_description: formData.seo_description || '',
-        seo_keywords: formData.seo_keywords || '',
-        about_description: formData.about_description || '',
-        therapeutic_approach: formData.therapeutic_approach || '',
-        years_experience: formData.years_experience || null,
-        profession_type: formData.profession_type || 'psychologist',
-        specialties: selectedSpecialties,
-        location: formData.location || '',
-        languages: languagesArray,
-        session_format: formData.session_format || 'presencial',
-        session_duration: formData.session_duration || 60,
-        pricing_info: formData.pricing_info || '',
-        education: formData.education || '',
-        certifications: formData.certifications || '',
-        email: formData.email || '',
-        website: formData.website || ''
-      };
-
-      console.log('=== SENDING PROFILE DATA ===', profileDataToSave);
-
-      const result = await createOrUpdateExpandedProfile(profileDataToSave);
-
-      if (result) {
-        console.log('=== PROFILE SAVED SUCCESSFULLY ===', result);
-        setCurrentProfileId(result.id);
-        
-        // Guardar especialidades si hay
-        if (selectedSpecialties.length > 0) {
-          console.log('=== SAVING SPECIALTIES ===', selectedSpecialties);
-          await saveProfileSpecialties(result.id, selectedSpecialties);
-        }
-
-        toast({
-          title: "¡Perfil guardado!",
-          description: "Tu perfil público ha sido actualizado correctamente",
-        });
-
-        // Forzar recarga de la página después de un breve delay
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
-      }
-
-    } catch (error: any) {
-      console.error('=== ERROR SAVING PROFILE ===', error);
-      toast({
-        title: "Error al guardar",
-        description: error.message || "No se pudo guardar el perfil. Inténtalo de nuevo.",
-        variant: "destructive"
+      const result = await createOrUpdateExpandedProfile({
+        ...formData,
+        specialties: selectedSpecialties
       });
+
+      if (result && selectedSpecialties.length > 0) {
+        await saveProfileSpecialties(result.id, selectedSpecialties);
+      }
+
+      setCurrentProfileId(result.id);
+    } catch (error) {
+      console.error('Error saving profile:', error);
     }
   };
 
@@ -245,17 +122,6 @@ export const ExpandedPublicProfileManager = () => {
         ? prev.filter(id => id !== specialtyId)
         : [...prev, specialtyId]
     );
-  };
-
-  const toggleLanguage = (language: string) => {
-    setSelectedLanguages(prev => {
-      const newLanguages = prev.includes(language) 
-        ? prev.filter(lang => lang !== language)
-        : [...prev, language];
-      
-      setValue('languages', newLanguages.join(', '));
-      return newLanguages;
-    });
   };
 
   const getSpecialtiesByCategory = () => {
@@ -316,33 +182,6 @@ export const ExpandedPublicProfileManager = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="location">Ubicación</Label>
-                  <Input
-                    {...register('location')}
-                    placeholder="Ej: Madrid, España"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="email">Email de contacto</Label>
-                  <Input
-                    {...register('email')}
-                    type="email"
-                    placeholder="tu@email.com"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="website">Sitio web</Label>
-                <Input
-                  {...register('website')}
-                  placeholder="https://tu-sitio-web.com"
-                />
-              </div>
-
               <div>
                 <Label htmlFor="custom_url">URL Personalizada</Label>
                 <div className="flex gap-2">
@@ -366,7 +205,7 @@ export const ExpandedPublicProfileManager = () => {
               </div>
             </div>
 
-            {/* Descripción Profesional */}
+            {/* Descripción Personalizada */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Descripción Profesional</h3>
               
@@ -384,98 +223,6 @@ export const ExpandedPublicProfileManager = () => {
                 <Input
                   {...register('therapeutic_approach')}
                   placeholder="Ej: Terapia cognitivo-conductual, enfoque humanístico..."
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="education">Educación</Label>
-                  <Textarea
-                    {...register('education')}
-                    placeholder="Tu formación académica, títulos, universidades..."
-                    rows={3}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="certifications">Certificaciones</Label>
-                  <Textarea
-                    {...register('certifications')}
-                    placeholder="Certificaciones profesionales, cursos especializados..."
-                    rows={3}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Información de Sesiones */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Información de Sesiones</h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="session_format">Formato de Sesiones</Label>
-                  <Select value={watch('session_format')} onValueChange={(value) => setValue('session_format', value)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sessionFormats.map(format => (
-                        <SelectItem key={format.value} value={format.value}>
-                          {format.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="session_duration">Duración (minutos)</Label>
-                  <Input
-                    {...register('session_duration', { valueAsNumber: true })}
-                    type="number"
-                    min="30"
-                    max="180"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="pricing_info">Información de Precios</Label>
-                  <Input
-                    {...register('pricing_info')}
-                    placeholder="Ej: Desde €60 por sesión"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Idiomas */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Idiomas</h3>
-              
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {commonLanguages.map(language => (
-                  <div key={language} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={language}
-                      checked={selectedLanguages.includes(language)}
-                      onCheckedChange={() => toggleLanguage(language)}
-                    />
-                    <label
-                      htmlFor={language}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                    >
-                      {language}
-                    </label>
-                  </div>
-                ))}
-              </div>
-
-              <div>
-                <Label htmlFor="languages">Idiomas (separados por comas)</Label>
-                <Input
-                  {...register('languages')}
-                  placeholder="Español, Inglés, Francés..."
                 />
               </div>
             </div>
@@ -572,7 +319,7 @@ export const ExpandedPublicProfileManager = () => {
               <Label>Perfil público activo</Label>
             </div>
 
-            <Button type="submit" disabled={isLoading} className="w-full" size="lg">
+            <Button type="submit" disabled={isLoading} className="w-full">
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -581,16 +328,10 @@ export const ExpandedPublicProfileManager = () => {
               ) : (
                 <>
                   <Save className="w-4 h-4 mr-2" />
-                  {isDirty ? 'Guardar Cambios' : 'Guardar Perfil Público'}
+                  Guardar Perfil Público
                 </>
               )}
             </Button>
-
-            {isDirty && (
-              <p className="text-sm text-amber-600 text-center">
-                Tienes cambios sin guardar
-              </p>
-            )}
           </form>
         </CardContent>
       </Card>
