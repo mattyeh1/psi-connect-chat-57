@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, User, Check, X, FileText, RefreshCw, Video, ChevronRight } from "lucide-react";
+import { Calendar, Clock, User, Check, X, FileText, RefreshCw, Video, ChevronRight, Receipt, ExternalLink, Eye } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -179,6 +178,36 @@ export const AppointmentRequests = ({
     } catch (error) {
       console.error('Exception creating Jitsi meeting:', error);
       throw error;
+    }
+  };
+
+  const handlePaymentVerification = async (requestId: string, status: 'verified' | 'rejected') => {
+    try {
+      const { error } = await supabase
+        .from('appointment_requests')
+        .update({ 
+          payment_status: status,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', requestId);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: status === 'verified' ? 'Comprobante verificado' : 'Comprobante rechazado',
+        description: `El comprobante de pago ha sido ${status === 'verified' ? 'verificado' : 'rechazado'} exitosamente.`,
+      });
+
+      await fetchRequests();
+    } catch (error) {
+      console.error('Error updating payment status:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el estado del comprobante",
+        variant: "destructive"
+      });
     }
   };
 
@@ -470,6 +499,84 @@ export const AppointmentRequests = ({
                         </div>
                       </div>
                     )}
+
+                    {/* Payment Proof Section */}
+                    <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="flex items-start gap-2">
+                        <Receipt className="w-4 h-4 text-blue-600 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-blue-700 mb-2">Comprobante de Pago:</p>
+                          
+                          {request.payment_proof_url ? (
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                  <Badge 
+                                    variant={
+                                      request.payment_status === 'verified' ? 'default' : 
+                                      request.payment_status === 'rejected' ? 'destructive' : 
+                                      'secondary'
+                                    }
+                                  >
+                                    {request.payment_status === 'verified' ? 'Verificado' : 
+                                     request.payment_status === 'rejected' ? 'Rechazado' : 
+                                     'Pendiente de revisión'}
+                                  </Badge>
+                                  {request.payment_amount && (
+                                    <span className="text-sm text-slate-600">
+                                      Monto: ${request.payment_amount}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => window.open(request.payment_proof_url, '_blank')}
+                                  className="flex items-center gap-1"
+                                >
+                                  <Eye className="w-3 h-3" />
+                                  Ver comprobante
+                                  <ExternalLink className="w-3 h-3" />
+                                </Button>
+                                
+                                {request.payment_status === 'pending' && (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handlePaymentVerification(request.id, 'verified')}
+                                      className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                                    >
+                                      <Check className="w-3 h-3 mr-1" />
+                                      Verificar
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handlePaymentVerification(request.id, 'rejected')}
+                                      className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+                                    >
+                                      <X className="w-3 h-3 mr-1" />
+                                      Rechazar
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-sm text-slate-600">
+                              <p>No se ha subido comprobante de pago</p>
+                              <p className="text-xs text-slate-500 mt-1">
+                                El paciente debe subir el comprobante antes de aprobar la cita
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {request.status === 'pending' && (
