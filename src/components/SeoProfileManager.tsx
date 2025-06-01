@@ -1,8 +1,7 @@
 
-import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ExpandedPublicProfileManager } from '@/components/ExpandedPublicProfileManager';
+import { UnifiedProfileManager } from '@/components/UnifiedProfileManager';
 import { Badge } from '@/components/ui/badge';
 import { Globe, Settings, Sparkles } from 'lucide-react';
 
@@ -16,21 +15,24 @@ export const SeoProfileManager = () => {
             Gestión de Perfil Público Profesional
             <Badge className="bg-emerald-500/20 text-emerald-600 border-emerald-300">
               <Sparkles className="w-3 h-3 mr-1" />
-              Mejorado
+              Adaptativo
             </Badge>
           </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Tu perfil se adapta automáticamente a las características de tu plan. Los usuarios Plus obtienen perfiles básicos, mientras que los usuarios Pro acceden a funciones premium.
+          </p>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="profile" className="w-full">
             <TabsList className="grid w-full grid-cols-1">
               <TabsTrigger value="profile" className="flex items-center gap-2">
                 <Settings className="w-4 h-4" />
-                Configuración Completa del Perfil
+                Configuración del Perfil
               </TabsTrigger>
             </TabsList>
             
             <TabsContent value="profile" className="mt-6">
-              <ExpandedPublicProfileManager />
+              <UnifiedProfileManager />
             </TabsContent>
           </Tabs>
         </CardContent>

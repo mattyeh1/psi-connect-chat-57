@@ -5,6 +5,7 @@ import { useProfile } from './useProfile';
 
 interface PlanCapabilities {
   seo_profile: boolean;
+  basic_profile: boolean;
   advanced_reports: boolean;
   early_access: boolean;
   priority_support: boolean;
@@ -51,6 +52,7 @@ export const usePlanCapabilities = () => {
         const planData = data as Record<string, unknown>;
         validCapabilities = {
           seo_profile: Boolean(planData.seo_profile),
+          basic_profile: Boolean(planData.basic_profile),
           advanced_reports: Boolean(planData.advanced_reports),
           early_access: Boolean(planData.early_access),
           priority_support: Boolean(planData.priority_support),
@@ -61,6 +63,7 @@ export const usePlanCapabilities = () => {
         console.log('No valid capabilities data, setting defaults');
         validCapabilities = {
           seo_profile: false,
+          basic_profile: false,
           advanced_reports: false,
           early_access: false,
           priority_support: false,

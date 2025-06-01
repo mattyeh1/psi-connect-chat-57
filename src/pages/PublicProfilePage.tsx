@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useExpandedPublicProfiles } from '@/hooks/useExpandedPublicProfiles';
@@ -29,12 +30,7 @@ interface PublicProfileData {
   config_description?: string;
   config_keywords?: string;
   config_custom_url?: string;
-  selected_specialties?: Array<{
-    id: string;
-    name: string;
-    category: string;
-    icon: string;
-  }>;
+  selected_specialties?: any; // Cambiado para ser más flexible
 }
 
 const professionTitles: Record<string, string> = {
@@ -83,8 +79,25 @@ export const PublicProfilePage = () => {
         const profileData = await getPublicProfileByUrlDetailed(profileUrl);
         
         if (profileData) {
-          setProfile(profileData);
-          console.log('=== EXPANDED PROFILE LOADED ===', profileData);
+          // Procesar selected_specialties de manera segura
+          let processedData = { ...profileData };
+          if (profileData.selected_specialties) {
+            try {
+              if (typeof profileData.selected_specialties === 'string') {
+                processedData.selected_specialties = JSON.parse(profileData.selected_specialties);
+              } else if (Array.isArray(profileData.selected_specialties)) {
+                processedData.selected_specialties = profileData.selected_specialties;
+              }
+            } catch (error) {
+              console.warn('Error parsing selected_specialties:', error);
+              processedData.selected_specialties = [];
+            }
+          } else {
+            processedData.selected_specialties = [];
+          }
+          
+          setProfile(processedData);
+          console.log('=== EXPANDED PROFILE LOADED ===', processedData);
         } else {
           setNotFound(true);
         }
@@ -152,15 +165,18 @@ export const PublicProfilePage = () => {
   const seoDescription = profile.seo_description || profile.config_description || profile.about_description || `Consulta profesional con ${professionTitle} ${profile.first_name} ${profile.last_name}. ${professionDescription}.`;
   const seoKeywords = profile.seo_keywords || profile.config_keywords || `${professionTitle.toLowerCase()}, consulta, ${profile.profession_type || 'profesional'}`;
 
-  // Agrupar especialidades por categoría
-  const groupedSpecialties = (profile.selected_specialties || []).reduce((acc, specialty) => {
-    const category = specialty.category || 'Otras';
-    if (!acc[category]) {
-      acc[category] = [];
+  // Procesar especialidades de manera segura
+  const specialties = Array.isArray(profile.selected_specialties) ? profile.selected_specialties : [];
+  const groupedSpecialties = specialties.reduce((acc, specialty) => {
+    if (specialty && typeof specialty === 'object') {
+      const category = specialty.category || 'Otras';
+      if (!acc[category]) {
+        acc[category] = [];
+      }
+      acc[category].push(specialty);
     }
-    acc[category].push(specialty);
     return acc;
-  }, {} as Record<string, typeof profile.selected_specialties>);
+  }, {} as Record<string, any[]>);
 
   return (
     <>
@@ -187,7 +203,7 @@ export const PublicProfilePage = () => {
             "jobTitle": professionTitle,
             "description": seoDescription,
             "url": `${window.location.origin}/perfil/${profile.custom_url}`,
-            "knowsAbout": profile.selected_specialties?.map(s => s.name).join(', ') || professionDescription,
+            "knowsAbout": specialties.map((s: any) => s?.name).filter(Boolean).join(', ') || professionDescription,
             "professionalCredentials": profile.professional_code
           })}
         </script>
@@ -318,7 +334,7 @@ export const PublicProfilePage = () => {
                 </Card>
 
                 {/* Specialties */}
-                {profile.selected_specialties && profile.selected_specialties.length > 0 && (
+                {specialties.length > 0 && (
                   <Card className="bg-white/5 backdrop-blur-xl border-white/10 shadow-glass animate-fade-in-scale">
                     <CardContent className="p-8">
                       <h3 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
@@ -327,15 +343,15 @@ export const PublicProfilePage = () => {
                       </h3>
                       
                       <div className="space-y-6">
-                        {Object.entries(groupedSpecialties).map(([category, specialties]) => (
+                        {Object.entries(groupedSpecialties).map(([category, categorySpecialties]) => (
                           <div key={category} className="space-y-3">
                             <h4 className="text-lg font-semibold text-white/90">{category}</h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {specialties.map((specialty) => (
-                                <div key={specialty.id} className="bg-white/5 p-4 rounded-lg border border-white/10 hover:bg-white/10 transition-all duration-300">
+                              {categorySpecialties.map((specialty, index) => (
+                                <div key={`${specialty?.id || index}`} className="bg-white/5 p-4 rounded-lg border border-white/10 hover:bg-white/10 transition-all duration-300">
                                   <div className="flex items-center gap-3">
-                                    <span className="text-2xl">{specialty.icon}</span>
-                                    <span className="text-white">{specialty.name}</span>
+                                    <span className="text-2xl">{specialty?.icon || '📋'}</span>
+                                    <span className="text-white">{specialty?.name || 'Especialidad'}</span>
                                   </div>
                                 </div>
                               ))}
