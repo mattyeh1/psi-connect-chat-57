@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -129,6 +128,36 @@ export const AppointmentRequests = ({
     await fetchRequests();
   };
 
+  const createJitsiMeeting = async (appointmentId: string, patientName: string, psychologistName: string, appointmentDate: string) => {
+    try {
+      console.log('=== CREATING JITSI MEETING ===');
+      console.log('Appointment ID:', appointmentId);
+      console.log('Patient:', patientName);
+      console.log('Psychologist:', psychologistName);
+      console.log('Date:', appointmentDate);
+
+      const { data, error } = await supabase.functions.invoke('create-jitsi-meeting', {
+        body: {
+          appointmentId,
+          patientName,
+          psychologistName,
+          appointmentDate
+        }
+      });
+
+      if (error) {
+        console.error('Error calling create-jitsi-meeting function:', error);
+        throw new Error(`Error al crear reunión: ${error.message}`);
+      }
+
+      console.log('Jitsi meeting created successfully:', data);
+      return data;
+    } catch (error) {
+      console.error('Exception creating Jitsi meeting:', error);
+      throw error;
+    }
+  };
+
   const handleRequestAction = async (requestId: string, action: 'approved' | 'rejected') => {
     console.log(`AppointmentRequests: ${action === 'approved' ? 'Approving' : 'Rejecting'} request:`, requestId);
     
@@ -191,6 +220,31 @@ export const AppointmentRequests = ({
         }
 
         console.log('AppointmentRequests: Appointment created successfully:', appointmentData);
+
+        // Create Jitsi meeting for the appointment
+        try {
+          const patientName = request.patient 
+            ? `${request.patient.first_name} ${request.patient.last_name}`
+            : 'Paciente';
+          const psychologistName = `${psychologist.first_name} ${psychologist.last_name}`;
+          
+          await createJitsiMeeting(
+            appointmentData.id,
+            patientName,
+            psychologistName,
+            appointmentDate.toISOString()
+          );
+
+          console.log('Jitsi meeting created and linked to appointment');
+        } catch (jitsiError) {
+          console.error('Error creating Jitsi meeting:', jitsiError);
+          // Don't fail the entire process if Jitsi creation fails
+          toast({
+            title: "Advertencia",
+            description: "Cita creada pero no se pudo generar la reunión virtual. Puedes crearla manualmente desde el calendario.",
+            variant: "default"
+          });
+        }
       }
 
       // Update the request status
@@ -213,7 +267,7 @@ export const AppointmentRequests = ({
       toast({
         title: `Solicitud ${actionLabel}`,
         description: action === 'approved' 
-          ? 'La cita ha sido creada exitosamente.'
+          ? 'La cita ha sido creada exitosamente con reunión virtual incluida.'
           : 'La solicitud de cita ha sido rechazada.',
       });
 

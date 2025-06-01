@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -54,16 +53,8 @@ export const PublicProfilePage = () => {
       setError(null);
 
       const { data, error: fetchError } = await supabase
-        .from('public_profiles')
-        .select(`
-          *,
-          specialties (
-            id,
-            name,
-            category,
-            icon
-          )
-        `)
+        .from('public_profile_detailed_view')
+        .select('*')
         .eq('custom_url', url)
         .eq('is_active', true)
         .single();
@@ -96,7 +87,27 @@ export const PublicProfilePage = () => {
       }
 
       const profileData: PublicProfileData = {
-        ...data,
+        id: data.id || '',
+        first_name: data.first_name || '',
+        last_name: data.last_name || '',
+        professional_code: data.professional_code || '',
+        bio: data.specialization || '',
+        years_experience: data.years_experience || 0,
+        education: '',
+        certifications: '',
+        therapy_types: [],
+        languages: [],
+        phone: '',
+        email: '',
+        office_address: '',
+        consultation_price: 0,
+        custom_url: data.custom_url || '',
+        is_active: data.is_active || false,
+        config_title: data.config_title || '',
+        config_description: data.config_description || '',
+        config_keywords: data.config_keywords || '',
+        config_custom_url: data.config_custom_url || '',
+        about_description: data.about_description || '',
         selected_specialties: selectedSpecialties
       };
 
