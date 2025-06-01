@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -45,7 +44,14 @@ export const SubscriptionPlans = ({ onPlanSelect }: SubscriptionPlansProps) => {
         }
 
         console.log('Fetched plans:', data);
-        setPlans(data || []);
+        
+        // Filtrar solo los planes Plus y Pro
+        const filteredPlans = data?.filter(plan => 
+          plan.plan_key?.toLowerCase().includes('plus') || 
+          plan.plan_key?.toLowerCase().includes('pro')
+        ) || [];
+        
+        setPlans(filteredPlans);
       } catch (error) {
         console.error('Error in fetchPlans:', error);
         toast({
