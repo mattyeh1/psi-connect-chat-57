@@ -303,7 +303,7 @@ export const LandingPage = () => {
                   <img src="https://images.unsplash.com/photo-1721322800607-8c38375eef04?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" alt="Dra. María López" className="w-12 h-12 rounded-full mr-4 group-hover:scale-110 transition-transform duration-300" />
                   <div>
                     <h5 className="font-semibold text-slate-800">Dr. Matías Schmidt</h5>
-                    <p className="text-sm text-slate-600">Psicóloga Infantil</p>
+                    <p className="text-sm text-slate-600">Psicólogo Infantil</p>
                   </div>
                 </div>
                 <div className="flex mb-4">
