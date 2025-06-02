@@ -42,6 +42,7 @@ export default function Index() {
       profile: !!profile,
       psychologist: !!psychologist,
       patient: !!patient,
+      profileLoading,
       profileError 
     });
 
@@ -120,37 +121,39 @@ export default function Index() {
     );
   }
 
-  // SIMPLIFICADO: Solo mostrar ProfileSetup si REALMENTE no hay datos de rol
-  if (profile && profile.user_type === 'psychologist' && !psychologist) {
-    console.log('=== SHOWING PROFILE SETUP FOR PSYCHOLOGIST - NO DATA FOUND ===');
-    return (
-      <ProfileSetup 
-        userType="psychologist"
-        onComplete={() => {
-          console.log('=== PROFILE SETUP COMPLETED - FORCING REFRESH ===');
-          forceRefresh();
-          setTimeout(() => {
-            window.location.reload();
-          }, 500);
-        }} 
-      />
-    );
-  }
+  // Solo mostrar ProfileSetup si NO estamos cargando Y realmente no hay datos de rol
+  if (profile && !profileLoading) {
+    if (profile.user_type === 'psychologist' && !psychologist) {
+      console.log('=== SHOWING PROFILE SETUP FOR PSYCHOLOGIST - NO DATA FOUND ===');
+      return (
+        <ProfileSetup 
+          userType="psychologist"
+          onComplete={() => {
+            console.log('=== PROFILE SETUP COMPLETED - FORCING REFRESH ===');
+            forceRefresh();
+            setTimeout(() => {
+              window.location.reload();
+            }, 500);
+          }} 
+        />
+      );
+    }
 
-  if (profile && profile.user_type === 'patient' && !patient) {
-    console.log('=== SHOWING PROFILE SETUP FOR PATIENT - NO DATA FOUND ===');
-    return (
-      <ProfileSetup 
-        userType="patient"
-        onComplete={() => {
-          console.log('=== PROFILE SETUP COMPLETED - FORCING REFRESH ===');
-          forceRefresh();
-          setTimeout(() => {
-            window.location.reload();
-          }, 500);
-        }} 
-      />
-    );
+    if (profile.user_type === 'patient' && !patient) {
+      console.log('=== SHOWING PROFILE SETUP FOR PATIENT - NO DATA FOUND ===');
+      return (
+        <ProfileSetup 
+          userType="patient"
+          onComplete={() => {
+            console.log('=== PROFILE SETUP COMPLETED - FORCING REFRESH ===');
+            forceRefresh();
+            setTimeout(() => {
+              window.location.reload();
+            }, 500);
+          }} 
+        />
+      );
+    }
   }
 
   // Patient portal (using the complete PatientPortal component)
