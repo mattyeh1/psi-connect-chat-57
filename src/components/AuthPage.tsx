@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,12 +15,45 @@ interface AuthPageProps {
   registrationOnly?: boolean;
 }
 
+// Professional categories
+const PROFESSIONAL_CATEGORIES = {
+  mentalHealth: [
+    "Psicólogo/a",
+    "Psiquiatra", 
+    "Terapeuta",
+    "Psicoanalista",
+    "Consejero/a",
+    "Trabajador/a Social",
+    "Terapista Ocupacional",
+    "Neuropsicólogo/a"
+  ],
+  generalHealth: [
+    "Dermatólogo/a",
+    "Médico General",
+    "Enfermero/a",
+    "Nutricionista",
+    "Fisioterapeuta",
+    "Odontólogo/a",
+    "Ginecólogo/a",
+    "Pediatra"
+  ],
+  wellness: [
+    "Manicurista",
+    "Esteticista",
+    "Masajista",
+    "Peluquero/a",
+    "Maquillador/a",
+    "Cosmetólogo/a"
+  ]
+};
+
 export const AuthPage = ({ affiliateCode, registrationOnly = false }: AuthPageProps) => {
   const { signIn, signUp, loading } = useAuth();
   const navigate = useNavigate();
   const [isSignUp, setIsSignUp] = useState(registrationOnly);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showOtherInput, setShowOtherInput] = useState(false);
   const [signInData, setSignInData] = useState({
     email: "",
     password: "",
@@ -34,7 +68,9 @@ export const AuthPage = ({ affiliateCode, registrationOnly = false }: AuthPagePr
     phone: "",
     licenseNumber: "",
     specialization: "",
-    professionalCode: ""
+    professionalCode: "",
+    professionalType: "",
+    otherProfessionalType: ""
   });
 
   const togglePasswordVisibility = () => {
@@ -51,10 +87,28 @@ export const AuthPage = ({ affiliateCode, registrationOnly = false }: AuthPagePr
 
   const handleSignUpChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setSignUpData({ 
-      ...signUpData, 
-      [name]: name === 'userType' ? value as "patient" | "psychologist" : value 
-    });
+    
+    if (name === 'userType') {
+      setSignUpData({ 
+        ...signUpData, 
+        userType: value as "patient" | "psychologist",
+        professionalType: "",
+        otherProfessionalType: ""
+      });
+      setShowOtherInput(false);
+    } else if (name === 'professionalType') {
+      setSignUpData({ 
+        ...signUpData, 
+        professionalType: value,
+        otherProfessionalType: ""
+      });
+      setShowOtherInput(value === "Otros...");
+    } else {
+      setSignUpData({ 
+        ...signUpData, 
+        [name]: value 
+      });
+    }
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -78,7 +132,27 @@ export const AuthPage = ({ affiliateCode, registrationOnly = false }: AuthPagePr
       return;
     }
 
+    if (signUpData.userType === 'psychologist' && !signUpData.professionalType) {
+      toast({
+        title: "Error",
+        description: "Por favor selecciona tu tipo de profesional",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (showOtherInput && !signUpData.otherProfessionalType.trim()) {
+      toast({
+        title: "Error",
+        description: "Por favor especifica tu profesión",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
+      const finalProfessionalType = showOtherInput ? signUpData.otherProfessionalType : signUpData.professionalType;
+      
       const metadata = {
         user_type: signUpData.userType,
         first_name: signUpData.firstName,
@@ -87,7 +161,8 @@ export const AuthPage = ({ affiliateCode, registrationOnly = false }: AuthPagePr
         ...(affiliateCode && { affiliate_code: affiliateCode }),
         ...(signUpData.userType === 'psychologist' && {
           license_number: signUpData.licenseNumber,
-          specialization: signUpData.specialization
+          specialization: signUpData.specialization,
+          professional_type: finalProfessionalType
         }),
         ...(signUpData.userType === 'patient' && {
           professional_code: signUpData.professionalCode
@@ -239,7 +314,7 @@ export const AuthPage = ({ affiliateCode, registrationOnly = false }: AuthPagePr
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="userType" className="text-slate-700 font-medium">Tipo de Usuario</Label>
+                <Label htmlFor="userType" className="text-slate-700 font-medium">¿Eres paciente o profesional?</Label>
                 <select
                   id="userType"
                   name="userType"
@@ -248,12 +323,65 @@ export const AuthPage = ({ affiliateCode, registrationOnly = false }: AuthPagePr
                   onChange={handleSignUpChange}
                 >
                   <option value="patient">Paciente</option>
-                  <option value="psychologist">Psicólogo</option>
+                  <option value="psychologist">Profesional</option>
                 </select>
               </div>
 
               {signUpData.userType === "psychologist" && (
                 <>
+                  <div className="space-y-2">
+                    <Label htmlFor="professionalType" className="text-slate-700 font-medium">Tipo de Profesional</Label>
+                    <select
+                      id="professionalType"
+                      name="professionalType"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white"
+                      value={signUpData.professionalType}
+                      onChange={handleSignUpChange}
+                      required
+                    >
+                      <option value="">Selecciona tu profesión</option>
+                      
+                      <optgroup label="Salud Mental">
+                        {PROFESSIONAL_CATEGORIES.mentalHealth.map(type => (
+                          <option key={type} value={type}>{type}</option>
+                        ))}
+                      </optgroup>
+                      
+                      <optgroup label="Salud General">
+                        {PROFESSIONAL_CATEGORIES.generalHealth.map(type => (
+                          <option key={type} value={type}>{type}</option>
+                        ))}
+                      </optgroup>
+                      
+                      <optgroup label="Bienestar y Belleza">
+                        {PROFESSIONAL_CATEGORIES.wellness.map(type => (
+                          <option key={type} value={type}>{type}</option>
+                        ))}
+                      </optgroup>
+                      
+                      <option value="Otros...">Otros...</option>
+                    </select>
+                  </div>
+
+                  {showOtherInput && (
+                    <div className="space-y-2">
+                      <Label htmlFor="otherProfessionalType" className="text-slate-700 font-medium">Especifica tu profesión</Label>
+                      <div className="relative">
+                        <Stethoscope className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
+                        <Input
+                          id="otherProfessionalType"
+                          type="text"
+                          name="otherProfessionalType"
+                          placeholder="Ej: Coach de vida, Contador, etc."
+                          className="pl-9 border-slate-200 focus:border-blue-400 focus:ring-blue-400"
+                          value={signUpData.otherProfessionalType}
+                          onChange={handleSignUpChange}
+                          required
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     <Label htmlFor="licenseNumber" className="text-slate-700 font-medium">Número de Licencia</Label>
                     <div className="relative">
@@ -513,7 +641,7 @@ export const AuthPage = ({ affiliateCode, registrationOnly = false }: AuthPagePr
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="userType" className="text-slate-700 font-medium">Tipo de Usuario</Label>
+                <Label htmlFor="userType" className="text-slate-700 font-medium">¿Eres paciente o profesional?</Label>
                 <select
                   id="userType"
                   name="userType"
@@ -522,9 +650,45 @@ export const AuthPage = ({ affiliateCode, registrationOnly = false }: AuthPagePr
                   onChange={handleSignUpChange}
                 >
                   <option value="patient">Paciente</option>
-                  <option value="psychologist">Psicólogo</option>
+                  <option value="psychologist">Profesional</option>
                 </select>
               </div>
+
+              {signUpData.userType === "psychologist" && (
+                <div className="space-y-2">
+                  <Label htmlFor="professionalType" className="text-slate-700 font-medium">Tipo de Profesional</Label>
+                  <select
+                    id="professionalType"
+                    name="professionalType"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white"
+                    value={signUpData.professionalType}
+                    onChange={handleSignUpChange}
+                    required
+                  >
+                    <option value="">Selecciona tu profesión</option>
+                    
+                    <optgroup label="Salud Mental">
+                      {PROFESSIONAL_CATEGORIES.mentalHealth.map(type => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </optgroup>
+                    
+                    <optgroup label="Salud General">
+                      {PROFESSIONAL_CATEGORIES.generalHealth.map(type => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </optgroup>
+                    
+                    <optgroup label="Bienestar y Belleza">
+                      {PROFESSIONAL_CATEGORIES.wellness.map(type => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </optgroup>
+                    
+                    <option value="Otros...">Otros...</option>
+                  </select>
+                </div>
+              )}
 
               {signUpData.userType === "patient" && (
                 <div className="space-y-2">
