@@ -122,7 +122,7 @@ export const Sidebar = ({ currentView, onViewChange }: SidebarProps) => {
     <div className="fixed left-0 top-0 h-full w-64 bg-white border-r border-slate-200 shadow-lg z-50">
       <div className="flex flex-col h-full">
         {/* Header */}
-        <div className="p-6 border-b border-slate-200">
+        <div className="p-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-emerald-500 rounded-lg flex items-center justify-center">
               <Settings className="w-5 h-5 text-white" />
@@ -136,21 +136,21 @@ export const Sidebar = ({ currentView, onViewChange }: SidebarProps) => {
 
         {/* Professional Code */}
         {psychologist?.professional_code && (
-          <div className="p-4 border-b border-slate-200">
+          <div className="px-4 mb-6">
             <ProfessionalCodeDisplay code={psychologist.professional_code} />
           </div>
         )}
 
         {/* Navigation */}
         <div className="flex-1 overflow-y-auto">
-          <nav className="p-4 space-y-2">
+          <nav className="px-4 space-y-3">
             {/* Main Navigation */}
-            <div className="space-y-1">
+            <div className="space-y-2">
               {menuItems.map((item) => (
                 <Button
                   key={item.id}
                   variant={currentView === item.id ? "default" : "ghost"}
-                  className={`w-full justify-start gap-3 ${
+                  className={`w-full justify-start gap-3 h-10 ${
                     currentView === item.id 
                       ? "bg-gradient-to-r from-blue-500 to-emerald-500 text-white" 
                       : "text-slate-700 hover:bg-slate-100"
@@ -170,10 +170,10 @@ export const Sidebar = ({ currentView, onViewChange }: SidebarProps) => {
             </div>
 
             {/* Advanced Features */}
-            <div className="pt-6 mt-4">
+            <div className="pt-8 mt-6">
               <Button
                 variant="ghost"
-                className="w-full justify-start gap-2 text-slate-600 hover:bg-slate-100 mb-3 font-medium"
+                className="w-full justify-start gap-2 text-slate-600 hover:bg-slate-100 mb-4 font-medium h-10"
                 onClick={() => setShowAdvanced(!showAdvanced)}
               >
                 {showAdvanced ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -181,12 +181,12 @@ export const Sidebar = ({ currentView, onViewChange }: SidebarProps) => {
               </Button>
               
               {showAdvanced && (
-                <div className="space-y-2 pl-2">
+                <div className="space-y-2 pl-1">
                   {advancedItems.map((item) => (
                     <Button
                       key={item.id}
                       variant={currentView === item.id ? "default" : "ghost"}
-                      className={`w-full justify-start gap-3 relative py-3 ${
+                      className={`w-full justify-start gap-3 relative h-10 ${
                         currentView === item.id 
                           ? "bg-gradient-to-r from-blue-500 to-emerald-500 text-white" 
                           : item.available 
@@ -215,8 +215,8 @@ export const Sidebar = ({ currentView, onViewChange }: SidebarProps) => {
         </div>
 
         {/* User Info & Logout */}
-        <div className="p-4 border-t border-slate-200">
-          <div className="mb-3">
+        <div className="p-4 mt-6">
+          <div className="mb-4">
             <p className="text-sm font-medium text-slate-800">
               {psychologist?.first_name} {psychologist?.last_name}
             </p>
@@ -226,7 +226,7 @@ export const Sidebar = ({ currentView, onViewChange }: SidebarProps) => {
             variant="outline"
             size="sm"
             onClick={handleLogout}
-            className="w-full justify-start gap-2 text-slate-600 hover:bg-red-50 hover:text-red-700 hover:border-red-200"
+            className="w-full justify-start gap-2 text-slate-600 hover:bg-red-50 hover:text-red-700 hover:border-red-200 h-9"
           >
             <LogOut className="w-4 h-4" />
             Cerrar Sesión
