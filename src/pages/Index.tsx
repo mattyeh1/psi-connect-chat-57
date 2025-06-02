@@ -25,6 +25,21 @@ import { AppSidebar } from "@/components/AppSidebar";
 
 type ViewType = "dashboard" | "patients" | "calendar" | "messages" | "affiliates" | "seo" | "reports" | "support" | "early-access" | "visibility" | "rates";
 
+// Type declaration for window debug property
+declare global {
+  interface Window {
+    debugAppState?: {
+      authLoading: boolean;
+      profileLoading: boolean;
+      user: boolean;
+      profile: boolean;
+      psychologist: boolean;
+      patient: boolean;
+      profileError: string | null;
+    };
+  }
+}
+
 export default function Index() {
   const { user, loading: authLoading } = useAuth();
   const { profile, psychologist, patient, loading: profileLoading, error: profileError, forceRefresh } = useProfile();
@@ -53,14 +68,15 @@ export default function Index() {
       patientId: patient?.id,
       profileError,
       // Detailed loading state analysis
-      shouldShowLoading: authLoading || (user && profileLoading),
-      shouldShowLanding: !user,
-      shouldShowError: !!profileError,
-      shouldShowProfileWait: !profile && user && !profileError && !profileLoading,
-      shouldShowApp: !!profile,
+      shouldShowLoading: authLoading,
+      shouldShowProfileLoading: !authLoading && user && profileLoading,
+      shouldShowLanding: !authLoading && !user,
+      shouldShowError: !authLoading && !!profileError,
+      shouldShowProfileWait: !authLoading && !profileLoading && user && !profile && !profileError,
+      shouldShowApp: !authLoading && !profileLoading && !!profile,
     });
 
-    // Add debug info to window for browser console inspection
+    // Add debug info to window for browser console inspection with proper typing
     if (typeof window !== 'undefined') {
       window.debugAppState = {
         authLoading,
@@ -143,14 +159,14 @@ export default function Index() {
     </div>
   );
 
-  // Simplified loading state - only show loading if truly loading
+  // SIMPLIFY LOADING STATE - Only show auth loading if truly authenticating
   if (authLoading) {
     console.log('=== SHOWING AUTH LOADING ===');
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600">Cargando autenticación...</p>
+          <p className="text-slate-600">Verificando autenticación...</p>
           <button 
             onClick={() => setDebugMode(true)}
             className="mt-4 text-xs text-blue-600 underline"
@@ -158,24 +174,25 @@ export default function Index() {
             Mostrar debug
           </button>
         </div>
+        {debugMode && <DebugPanel />}
       </div>
     );
   }
 
-  // Si no hay usuario, mostrar la landing page
+  // Si no hay usuario después de auth, mostrar landing
   if (!user) {
     console.log('=== SHOWING LANDING PAGE (NO USER) ===');
     return <LandingPage />;
   }
 
-  // Profile loading only when we have a user but are actively loading
+  // Profile loading only when we have user but loading profile
   if (profileLoading) {
     console.log('=== SHOWING PROFILE LOADING ===');
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600">Cargando perfil...</p>
+          <p className="text-slate-600">Cargando perfil del usuario...</p>
           <button 
             onClick={() => setDebugMode(true)}
             className="mt-4 text-xs text-blue-600 underline"
@@ -183,6 +200,7 @@ export default function Index() {
             Mostrar debug
           </button>
         </div>
+        {debugMode && <DebugPanel />}
       </div>
     );
   }
@@ -223,7 +241,7 @@ export default function Index() {
 
   // Si hay usuario pero no hay perfil después de cargar
   if (!profile) {
-    console.log('=== SHOWING PROFILE SETUP WAIT ===');
+    console.log('=== NO PROFILE FOUND - WAITING OR SETUP NEEDED ===');
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
         <div className="text-center max-w-md">
@@ -232,7 +250,7 @@ export default function Index() {
               Configurando tu perfil...
             </h2>
             <p className="text-yellow-600 mb-4">
-              Estamos preparando tu cuenta. Esto debería tomar solo unos segundos.
+              Tu cuenta está siendo configurada. Este proceso puede tomar unos segundos.
             </p>
             <div className="w-6 h-6 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <div className="space-y-2">
@@ -240,7 +258,7 @@ export default function Index() {
                 onClick={() => forceRefresh()}
                 className="bg-yellow-600 hover:bg-yellow-700 w-full"
               >
-                Recargar
+                Recargar perfil
               </Button>
               <button 
                 onClick={() => setDebugMode(true)}
@@ -256,10 +274,10 @@ export default function Index() {
     );
   }
 
-  // AHORA SÍ TENEMOS PROFILE - Renderizar la aplicación correcta
-  console.log('=== RENDERING APPLICATION ===', { 
+  // TENEMOS PROFILE - Renderizar según tipo de usuario
+  console.log('=== PROFILE FOUND - RENDERING APP ===', { 
     userType: profile.user_type,
-    hasProfile: !!profile,
+    profileId: profile.id,
     hasPsychologist: !!psychologist,
     hasPatient: !!patient 
   });
@@ -275,10 +293,18 @@ export default function Index() {
     );
   }
 
-  // Psychologist dashboard - USAR SIDEBAR RESPONSIVO
+  // Admin redirect
+  if (profile.user_type === 'admin') {
+    console.log('=== REDIRECTING ADMIN TO ADMIN DASHBOARD ===');
+    navigate('/admin/dashboard');
+    return null;
+  }
+
+  // Psychologist dashboard
   if (profile.user_type === 'psychologist') {
     console.log('=== RENDERING PSYCHOLOGIST DASHBOARD ===', {
-      psychologistName: psychologist ? `${psychologist.first_name} ${psychologist.last_name}` : 'Loading...'
+      psychologistId: psychologist?.id,
+      psychologistName: psychologist ? `${psychologist.first_name} ${psychologist.last_name}` : 'Loading psychologist data...'
     });
 
     const renderCurrentView = () => {
@@ -320,7 +346,7 @@ export default function Index() {
                 <SidebarTrigger className="-ml-1" />
                 <div className="ml-auto flex items-center space-x-4">
                   <span className="text-sm text-muted-foreground">
-                    {psychologist?.first_name} {psychologist?.last_name}
+                    {psychologist?.first_name || 'Cargando...'} {psychologist?.last_name || ''}
                   </span>
                   <button 
                     onClick={() => setDebugMode(!debugMode)}
@@ -344,45 +370,39 @@ export default function Index() {
     );
   }
 
-  // Admin o cualquier otro tipo
-  if (profile.user_type === 'admin') {
-    console.log('=== REDIRECTING ADMIN TO ADMIN DASHBOARD ===');
-    navigate('/admin/dashboard');
-    return null;
-  }
-
-  // Fallback final - esto NO debería ocurrir
-  console.warn('=== UNEXPECTED FALLBACK REACHED ===', {
+  // FALLBACK FINAL - esto indica un problema
+  console.error('=== UNEXPECTED FALLBACK REACHED ===', {
     hasUser: !!user,
     hasProfile: !!profile,
     userType: profile?.user_type,
     authLoading,
-    profileLoading
+    profileLoading,
+    profileError
   });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
       <div className="text-center max-w-md">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-4">
-          <h2 className="text-xl font-bold text-blue-700 mb-2">
-            Estado inesperado de la aplicación
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 mb-4">
+          <h2 className="text-xl font-bold text-orange-700 mb-2">
+            Estado inesperado detectado
           </h2>
-          <p className="text-blue-600 mb-4">
-            La aplicación está en un estado inesperado. Por favor, recarga la página.
+          <p className="text-orange-600 mb-4">
+            La aplicación está en un estado no manejado. Tipo de usuario: {profile?.user_type || 'desconocido'}
           </p>
           <div className="space-y-2">
             <Button 
               onClick={() => window.location.reload()}
-              className="bg-blue-600 hover:bg-blue-700 w-full"
+              className="bg-orange-600 hover:bg-orange-700 w-full"
             >
-              Recargar página
+              Recargar página completa
             </Button>
             <Button 
               onClick={forceRefresh}
               variant="outline"
               className="w-full"
             >
-              Forzar actualización de perfil
+              Refrescar perfil
             </Button>
             <button 
               onClick={() => setDebugMode(true)}
