@@ -14,13 +14,14 @@ import { AdvancedReports } from "@/components/AdvancedReports";
 import { PrioritySupport } from "@/components/PrioritySupport";
 import { EarlyAccess } from "@/components/EarlyAccess";
 import { VisibilityConsulting } from "@/components/VisibilityConsulting";
-import { Sidebar } from "@/components/Sidebar";
 import { TrialExpiredModal } from "@/components/TrialExpiredModal";
 import { PatientPortal } from "@/components/PatientPortal";
 import { LandingPage } from "@/pages/LandingPage";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { PsychologistRatesManager } from "@/components/PsychologistRatesManager";
+import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/AppSidebar";
 
 type ViewType = "dashboard" | "patients" | "calendar" | "messages" | "affiliates" | "seo" | "reports" | "support" | "early-access" | "visibility" | "rates";
 
@@ -149,16 +150,12 @@ export default function Index() {
       return <PatientPortal />;
     }
 
-    // Psychologist dashboard - IR DIRECTO AL DASHBOARD
+    // Psychologist dashboard - USAR SIDEBAR RESPONSIVO
     if (profile.user_type === 'psychologist') {
-      const handleViewChange = (view: ViewType) => {
-        setCurrentView(view);
-      };
-
       const renderCurrentView = () => {
         switch (currentView) {
           case "dashboard":
-            return <Dashboard onViewChange={handleViewChange} />;
+            return <Dashboard onViewChange={setCurrentView} />;
           case "patients":
             return <PatientManagement />;
           case "calendar":
@@ -180,20 +177,32 @@ export default function Index() {
           case "rates":
             return <PsychologistRatesManager />;
           default:
-            return <Dashboard onViewChange={handleViewChange} />;
+            return <Dashboard onViewChange={setCurrentView} />;
         }
       };
 
       return (
-        <div className="flex min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-          <Sidebar currentView={currentView} onViewChange={handleViewChange} />
-          <main className="flex-1 p-6 ml-64">
-            {renderCurrentView()}
-          </main>
-          {showTrialModal && (
-            <TrialExpiredModal onUpgrade={() => setShowTrialModal(false)} />
-          )}
-        </div>
+        <SidebarProvider>
+          <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 to-blue-50">
+            <AppSidebar currentView={currentView} onViewChange={setCurrentView} />
+            <SidebarInset>
+              <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+                <SidebarTrigger className="-ml-1" />
+                <div className="ml-auto flex items-center space-x-4">
+                  <span className="text-sm text-muted-foreground">
+                    {psychologist?.first_name} {psychologist?.last_name}
+                  </span>
+                </div>
+              </header>
+              <div className="flex flex-1 flex-col gap-4 p-4">
+                {renderCurrentView()}
+              </div>
+            </SidebarInset>
+            {showTrialModal && (
+              <TrialExpiredModal onUpgrade={() => setShowTrialModal(false)} />
+            )}
+          </div>
+        </SidebarProvider>
       );
     }
   }
