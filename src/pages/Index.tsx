@@ -30,26 +30,57 @@ export default function Index() {
   const { profile, psychologist, patient, loading: profileLoading, error: profileError, forceRefresh } = useProfile();
   const [currentView, setCurrentView] = useState<ViewType>("dashboard");
   const [showTrialModal, setShowTrialModal] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
   const navigate = useNavigate();
 
   // Manejar verificación de email desde URL
   useEmailVerification();
 
+  // Enhanced logging for debugging
   useEffect(() => {
-    console.log('=== INDEX EFFECT ===', { 
-      authLoading, 
-      user: !!user, 
-      profile: !!profile,
-      psychologist: !!psychologist,
-      patient: !!patient,
+    console.log('=== INDEX DETAILED STATE DEBUG ===', {
+      timestamp: new Date().toISOString(),
+      authLoading,
       profileLoading,
-      profileError 
+      hasUser: !!user,
+      userId: user?.id,
+      hasProfile: !!profile,
+      profileUserType: profile?.user_type,
+      hasPsychologist: !!psychologist,
+      psychologistId: psychologist?.id,
+      psychologistNames: psychologist ? `${psychologist.first_name} ${psychologist.last_name}` : 'N/A',
+      hasPatient: !!patient,
+      patientId: patient?.id,
+      profileError,
+      // Detailed loading state analysis
+      shouldShowLoading: authLoading || (user && profileLoading),
+      shouldShowLanding: !user,
+      shouldShowError: !!profileError,
+      shouldShowProfileWait: !profile && user && !profileError && !profileLoading,
+      shouldShowApp: !!profile,
     });
 
+    // Add debug info to window for browser console inspection
+    if (typeof window !== 'undefined') {
+      window.debugAppState = {
+        authLoading,
+        profileLoading,
+        user: !!user,
+        profile: !!profile,
+        psychologist: !!psychologist,
+        patient: !!patient,
+        profileError
+      };
+    }
+  }, [user, authLoading, profile, psychologist, patient, profileLoading, profileError]);
+
+  useEffect(() => {
     // Verificar si el trial ha expirado usando la función de Supabase
     const checkTrialStatus = async () => {
       if (psychologist?.id) {
         try {
+          console.log('=== CHECKING TRIAL STATUS ===', { psychologistId: psychologist.id });
+          
           const { data: isExpired, error } = await supabase.rpc('is_trial_expired', {
             psychologist_id: psychologist.id
           });
@@ -62,8 +93,15 @@ export default function Index() {
           const hasExpiredStatus = psychologist.subscription_status === 'expired' || 
                                  psychologist.subscription_status === 'cancelled';
 
+          console.log('=== TRIAL STATUS RESULT ===', {
+            isExpired,
+            hasExpiredStatus,
+            subscriptionStatus: psychologist.subscription_status,
+            shouldShowModal: isExpired || hasExpiredStatus
+          });
+
           if (isExpired || hasExpiredStatus) {
-            console.log('Trial expired, showing modal:', { isExpired, hasExpiredStatus, subscription_status: psychologist.subscription_status });
+            console.log('Trial expired, showing modal');
             setShowTrialModal(true);
           }
         } catch (error) {
@@ -75,15 +113,50 @@ export default function Index() {
     if (psychologist) {
       checkTrialStatus();
     }
-  }, [user, authLoading, navigate, psychologist, profile, profileError]);
+  }, [psychologist]);
 
-  // Mostrar loading mientras se cargan auth y profile
-  if (authLoading || (user && profileLoading)) {
+  // Debug component to show current state
+  const DebugPanel = () => (
+    <div className="fixed top-4 right-4 bg-black/80 text-white p-4 rounded-lg text-xs max-w-sm z-50">
+      <div className="flex justify-between items-center mb-2">
+        <span className="font-bold">Debug State</span>
+        <button onClick={() => setDebugMode(false)} className="text-red-400">×</button>
+      </div>
+      <div className="space-y-1">
+        <div>Auth Loading: {authLoading ? '✓' : '✗'}</div>
+        <div>Profile Loading: {profileLoading ? '✓' : '✗'}</div>
+        <div>Has User: {user ? '✓' : '✗'}</div>
+        <div>Has Profile: {profile ? '✓' : '✗'}</div>
+        <div>Profile Type: {profile?.user_type || 'N/A'}</div>
+        <div>Has Psychologist: {psychologist ? '✓' : '✗'}</div>
+        <div>Has Patient: {patient ? '✓' : '✗'}</div>
+        <div>Profile Error: {profileError || 'None'}</div>
+        <div className="pt-2 border-t border-gray-600">
+          <button 
+            onClick={forceRefresh}
+            className="bg-blue-600 px-2 py-1 rounded text-xs"
+          >
+            Force Refresh
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Simplified loading state - only show loading if truly loading
+  if (authLoading) {
+    console.log('=== SHOWING AUTH LOADING ===');
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600">Cargando...</p>
+          <p className="text-slate-600">Cargando autenticación...</p>
+          <button 
+            onClick={() => setDebugMode(true)}
+            className="mt-4 text-xs text-blue-600 underline"
+          >
+            Mostrar debug
+          </button>
         </div>
       </div>
     );
@@ -91,11 +164,32 @@ export default function Index() {
 
   // Si no hay usuario, mostrar la landing page
   if (!user) {
+    console.log('=== SHOWING LANDING PAGE (NO USER) ===');
     return <LandingPage />;
+  }
+
+  // Profile loading only when we have a user but are actively loading
+  if (profileLoading) {
+    console.log('=== SHOWING PROFILE LOADING ===');
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600">Cargando perfil...</p>
+          <button 
+            onClick={() => setDebugMode(true)}
+            className="mt-4 text-xs text-blue-600 underline"
+          >
+            Mostrar debug
+          </button>
+        </div>
+      </div>
+    );
   }
 
   // Si hay error de perfil
   if (profileError) {
+    console.log('=== SHOWING PROFILE ERROR ===', profileError);
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
         <div className="text-center max-w-md">
@@ -106,20 +200,30 @@ export default function Index() {
             <p className="text-red-600 mb-4">
               {profileError}
             </p>
-            <Button 
-              onClick={forceRefresh}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Reintentar
-            </Button>
+            <div className="space-y-2">
+              <Button 
+                onClick={forceRefresh}
+                className="bg-red-600 hover:bg-red-700 w-full"
+              >
+                Reintentar
+              </Button>
+              <button 
+                onClick={() => setDebugMode(true)}
+                className="text-xs text-blue-600 underline"
+              >
+                Mostrar debug
+              </button>
+            </div>
           </div>
         </div>
+        {debugMode && <DebugPanel />}
       </div>
     );
   }
 
-  // Si hay usuario pero no hay perfil, esperar un poco más o forzar refresh
+  // Si hay usuario pero no hay perfil después de cargar
   if (!profile) {
+    console.log('=== SHOWING PROFILE SETUP WAIT ===');
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
         <div className="text-center max-w-md">
@@ -131,57 +235,83 @@ export default function Index() {
               Estamos preparando tu cuenta. Esto debería tomar solo unos segundos.
             </p>
             <div className="w-6 h-6 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <Button 
-              onClick={() => forceRefresh()}
-              className="bg-yellow-600 hover:bg-yellow-700"
-            >
-              Recargar
-            </Button>
+            <div className="space-y-2">
+              <Button 
+                onClick={() => forceRefresh()}
+                className="bg-yellow-600 hover:bg-yellow-700 w-full"
+              >
+                Recargar
+              </Button>
+              <button 
+                onClick={() => setDebugMode(true)}
+                className="text-xs text-blue-600 underline"
+              >
+                Mostrar debug
+              </button>
+            </div>
           </div>
         </div>
+        {debugMode && <DebugPanel />}
       </div>
     );
   }
 
-  // SI HAY PERFIL, IR DIRECTO A LA APP PRINCIPAL
-  if (profile) {
-    // Patient portal
-    if (profile.user_type === 'patient') {
-      return <PatientPortal />;
-    }
+  // AHORA SÍ TENEMOS PROFILE - Renderizar la aplicación correcta
+  console.log('=== RENDERING APPLICATION ===', { 
+    userType: profile.user_type,
+    hasProfile: !!profile,
+    hasPsychologist: !!psychologist,
+    hasPatient: !!patient 
+  });
 
-    // Psychologist dashboard - USAR SIDEBAR RESPONSIVO
-    if (profile.user_type === 'psychologist') {
-      const renderCurrentView = () => {
-        switch (currentView) {
-          case "dashboard":
-            return <Dashboard onViewChange={setCurrentView} />;
-          case "patients":
-            return <PatientManagement />;
-          case "calendar":
-            return <Calendar />;
-          case "messages":
-            return <MessagingHub />;
-          case "affiliates":
-            return <AffiliateSystem />;
-          case "seo":
-            return <SeoProfileManager />;
-          case "reports":
-            return <AdvancedReports />;
-          case "support":
-            return <PrioritySupport />;
-          case "early-access":
-            return <EarlyAccess />;
-          case "visibility":
-            return <VisibilityConsulting />;
-          case "rates":
-            return <PsychologistRatesManager />;
-          default:
-            return <Dashboard onViewChange={setCurrentView} />;
-        }
-      };
+  // Patient portal
+  if (profile.user_type === 'patient') {
+    console.log('=== RENDERING PATIENT PORTAL ===');
+    return (
+      <>
+        <PatientPortal />
+        {debugMode && <DebugPanel />}
+      </>
+    );
+  }
 
-      return (
+  // Psychologist dashboard - USAR SIDEBAR RESPONSIVO
+  if (profile.user_type === 'psychologist') {
+    console.log('=== RENDERING PSYCHOLOGIST DASHBOARD ===', {
+      psychologistName: psychologist ? `${psychologist.first_name} ${psychologist.last_name}` : 'Loading...'
+    });
+
+    const renderCurrentView = () => {
+      switch (currentView) {
+        case "dashboard":
+          return <Dashboard onViewChange={setCurrentView} />;
+        case "patients":
+          return <PatientManagement />;
+        case "calendar":
+          return <Calendar />;
+        case "messages":
+          return <MessagingHub />;
+        case "affiliates":
+          return <AffiliateSystem />;
+        case "seo":
+          return <SeoProfileManager />;
+        case "reports":
+          return <AdvancedReports />;
+        case "support":
+          return <PrioritySupport />;
+        case "early-access":
+          return <EarlyAccess />;
+        case "visibility":
+          return <VisibilityConsulting />;
+        case "rates":
+          return <PsychologistRatesManager />;
+        default:
+          return <Dashboard onViewChange={setCurrentView} />;
+      }
+    };
+
+    return (
+      <>
         <SidebarProvider>
           <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 to-blue-50">
             <AppSidebar currentView={currentView} onViewChange={setCurrentView} />
@@ -192,6 +322,12 @@ export default function Index() {
                   <span className="text-sm text-muted-foreground">
                     {psychologist?.first_name} {psychologist?.last_name}
                   </span>
+                  <button 
+                    onClick={() => setDebugMode(!debugMode)}
+                    className="text-xs text-blue-600 underline"
+                  >
+                    Debug
+                  </button>
                 </div>
               </header>
               <div className="flex flex-1 flex-col gap-4 p-4">
@@ -203,21 +339,61 @@ export default function Index() {
             )}
           </div>
         </SidebarProvider>
-      );
-    }
+        {debugMode && <DebugPanel />}
+      </>
+    );
   }
 
-  // Fallback
+  // Admin o cualquier otro tipo
+  if (profile.user_type === 'admin') {
+    console.log('=== REDIRECTING ADMIN TO ADMIN DASHBOARD ===');
+    navigate('/admin/dashboard');
+    return null;
+  }
+
+  // Fallback final - esto NO debería ocurrir
+  console.warn('=== UNEXPECTED FALLBACK REACHED ===', {
+    hasUser: !!user,
+    hasProfile: !!profile,
+    userType: profile?.user_type,
+    authLoading,
+    profileLoading
+  });
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
       <div className="text-center max-w-md">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-4">
           <h2 className="text-xl font-bold text-blue-700 mb-2">
-            Cargando aplicación...
+            Estado inesperado de la aplicación
           </h2>
-          <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-blue-600 mb-4">
+            La aplicación está en un estado inesperado. Por favor, recarga la página.
+          </p>
+          <div className="space-y-2">
+            <Button 
+              onClick={() => window.location.reload()}
+              className="bg-blue-600 hover:bg-blue-700 w-full"
+            >
+              Recargar página
+            </Button>
+            <Button 
+              onClick={forceRefresh}
+              variant="outline"
+              className="w-full"
+            >
+              Forzar actualización de perfil
+            </Button>
+            <button 
+              onClick={() => setDebugMode(true)}
+              className="text-xs text-blue-600 underline"
+            >
+              Mostrar debug
+            </button>
+          </div>
         </div>
       </div>
+      {debugMode && <DebugPanel />}
     </div>
   );
 }
