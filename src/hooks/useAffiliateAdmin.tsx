@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -297,6 +298,9 @@ export const useAffiliateAdmin = () => {
 
   const approvePayment = async (paymentId: string, paymentMethod: string, paymentReference?: string) => {
     try {
+      console.log('Approving payment:', paymentId);
+      
+      // 1. Actualizar el pago en la base de datos
       const { error } = await supabase
         .from('affiliate_payments')
         .update({
@@ -308,20 +312,32 @@ export const useAffiliateAdmin = () => {
         })
         .eq('id', paymentId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating payment in database:', error);
+        throw error;
+      }
+
+      console.log('Payment updated successfully in database');
+
+      // 2. Actualizar inmediatamente el estado local - REMOVER el pago de la lista
+      setPendingPayments(prevPayments => {
+        const updatedPayments = prevPayments.filter(payment => payment.id !== paymentId);
+        console.log('Updated pending payments state:', updatedPayments.length, 'payments remaining');
+        return updatedPayments;
+      });
+
+      // 3. Actualizar las estadísticas para reflejar el pago procesado
+      await fetchAffiliateStats();
 
       toast({
         title: "Pago aprobado",
         description: "El pago de comisión ha sido marcado como pagado",
       });
 
-      await Promise.all([
-        fetchAffiliateStats(),
-        fetchPendingPayments(),
-        fetchAffiliateReferrals(),
-        fetchPendingReferredPsychologists()
-      ]);
+      console.log('Payment approval process completed successfully');
+
     } catch (error: any) {
+      console.error('Error in approvePayment:', error);
       toast({
         title: "Error",
         description: error.message || "No se pudo aprobar el pago",
@@ -332,26 +348,42 @@ export const useAffiliateAdmin = () => {
 
   const processSubscriptionCommission = async (psychologistId: string, amount: number) => {
     try {
+      console.log('Processing subscription commission for:', psychologistId, 'amount:', amount);
+      
       const { error } = await supabase
         .rpc('process_affiliate_commission', {
           referred_psychologist_id: psychologistId,
           subscription_amount: amount
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error processing commission:', error);
+        throw error;
+      }
+
+      console.log('Commission processed successfully');
+
+      // Actualizar inmediatamente el psicólogo de la lista de pendientes
+      setPendingReferredPsychologists(prevPending => {
+        const updated = prevPending.filter(p => p.id !== psychologistId);
+        console.log('Updated pending referred psychologists:', updated.length, 'remaining');
+        return updated;
+      });
+
+      // Refrescar los datos para obtener el nuevo pago pendiente generado
+      await Promise.all([
+        fetchAffiliateStats(),
+        fetchPendingPayments(),
+        fetchAffiliateReferrals()
+      ]);
 
       toast({
         title: "Comisión procesada",
         description: "Se ha calculado y registrado la comisión de afiliado",
       });
 
-      await Promise.all([
-        fetchAffiliateStats(),
-        fetchPendingPayments(),
-        fetchAffiliateReferrals(),
-        fetchPendingReferredPsychologists()
-      ]);
     } catch (error: any) {
+      console.error('Error in processSubscriptionCommission:', error);
       toast({
         title: "Error",
         description: error.message || "No se pudo procesar la comisión",
