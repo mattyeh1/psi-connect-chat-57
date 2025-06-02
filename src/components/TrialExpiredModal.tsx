@@ -2,24 +2,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock, Sparkles, Zap, Star } from 'lucide-react';
 import { SubscriptionPlans } from './SubscriptionPlans';
-import { useMercadoPago } from '@/hooks/useMercadoPago';
 
 interface TrialExpiredModalProps {
   onUpgrade: () => void;
 }
 
 export const TrialExpiredModal = ({ onUpgrade }: TrialExpiredModalProps) => {
-  const { createSubscription } = useMercadoPago();
-
-  const handlePlanSelect = async (planId: string) => {
-    try {
-      await createSubscription(planId);
-      onUpgrade();
-    } catch (error) {
-      console.error('Error selecting plan:', error);
-    }
-  };
-
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-slate-900/95 via-purple-900/85 to-blue-900/95 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
       <div className="relative">
@@ -108,7 +96,7 @@ export const TrialExpiredModal = ({ onUpgrade }: TrialExpiredModalProps) => {
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-r from-purple-100/40 to-blue-100/40 rounded-3xl blur-2xl"></div>
               <div className="relative bg-white/90 backdrop-blur-sm rounded-3xl p-8 border border-white/60 shadow-2xl">
-                <SubscriptionPlans onPlanSelect={handlePlanSelect} />
+                <SubscriptionPlans />
               </div>
             </div>
 

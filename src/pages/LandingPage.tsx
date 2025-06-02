@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Heart, Shield, Users, MessageCircle, Calendar, Star, CheckCircle, Award, TrendingUp, Clock, Globe, Zap, Crown } from "lucide-react";
@@ -24,7 +25,7 @@ export const LandingPage = () => {
                 Iniciar Sesión
               </Button>
             </Link>
-            <Link to="/app">
+            <Link to="/register">
               <Button className="bg-gradient-to-r from-blue-500 to-emerald-500 hover:from-purple-500 hover:to-pink-500 hover:scale-105 hover:shadow-xl transition-all duration-300 relative overflow-hidden group">
                 <span className="relative z-10">Comenzar Ahora</span>
                 <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
@@ -61,7 +62,7 @@ export const LandingPage = () => {
           
           <ScrollAnimationWrapper animation="fade-up" delay={400}>
             <div className="flex justify-center gap-4 mb-12">
-              <Link to="/app">
+              <Link to="/register">
                 <Button size="lg" className="bg-gradient-to-r from-blue-500 to-emerald-500 px-8 py-3 text-lg hover:scale-110 hover:shadow-2xl transition-all duration-300 group relative overflow-hidden">
                   <span className="relative z-10">Empezar Gratis</span>
                   <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
@@ -557,7 +558,7 @@ export const LandingPage = () => {
               para brindar la mejor atención a sus pacientes.
             </p>
             <div className="flex justify-center gap-4">
-              <Link to="/app">
+              <Link to="/register">
                 <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100 hover:scale-110 px-8 py-3 text-lg font-semibold hover:shadow-2xl transition-all duration-300 group relative overflow-hidden">
                   <span className="relative z-10">Comenzar Prueba Gratuita</span>
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-100/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
