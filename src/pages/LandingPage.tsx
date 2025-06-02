@@ -283,7 +283,7 @@ export const LandingPage = () => {
                 <div className="flex items-center mb-4">
                   <img src="https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" alt="Dr. Carlos Mendoza" className="w-12 h-12 rounded-full mr-4 group-hover:scale-110 transition-transform duration-300" />
                   <div>
-                    <h5 className="font-semibold text-slate-800">Dr. Carlos Mendoza</h5>
+                    <h5 className="font-semibold text-slate-800">Dr. Fernando Mendoza</h5>
                     <p className="text-sm text-slate-600">Psicoterapeuta</p>
                   </div>
                 </div>
