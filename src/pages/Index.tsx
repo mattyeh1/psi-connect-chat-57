@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -78,6 +79,27 @@ export default function Index() {
     }
   }, [user, authLoading, navigate, psychologist, profile, profileError]);
 
+  // Función auxiliar para verificar si un perfil está completo
+  const isProfileComplete = (userType: string, profileData: any, roleData: any) => {
+    console.log('=== CHECKING PROFILE COMPLETION ===', {
+      userType,
+      hasProfileData: !!profileData,
+      hasRoleData: !!roleData,
+      roleDataFirstName: roleData?.first_name,
+      roleDataLastName: roleData?.last_name
+    });
+
+    if (!profileData || !roleData) {
+      console.log('Missing profile or role data');
+      return false;
+    }
+
+    const hasRequiredNames = !!(roleData.first_name && roleData.last_name);
+    console.log('Has required names:', hasRequiredNames);
+    
+    return hasRequiredNames;
+  };
+
   // Mostrar loading mientras se cargan auth y profile
   if (authLoading || (user && profileLoading)) {
     return (
@@ -123,20 +145,30 @@ export default function Index() {
   }
 
   // Show profile setup if psychologist profile needs completion
-  if (profile?.user_type === 'psychologist' && (!psychologist || !psychologist.first_name || !psychologist.last_name)) {
+  if (profile?.user_type === 'psychologist' && !isProfileComplete('psychologist', profile, psychologist)) {
+    console.log('=== SHOWING PSYCHOLOGIST SETUP ===');
     return (
       <ProfileSetup 
         userType="psychologist" 
-        onComplete={() => window.location.reload()} 
+        onComplete={() => {
+          console.log('=== PSYCHOLOGIST SETUP COMPLETED ===');
+          forceRefresh();
+          setTimeout(() => window.location.reload(), 200);
+        }} 
       />
     );
   }
 
-  if (profile?.user_type === 'patient' && (!patient || !patient.first_name || !patient.last_name)) {
+  if (profile?.user_type === 'patient' && !isProfileComplete('patient', profile, patient)) {
+    console.log('=== SHOWING PATIENT SETUP ===');
     return (
       <ProfileSetup 
         userType="patient" 
-        onComplete={() => window.location.reload()} 
+        onComplete={() => {
+          console.log('=== PATIENT SETUP COMPLETED ===');
+          forceRefresh();
+          setTimeout(() => window.location.reload(), 200);
+        }} 
       />
     );
   }
@@ -159,7 +191,7 @@ export default function Index() {
               Tu cuenta está registrada pero necesitas completar tu perfil profesional.
             </p>
             <Button 
-              onClick={() => window.location.reload()}
+              onClick={() => forceRefresh()}
               className="bg-yellow-600 hover:bg-yellow-700"
             >
               Completar Perfil

@@ -82,7 +82,7 @@ export const useProfile = () => {
     console.log('User ID:', user.id);
     console.log('Force refresh:', forceRefresh);
 
-    // Verificar cache
+    // Verificar cache solo si no es force refresh
     const cacheAge = Date.now() - profileCache.lastFetch;
     const isSameUser = profileCache.userId === user.id;
     
@@ -136,6 +136,8 @@ export const useProfile = () => {
           ...newProfile,
           user_type: newProfile.user_type as 'psychologist' | 'patient' | 'admin'
         };
+        
+        // Actualizar estados y cache inmediatamente
         setProfile(typedProfile);
         profileCache.profile = typedProfile;
         profileCache.userId = user.id;
@@ -150,7 +152,6 @@ export const useProfile = () => {
         ...profileData,
         user_type: profileData.user_type as 'psychologist' | 'patient' | 'admin'
       };
-      setProfile(typedProfile);
 
       let psychData = null;
       let patientData = null;
@@ -170,11 +171,9 @@ export const useProfile = () => {
         } else if (psychResult) {
           console.log('=== PSYCHOLOGIST DATA FOUND ===', psychResult);
           psychData = psychResult;
-          setPsychologist(psychResult);
         } else {
           console.warn('=== NO PSYCHOLOGIST DATA, NEEDS SETUP ===');
-          // El psicólogo existe en profiles pero no en psychologists - necesita setup
-          setPsychologist(null);
+          psychData = null;
         }
       } else if (typedProfile.user_type === 'patient') {
         console.log('=== FETCHING PATIENT DATA ===');
@@ -190,13 +189,16 @@ export const useProfile = () => {
         } else if (patientResult) {
           console.log('=== PATIENT DATA FOUND ===', patientResult);
           patientData = patientResult;
-          setPatient(patientResult);
         } else {
           console.warn('=== NO PATIENT DATA, NEEDS SETUP ===');
-          // El paciente existe en profiles pero no en patients - necesita setup
-          setPatient(null);
+          patientData = null;
         }
       }
+
+      // Actualizar estados inmediatamente
+      setProfile(typedProfile);
+      setPsychologist(psychData);
+      setPatient(patientData);
 
       // Actualizar cache
       profileCache = {
@@ -207,7 +209,14 @@ export const useProfile = () => {
         lastFetch: Date.now()
       };
 
-      console.log('=== PROFILE DATA CACHED SUCCESSFULLY ===');
+      console.log('=== PROFILE DATA FETCHED AND CACHED SUCCESSFULLY ===');
+      console.log('Profile complete:', {
+        hasProfile: !!typedProfile,
+        hasPsychData: !!psychData,
+        hasPatientData: !!patientData,
+        psychHasNames: psychData ? !!(psychData.first_name && psychData.last_name) : false,
+        patientHasNames: patientData ? !!(patientData.first_name && patientData.last_name) : false
+      });
 
     } catch (error) {
       console.error('=== ERROR IN FETCH PROFILE ===', error);
@@ -314,6 +323,7 @@ export const useProfile = () => {
 
       if (existingPsych) {
         console.log('=== PSYCHOLOGIST ALREADY EXISTS ===', existingPsych);
+        // Actualizar estados y cache inmediatamente
         setPsychologist(existingPsych);
         profileCache.psychologist = existingPsych;
         return { data: existingPsych, error: null };
@@ -346,8 +356,10 @@ export const useProfile = () => {
 
       console.log('=== PSYCHOLOGIST CREATED SUCCESSFULLY ===', result);
 
+      // Actualizar estados y cache inmediatamente
       setPsychologist(result);
       profileCache.psychologist = result;
+      profileCache.lastFetch = Date.now(); // Actualizar timestamp del cache
       
       toast({
         title: "Perfil creado",
@@ -393,8 +405,10 @@ export const useProfile = () => {
 
       console.log('=== PATIENT CREATED SUCCESSFULLY ===', result);
 
+      // Actualizar estados y cache inmediatamente
       setPatient(result);
       profileCache.patient = result;
+      profileCache.lastFetch = Date.now(); // Actualizar timestamp del cache
       
       toast({
         title: "Perfil creado",

@@ -14,7 +14,7 @@ interface ProfileSetupProps {
 }
 
 export const ProfileSetup = ({ userType, onComplete }: ProfileSetupProps) => {
-  const { createPatientProfile, refetch } = useProfile();
+  const { createPatientProfile, forceRefresh } = useProfile();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [professionalCode, setProfessionalCode] = useState('');
@@ -145,11 +145,14 @@ export const ProfileSetup = ({ userType, onComplete }: ProfileSetupProps) => {
 
       console.log('Profile setup completed successfully');
       
-      // Refetch profile data to update cache
-      refetch();
+      // Force refresh of profile data to clear cache
+      forceRefresh();
       
-      // Complete the setup
-      onComplete();
+      // Small delay to ensure cache is updated before calling onComplete
+      setTimeout(() => {
+        onComplete();
+      }, 100);
+      
     } catch (error: any) {
       console.error('Profile setup error:', error);
       setError(error.message || 'An error occurred while setting up your profile');
