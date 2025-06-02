@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Clock, CreditCard, AlertTriangle, Crown, Star, MessageCircle } from 'lucide-react';
+import { Clock, CreditCard, AlertTriangle, Crown, Star, MessageCircle, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
 import { usePlanCapabilities } from '@/hooks/usePlanCapabilities';
 import { PlanBadge } from './PlanBadge';
+import { SubscriptionPlans } from './SubscriptionPlans';
 
 export const TrialStatus = () => {
   const { psychologist } = useProfile();
@@ -13,6 +14,7 @@ export const TrialStatus = () => {
   const [trialDaysRemaining, setTrialDaysRemaining] = useState<number | null>(null);
   const [isTrialExpired, setIsTrialExpired] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showPlans, setShowPlans] = useState(false);
 
   useEffect(() => {
     if (psychologist) {
@@ -72,6 +74,23 @@ export const TrialStatus = () => {
     );
   }
 
+  // If showing subscription plans
+  if (showPlans) {
+    return (
+      <div className="space-y-4">
+        <Button 
+          variant="outline" 
+          onClick={() => setShowPlans(false)}
+          className="mb-4"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Volver
+        </Button>
+        <SubscriptionPlans />
+      </div>
+    );
+  }
+
   // Si tiene suscripción activa (Plus o Pro)
   if (psychologist?.subscription_status === 'active' && (isPlusUser() || isProUser())) {
     return (
@@ -94,7 +113,7 @@ export const TrialStatus = () => {
             <Button 
               variant="outline" 
               className="border-purple-500 text-purple-600 hover:bg-purple-50"
-              onClick={() => openWhatsApp("Hola! Quiero actualizar mi plan Plus a Pro en ProConnection")}
+              onClick={() => setShowPlans(true)}
             >
               <MessageCircle className="w-4 h-4 mr-2" />
               Actualizar a Pro
@@ -122,9 +141,9 @@ export const TrialStatus = () => {
             </p>
             <Button 
               className="w-full bg-gradient-to-r from-blue-500 to-emerald-500 hover:shadow-lg"
-              onClick={() => openWhatsApp("Hola! Mi trial en ProConnection ha expirado y quiero contratar un plan")}
+              onClick={() => setShowPlans(true)}
             >
-              <MessageCircle className="w-4 h-4 mr-2" />
+              <CreditCard className="w-4 h-4 mr-2" />
               Ver Planes de Suscripción
             </Button>
           </div>
@@ -168,9 +187,9 @@ export const TrialStatus = () => {
             <Button 
               variant={isLastDays ? "default" : "outline"} 
               className={`w-full ${isLastDays ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:shadow-lg' : ''}`}
-              onClick={() => openWhatsApp("Hola! Quiero contratar un plan en ProConnection antes de que expire mi trial")}
+              onClick={() => setShowPlans(true)}
             >
-              <MessageCircle className="w-4 h-4 mr-2" />
+              <CreditCard className="w-4 h-4 mr-2" />
               {isLastDays ? 'Seleccionar Plan Ahora' : 'Ver Planes de Suscripción'}
             </Button>
           </div>
