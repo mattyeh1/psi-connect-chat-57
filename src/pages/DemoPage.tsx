@@ -9,11 +9,11 @@ export const DemoPage = () => {
 
   const demoFeatures = [
     {
-      id: "yellow",
+      id: "calendar",
       title: "Gestión de Agenda",
       description: "Sistema inteligente para programar y gestionar citas con tus pacientes",
       icon: Calendar,
-      color: "emerald",
+      color: "yellow",
       steps: [
         "Selecciona fecha y hora disponible en el calendario",
         "El sistema verifica automáticamente conflictos horarios",
