@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -62,7 +61,7 @@ export const AffiliateSystem = () => {
         setAffiliateCode(codeData);
       }
 
-      // Fetch affiliate stats
+      // Fetch affiliate referrals for total earnings and active referrals
       const { data: referralsData, error: referralsError } = await supabase
         .from('affiliate_referrals')
         .select('*')
@@ -70,18 +69,38 @@ export const AffiliateSystem = () => {
 
       if (referralsError) {
         console.error('Error fetching referrals:', referralsError);
-      } else {
-        const totalReferrals = referralsData?.length || 0;
-        const totalEarnings = referralsData?.reduce((sum, ref) => sum + (ref.commission_earned || 0), 0) || 0;
-        const activeReferrals = referralsData?.filter(ref => ref.status === 'active').length || 0;
-
-        setStats({
-          totalReferrals,
-          totalEarnings,
-          pendingPayments: totalEarnings, // Simplificado para el demo
-          activeReferrals
-        });
       }
+
+      // Fetch pending payments from affiliate_payments table
+      const { data: pendingPaymentsData, error: pendingPaymentsError } = await supabase
+        .from('affiliate_payments')
+        .select('amount')
+        .eq('psychologist_id', psychologist.id)
+        .eq('status', 'pending');
+
+      if (pendingPaymentsError) {
+        console.error('Error fetching pending payments:', pendingPaymentsError);
+      }
+
+      // Calculate stats
+      const totalReferrals = referralsData?.length || 0;
+      const totalEarnings = referralsData?.reduce((sum, ref) => sum + (ref.commission_earned || 0), 0) || 0;
+      const activeReferrals = referralsData?.filter(ref => ref.status === 'active').length || 0;
+      const pendingPayments = pendingPaymentsData?.reduce((sum, payment) => sum + (payment.amount || 0), 0) || 0;
+
+      console.log('Affiliate stats calculated:', {
+        totalReferrals,
+        totalEarnings,
+        pendingPayments,
+        activeReferrals
+      });
+
+      setStats({
+        totalReferrals,
+        totalEarnings,
+        pendingPayments,
+        activeReferrals
+      });
     } catch (error) {
       console.error('Error fetching affiliate data:', error);
       toast({
