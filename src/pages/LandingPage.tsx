@@ -264,7 +264,7 @@ export const LandingPage = () => {
                 <div className="flex items-center mb-4">
                   <img src="https://images.unsplash.com/photo-1649972904349-6e44c42644a7?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" alt="Dra. Ana García" className="w-12 h-12 rounded-full mr-4 group-hover:scale-110 transition-transform duration-300" />
                   <div>
-                    <h5 className="font-semibold text-slate-800">Dra. Ana García</h5>
+                    <h5 className="font-semibold text-slate-800">Dra. Alejandra García</h5>
                     <p className="text-sm text-slate-600">Psicóloga Clínica</p>
                   </div>
                 </div>
@@ -302,7 +302,7 @@ export const LandingPage = () => {
                 <div className="flex items-center mb-4">
                   <img src="https://images.unsplash.com/photo-1721322800607-8c38375eef04?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" alt="Dra. María López" className="w-12 h-12 rounded-full mr-4 group-hover:scale-110 transition-transform duration-300" />
                   <div>
-                    <h5 className="font-semibold text-slate-800">Dra. María López</h5>
+                    <h5 className="font-semibold text-slate-800">Dr. Matías Schmidt</h5>
                     <p className="text-sm text-slate-600">Psicóloga Infantil</p>
                   </div>
                 </div>
