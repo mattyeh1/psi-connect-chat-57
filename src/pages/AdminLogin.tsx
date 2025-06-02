@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -266,7 +267,7 @@ export const AdminLogin = () => {
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     required
-                    placeholder="admin@psiconnect.com"
+                    placeholder="admin@proconnection.com"
                     disabled={loading}
                   />
                 </div>
@@ -320,7 +321,7 @@ export const AdminLogin = () => {
                     value={createFormData.email}
                     onChange={(e) => setCreateFormData({ ...createFormData, email: e.target.value })}
                     required
-                    placeholder="nuevo-admin@psiconnect.com"
+                    placeholder="nuevo-admin@proconnection.com"
                     disabled={createLoading}
                   />
                 </div>

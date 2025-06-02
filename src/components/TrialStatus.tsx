@@ -80,7 +80,7 @@ export const TrialStatus = () => {
         <CardContent>
           <p className="text-slate-600 mb-4">
             {isProUser() 
-              ? '¡Excelente! Tienes acceso a todas las funciones premium de PsiConnect.'
+              ? '¡Excelente! Tienes acceso a todas las funciones premium de ProConnection.'
               : '¡Genial! Tu plan Plus está activo. Considera actualizar a Pro para funciones avanzadas.'
             }
           </p>
@@ -111,7 +111,7 @@ export const TrialStatus = () => {
         <CardContent>
           <div className="space-y-4">
             <p className="text-slate-600">
-              Tu período de prueba ha terminado. Selecciona un plan para continuar usando PsiConnect.
+              Tu período de prueba ha terminado. Selecciona un plan para continuar usando ProConnection.
             </p>
             <Button className="w-full bg-gradient-to-r from-blue-500 to-emerald-500 hover:shadow-lg">
               <CreditCard className="w-4 h-4 mr-2" />

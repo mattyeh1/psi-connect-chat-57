@@ -119,7 +119,7 @@ export const AdminDashboard = () => {
               </div>
               <div>
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                  PsiConnect Admin
+                  ProConnection Admin
                 </h1>
                 <p className="text-gray-600 text-sm">Sistema de Administración Central</p>
               </div>

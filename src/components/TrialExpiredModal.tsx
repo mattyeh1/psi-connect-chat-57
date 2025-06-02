@@ -99,7 +99,7 @@ export const TrialExpiredModal = ({ onUpgrade }: TrialExpiredModalProps) => {
                 <p className="text-lg text-slate-700 leading-relaxed max-w-3xl mx-auto">
                   Elige el plan perfecto para tu práctica profesional y continúa 
                   brindando el mejor servicio a tus pacientes con todas las herramientas 
-                  que PsiConnect tiene para ofrecerte.
+                  que ProConnection tiene para ofrecerte.
                 </p>
               </div>
             </div>
@@ -130,7 +130,7 @@ export const TrialExpiredModal = ({ onUpgrade }: TrialExpiredModalProps) => {
               </div>
               
               <p className="text-sm text-slate-500 max-w-2xl mx-auto leading-relaxed">
-                Más de 1,000 profesionales confían en PsiConnect para gestionar su práctica diaria.
+                Más de 1,000 profesionales confían en ProConnection para gestionar su práctica diaria.
                 Únete a ellos y experimenta la diferencia que marca tener las herramientas adecuadas.
               </p>
             </div>

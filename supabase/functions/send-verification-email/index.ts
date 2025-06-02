@@ -56,9 +56,9 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     const emailResponse = await resend.emails.send({
-      from: "PsiConnect <lord@mattyeh.com>",
+      from: "ProConnection <lord@mattyeh.com>",
       to: [email],
-      subject: `🔐 Verifica tu cuenta en PsiConnect - ${first_name}`,
+      subject: `🔐 Verifica tu cuenta en ProConnection - ${first_name}`,
       html: emailHtml,
     });
 

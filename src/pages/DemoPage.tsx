@@ -131,10 +131,10 @@ export const DemoPage = () => {
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-6 py-16 text-center">
         <h2 className="text-4xl font-bold text-slate-800 mb-6">
-          Explora PsiConnect en acción
+          Explora ProConnection en acción
         </h2>
         <p className="text-xl text-slate-600 mb-8 max-w-3xl mx-auto">
-          Descubre cómo PsiConnect puede transformar tu práctica profesional. 
+          Descubre cómo ProConnection puede transformar tu práctica profesional. 
           Haz clic en cualquier característica para conocer más detalles.
         </p>
       </section>
