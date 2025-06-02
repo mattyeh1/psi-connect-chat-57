@@ -14,7 +14,7 @@ interface ProfileSetupProps {
 }
 
 export const ProfileSetup = ({ userType, onComplete }: ProfileSetupProps) => {
-  const { createPatientProfile, forceRefresh } = useProfile();
+  const { createPatientProfile, forceRefresh, verifyProfileCompleteness } = useProfile();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [professionalCode, setProfessionalCode] = useState('');
@@ -115,7 +115,8 @@ export const ProfileSetup = ({ userType, onComplete }: ProfileSetupProps) => {
     setLoading(true);
     setError('');
 
-    console.log('Submitting profile setup for:', userType);
+    console.log('=== PROFILE SETUP SUBMIT START ===');
+    console.log('User type:', userType);
     console.log('Form data:', formData);
 
     try {
@@ -143,15 +144,30 @@ export const ProfileSetup = ({ userType, onComplete }: ProfileSetupProps) => {
         }
       }
 
-      console.log('Profile setup completed successfully');
+      console.log('=== PROFILE SETUP COMPLETED SUCCESSFULLY ===');
       
-      // Force refresh of profile data to clear cache
+      // Force complete cache refresh first
       forceRefresh();
       
-      // Small delay to ensure cache is updated before calling onComplete
-      setTimeout(() => {
-        onComplete();
-      }, 100);
+      // Wait a bit longer for cache to clear and then verify the profile was saved
+      setTimeout(async () => {
+        console.log('=== VERIFYING PROFILE COMPLETION ===');
+        
+        const isComplete = await verifyProfileCompleteness?.(userType);
+        console.log('Profile verification result:', isComplete);
+        
+        if (isComplete) {
+          console.log('Profile verified as complete, calling onComplete');
+          onComplete();
+        } else {
+          console.warn('Profile verification failed, trying again...');
+          // Try one more time with additional delay
+          setTimeout(() => {
+            console.log('Second attempt at completion');
+            onComplete();
+          }, 500);
+        }
+      }, 200);
       
     } catch (error: any) {
       console.error('Profile setup error:', error);

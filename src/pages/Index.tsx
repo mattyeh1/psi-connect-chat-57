@@ -27,9 +27,10 @@ type ViewType = "dashboard" | "patients" | "calendar" | "messages" | "affiliates
 
 export default function Index() {
   const { user, loading: authLoading } = useAuth();
-  const { profile, psychologist, patient, loading: profileLoading, error: profileError, forceRefresh } = useProfile();
+  const { profile, psychologist, patient, loading: profileLoading, error: profileError, forceRefresh, verifyProfileCompleteness } = useProfile();
   const [currentView, setCurrentView] = useState<ViewType>("dashboard");
   const [showTrialModal, setShowTrialModal] = useState(false);
+  const [profileCheckComplete, setProfileCheckComplete] = useState(false);
   const navigate = useNavigate();
 
   // Manejar verificación de email desde URL
@@ -79,8 +80,8 @@ export default function Index() {
     }
   }, [user, authLoading, navigate, psychologist, profile, profileError]);
 
-  // Función auxiliar para verificar si un perfil está completo
-  const isProfileComplete = (userType: string, profileData: any, roleData: any) => {
+  // Función mejorada para verificar si un perfil está completo
+  const isProfileComplete = async (userType: string, profileData: any, roleData: any) => {
     console.log('=== CHECKING PROFILE COMPLETION ===', {
       userType,
       hasProfileData: !!profileData,
@@ -90,15 +91,57 @@ export default function Index() {
     });
 
     if (!profileData || !roleData) {
-      console.log('Missing profile or role data');
+      console.log('Missing profile or role data, checking database directly...');
+      
+      // If cache data is missing, verify directly from database
+      if (verifyProfileCompleteness) {
+        const dbResult = await verifyProfileCompleteness(userType);
+        console.log('Database verification result:', dbResult);
+        
+        if (dbResult) {
+          console.log('Database shows profile is complete, but cache is stale. Forcing refresh...');
+          forceRefresh();
+          return true;
+        }
+      }
+      
       return false;
     }
 
     const hasRequiredNames = !!(roleData.first_name && roleData.last_name);
-    console.log('Has required names:', hasRequiredNames);
+    console.log('Profile completion check result:', {
+      hasRequiredNames,
+      firstName: roleData.first_name,
+      lastName: roleData.last_name
+    });
     
     return hasRequiredNames;
   };
+
+  // Efecto para verificar completitud del perfil cuando cambian los datos
+  useEffect(() => {
+    const checkProfileCompleteness = async () => {
+      if (!user || !profile || profileLoading) {
+        setProfileCheckComplete(false);
+        return;
+      }
+
+      console.log('=== PROFILE COMPLETENESS CHECK EFFECT ===');
+      
+      let isComplete = false;
+      
+      if (profile.user_type === 'psychologist') {
+        isComplete = await isProfileComplete('psychologist', profile, psychologist);
+      } else if (profile.user_type === 'patient') {
+        isComplete = await isProfileComplete('patient', profile, patient);
+      }
+      
+      console.log('Profile completeness result:', isComplete);
+      setProfileCheckComplete(isComplete);
+    };
+
+    checkProfileCompleteness();
+  }, [user, profile, psychologist, patient, profileLoading]);
 
   // Mostrar loading mientras se cargan auth y profile
   if (authLoading || (user && profileLoading)) {
@@ -144,30 +187,24 @@ export default function Index() {
     );
   }
 
-  // Show profile setup if psychologist profile needs completion
-  if (profile?.user_type === 'psychologist' && !isProfileComplete('psychologist', profile, psychologist)) {
-    console.log('=== SHOWING PSYCHOLOGIST SETUP ===');
+  // Show profile setup if profile needs completion
+  if (profile && !profileCheckComplete) {
+    console.log('=== SHOWING PROFILE SETUP ===', {
+      userType: profile.user_type,
+      profileCheckComplete
+    });
+    
     return (
       <ProfileSetup 
-        userType="psychologist" 
+        userType={profile.user_type as 'psychologist' | 'patient'} 
         onComplete={() => {
-          console.log('=== PSYCHOLOGIST SETUP COMPLETED ===');
+          console.log('=== PROFILE SETUP COMPLETED - FORCING REFRESH ===');
+          setProfileCheckComplete(true);
           forceRefresh();
-          setTimeout(() => window.location.reload(), 200);
-        }} 
-      />
-    );
-  }
-
-  if (profile?.user_type === 'patient' && !isProfileComplete('patient', profile, patient)) {
-    console.log('=== SHOWING PATIENT SETUP ===');
-    return (
-      <ProfileSetup 
-        userType="patient" 
-        onComplete={() => {
-          console.log('=== PATIENT SETUP COMPLETED ===');
-          forceRefresh();
-          setTimeout(() => window.location.reload(), 200);
+          // Small delay to ensure state updates
+          setTimeout(() => {
+            window.location.reload();
+          }, 500);
         }} 
       />
     );
@@ -179,7 +216,7 @@ export default function Index() {
   }
 
   // Check if we have a complete psychologist profile
-  if (!psychologist) {
+  if (!psychologist && profile?.user_type === 'psychologist') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
         <div className="text-center max-w-md">
