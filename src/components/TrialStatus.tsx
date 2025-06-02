@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Clock, CreditCard, AlertTriangle, Crown, Star } from 'lucide-react';
+import { Clock, CreditCard, AlertTriangle, Crown, Star, MessageCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
 import { usePlanCapabilities } from '@/hooks/usePlanCapabilities';
@@ -53,6 +52,13 @@ export const TrialStatus = () => {
     }
   };
 
+  const openWhatsApp = (message: string) => {
+    const phoneNumber = "5491144133576";
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
   if (loading) {
     return (
       <Card className="border-0 shadow-lg">
@@ -88,8 +94,9 @@ export const TrialStatus = () => {
             <Button 
               variant="outline" 
               className="border-purple-500 text-purple-600 hover:bg-purple-50"
+              onClick={() => openWhatsApp("Hola! Quiero actualizar mi plan Plus a Pro en ProConnection")}
             >
-              <Crown className="w-4 h-4 mr-2" />
+              <MessageCircle className="w-4 h-4 mr-2" />
               Actualizar a Pro
             </Button>
           )}
@@ -113,8 +120,11 @@ export const TrialStatus = () => {
             <p className="text-slate-600">
               Tu período de prueba ha terminado. Selecciona un plan para continuar usando ProConnection.
             </p>
-            <Button className="w-full bg-gradient-to-r from-blue-500 to-emerald-500 hover:shadow-lg">
-              <CreditCard className="w-4 h-4 mr-2" />
+            <Button 
+              className="w-full bg-gradient-to-r from-blue-500 to-emerald-500 hover:shadow-lg"
+              onClick={() => openWhatsApp("Hola! Mi trial en ProConnection ha expirado y quiero contratar un plan")}
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
               Ver Planes de Suscripción
             </Button>
           </div>
@@ -158,8 +168,9 @@ export const TrialStatus = () => {
             <Button 
               variant={isLastDays ? "default" : "outline"} 
               className={`w-full ${isLastDays ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:shadow-lg' : ''}`}
+              onClick={() => openWhatsApp("Hola! Quiero contratar un plan en ProConnection antes de que expire mi trial")}
             >
-              <CreditCard className="w-4 h-4 mr-2" />
+              <MessageCircle className="w-4 h-4 mr-2" />
               {isLastDays ? 'Seleccionar Plan Ahora' : 'Ver Planes de Suscripción'}
             </Button>
           </div>
