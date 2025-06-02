@@ -1,16 +1,20 @@
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
-import { Shield, LogOut, Users, Database, Settings, Activity } from 'lucide-react';
+import { Shield, LogOut, Users, Database, Settings, Activity, UserPlus } from 'lucide-react';
 import { AdminPanel } from '@/components/AdminPanel';
+import { AffiliateAdminPanel } from '@/components/AffiliateAdminPanel';
+
+type AdminSection = 'users' | 'affiliates' | 'database' | 'statistics' | 'settings';
 
 export const AdminDashboard = () => {
   const { user, signOut } = useAuth();
   const { isAdmin, loading } = useAdmin();
   const navigate = useNavigate();
+  const [activeSection, setActiveSection] = useState<AdminSection>('users');
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
@@ -37,6 +41,71 @@ export const AdminDashboard = () => {
   if (!user || !isAdmin) {
     return null;
   }
+
+  const navigationItems = [
+    {
+      id: 'users' as AdminSection,
+      label: 'Gestión de Usuarios',
+      icon: Users,
+      isActive: activeSection === 'users'
+    },
+    {
+      id: 'affiliates' as AdminSection,
+      label: 'Sistema de Afiliados',
+      icon: UserPlus,
+      isActive: activeSection === 'affiliates'
+    },
+    {
+      id: 'database' as AdminSection,
+      label: 'Base de Datos',
+      icon: Database,
+      isActive: activeSection === 'database'
+    },
+    {
+      id: 'statistics' as AdminSection,
+      label: 'Estadísticas',
+      icon: Activity,
+      isActive: activeSection === 'statistics'
+    },
+    {
+      id: 'settings' as AdminSection,
+      label: 'Configuración',
+      icon: Settings,
+      isActive: activeSection === 'settings'
+    }
+  ];
+
+  const renderContent = () => {
+    switch (activeSection) {
+      case 'users':
+        return <AdminPanel />;
+      case 'affiliates':
+        return <AffiliateAdminPanel />;
+      case 'database':
+        return (
+          <div className="text-center py-8">
+            <Database className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+            <p className="text-gray-600">Sección de Base de Datos - Próximamente</p>
+          </div>
+        );
+      case 'statistics':
+        return (
+          <div className="text-center py-8">
+            <Activity className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+            <p className="text-gray-600">Sección de Estadísticas - Próximamente</p>
+          </div>
+        );
+      case 'settings':
+        return (
+          <div className="text-center py-8">
+            <Settings className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+            <p className="text-gray-600">Sección de Configuración - Próximamente</p>
+          </div>
+        );
+      default:
+        return <AdminPanel />;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-purple-50">
@@ -81,29 +150,27 @@ export const AdminDashboard = () => {
       <div className="bg-white border-b border-gray-200">
         <div className="px-6 py-3">
           <div className="flex gap-6">
-            <div className="flex items-center gap-2 text-purple-600 border-b-2 border-purple-600 pb-3">
-              <Users className="w-4 h-4" />
-              <span className="font-medium">Gestión de Usuarios</span>
-            </div>
-            <div className="flex items-center gap-2 text-gray-500 pb-3">
-              <Database className="w-4 h-4" />
-              <span>Base de Datos</span>
-            </div>
-            <div className="flex items-center gap-2 text-gray-500 pb-3">
-              <Activity className="w-4 h-4" />
-              <span>Estadísticas</span>
-            </div>
-            <div className="flex items-center gap-2 text-gray-500 pb-3">
-              <Settings className="w-4 h-4" />
-              <span>Configuración</span>
-            </div>
+            {navigationItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setActiveSection(item.id)}
+                className={`flex items-center gap-2 pb-3 ${
+                  item.isActive
+                    ? 'text-purple-600 border-b-2 border-purple-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <item.icon className="w-4 h-4" />
+                <span className={item.isActive ? 'font-medium' : ''}>{item.label}</span>
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
       {/* Contenido principal */}
       <main className="p-6">
-        <AdminPanel />
+        {renderContent()}
       </main>
     </div>
   );
