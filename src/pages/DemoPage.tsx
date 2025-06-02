@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, MessageCircle, Users, Video, ClipboardList, Shield, ArrowLeft, Play, Pause, RotateCcw } from "lucide-react";
@@ -15,6 +14,7 @@ export const DemoPage = () => {
       description: "Sistema inteligente para programar y gestionar citas con tus pacientes",
       icon: Calendar,
       color: "orange",
+      hideFade: true,
       steps: [
         "Selecciona fecha y hora disponible en el calendario",
         "El sistema verifica automáticamente conflictos horarios",
@@ -80,6 +80,7 @@ export const DemoPage = () => {
       description: "Cumplimiento total con regulaciones de privacidad médica",
       icon: Shield,
       color: "red",
+      hideFade: true,
       steps: [
         "Cifrado de extremo a extremo para todos los datos",
         "Autenticación segura con verificación de identidad",
@@ -146,10 +147,13 @@ export const DemoPage = () => {
             {demoFeatures.map((feature) => (
               <Card 
                 key={feature.id}
-                className="border-0 shadow-lg hover:shadow-2xl transition-all duration-500 group hover:scale-105 hover:-translate-y-2 cursor-pointer"
+                className="border-0 shadow-lg hover:shadow-2xl transition-all duration-500 group hover:scale-105 hover:-translate-y-2 cursor-pointer relative overflow-hidden"
                 onClick={() => startDemo(feature.id)}
               >
-                <CardHeader className="text-center">
+                {!feature.hideFade && (
+                  <div className={`absolute inset-0 bg-gradient-to-br from-${feature.color}-50 to-transparent opacity-20 group-hover:opacity-30 transition-opacity duration-300`} />
+                )}
+                <CardHeader className="text-center relative z-10">
                   <div className={`w-16 h-16 bg-gradient-to-r from-${feature.color}-500 to-${feature.color}-600 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300`}>
                     <feature.icon className="w-8 h-8 text-white" />
                   </div>
@@ -157,7 +161,7 @@ export const DemoPage = () => {
                     {feature.title}
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="relative z-10">
                   <p className="text-slate-600 text-center mb-4">
                     {feature.description}
                   </p>
