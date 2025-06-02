@@ -1,8 +1,10 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Heart, Shield, Users, MessageCircle, Calendar, Star, CheckCircle, Award, TrendingUp, Clock, Globe, Zap, Crown } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ScrollAnimationWrapper } from "@/components/ScrollAnimationWrapper";
+
 export const LandingPage = () => {
   return <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header */}
@@ -78,7 +80,7 @@ export const LandingPage = () => {
           {/* Hero Image */}
           <ScrollAnimationWrapper animation="fade-scale" delay={600}>
             <div className="relative group">
-              <img src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" alt="Profesional de la salud mental usando ProConnection" className="rounded-2xl shadow-2xl mx-auto max-w-4xl w-full transform group-hover:scale-105 transition-all duration-500 group-hover:shadow-3xl" />
+              <img src="/lovable-uploads/befe2e15-db81-4d89-805b-b994227673d5.png" alt="Profesional de la salud mental usando ProConnection" className="rounded-2xl shadow-2xl mx-auto max-w-4xl w-full transform group-hover:scale-105 transition-all duration-500 group-hover:shadow-3xl" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-2xl group-hover:from-black/10 transition-all duration-500"></div>
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-emerald-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             </div>
