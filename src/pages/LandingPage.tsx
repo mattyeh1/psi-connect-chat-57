@@ -449,7 +449,7 @@ export const LandingPage = () => {
                   <Star className="w-6 h-6 text-blue-500" />
                   Plan Plus
                 </CardTitle>
-                <div className="text-4xl font-bold text-slate-800 group-hover:scale-110 transition-transform duration-300">$100.000</div>
+                <div className="text-4xl font-bold text-slate-800 group-hover:scale-110 transition-transform duration-300">$99.999</div>
                 <div className="text-slate-600">/mes</div>
               </CardHeader>
               <CardContent>
@@ -494,7 +494,7 @@ export const LandingPage = () => {
                   <Crown className="w-6 h-6 text-purple-500" />
                   Plan Pro
                 </CardTitle>
-                <div className="text-4xl font-bold text-slate-800 group-hover:scale-110 transition-transform duration-300">$150.000</div>
+                <div className="text-4xl font-bold text-slate-800 group-hover:scale-110 transition-transform duration-300">$149.999</div>
                 <div className="text-slate-600">/mes</div>
               </CardHeader>
               <CardContent>
