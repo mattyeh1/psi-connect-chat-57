@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Heart, Shield, Users, MessageCircle, Calendar, Star, CheckCircle, Award, TrendingUp, Clock, Globe, Zap, Crown } from "lucide-react";
@@ -177,9 +176,7 @@ export const LandingPage = () => {
           delay: 500
         }].map((feature, index) => <ScrollAnimationWrapper key={index} animation="fade-scale" delay={feature.delay}>
               <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-500 group hover:scale-105 hover:-translate-y-2 cursor-pointer relative overflow-hidden">
-                {!feature.hideFade && (
-                  <div className={`absolute inset-0 bg-gradient-to-br from-${feature.color}-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500`}></div>
-                )}
+                {!feature.hideFade && <div className={`absolute inset-0 bg-gradient-to-br from-${feature.color}-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500`}></div>}
                 <CardHeader className="text-center relative z-10">
                   <div className={`w-16 h-16 bg-gradient-to-r from-${feature.color}-500 to-${feature.color}-600 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300`}>
                     <feature.icon className="w-8 h-8 text-white group-hover:animate-pulse" />
@@ -458,7 +455,7 @@ export const LandingPage = () => {
                 </span>
               </div>
               <CardHeader className="text-center pb-8">
-                <CardTitle className="text-2xl mb-2 group-hover:text-purple-600 transition-colors duration-300 flex items-center justify-center gap-2 px-0 mx-0 my-[25px]">
+                <CardTitle className="text-2xl mb-2 group-hover:text-purple-600 transition-colors duration-300 flex items-center justify-center gap-2 px-0 mx-0 my-[6px]">
                   <Crown className="w-6 h-6 text-purple-500" />
                   Plan Pro
                 </CardTitle>
