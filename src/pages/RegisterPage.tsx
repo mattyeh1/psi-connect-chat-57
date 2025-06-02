@@ -134,11 +134,13 @@ export const RegisterPage = () => {
           </div>
         </div>
 
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-            
-            {/* Referral Info Card */}
-            {referralCode && (
+        {/* Main Content Area */}
+        {referralCode ? (
+          // Layout with referral code (2 columns)
+          <div className="max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+              
+              {/* Referral Info Card */}
               <div className="lg:order-1">
                 <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-green-50 shadow-xl">
                   <CardHeader className="text-center">
@@ -226,16 +228,23 @@ export const RegisterPage = () => {
                   </CardContent>
                 </Card>
               </div>
-            )}
 
-            {/* Auth Component - Solo mostrar cuando la validación esté completa */}
-            {(!referralCode || codeValidationComplete) && (
-              <div className={`${referralCode ? 'lg:order-2' : 'mx-auto'}`}>
-                <AuthPage affiliateCode={referralCode} registrationOnly={true} />
-              </div>
-            )}
+              {/* Auth Component */}
+              {(!referralCode || codeValidationComplete) && (
+                <div className="lg:order-2">
+                  <AuthPage affiliateCode={referralCode} registrationOnly={true} />
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        ) : (
+          // Centered layout without referral code
+          <div className="max-w-lg mx-auto">
+            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+              <AuthPage affiliateCode={null} registrationOnly={true} />
+            </div>
+          </div>
+        )}
 
         {/* Enhanced Features Section with Trial Benefits */}
         <div className="max-w-4xl mx-auto mt-16">
