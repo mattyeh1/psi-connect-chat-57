@@ -1,9 +1,18 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Heart, Shield, Users, MessageCircle, Calendar, Star, CheckCircle, Award, TrendingUp, Clock, Globe, Zap, Crown } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ScrollAnimationWrapper } from "@/components/ScrollAnimationWrapper";
+
 export const LandingPage = () => {
+  const openWhatsApp = (plan: string) => {
+    const phoneNumber = "5491144133576";
+    const message = encodeURIComponent(`Hola! Me interesa el ${plan} de ProConnection. ¿Podrían darme más información?`);
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
   return <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-md shadow-sm border-b border-slate-200 sticky top-0 z-50 transition-all duration-300">
@@ -440,7 +449,11 @@ export const LandingPage = () => {
                     <span>Hub de mensajería básico</span>
                   </li>
                 </ul>
-                <Button className="w-full hover:scale-105 transition-all duration-300 bg-gradient-to-r from-blue-500 to-emerald-500 hover:from-blue-600 hover:to-emerald-600">
+                <Button 
+                  onClick={() => openWhatsApp('Plan Plus')}
+                  className="w-full hover:scale-105 transition-all duration-300 bg-gradient-to-r from-blue-500 to-emerald-500 hover:from-blue-600 hover:to-emerald-600"
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" />
                   Empezar Prueba Gratuita
                 </Button>
               </CardContent>
@@ -499,8 +512,11 @@ export const LandingPage = () => {
                     <span>Consultoría de visibilidad</span>
                   </li>
                 </ul>
-                <Button className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 hover:scale-105 transition-all duration-300 group-hover:shadow-xl">
-                  <Crown className="w-4 h-4 mr-2" />
+                <Button 
+                  onClick={() => openWhatsApp('Plan Pro')}
+                  className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 hover:scale-105 transition-all duration-300 group-hover:shadow-xl"
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" />
                   Suscribirse a Pro
                 </Button>
               </CardContent>
