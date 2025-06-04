@@ -1,7 +1,8 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useProfile } from "@/hooks/useProfile";
+import { useOptimizedProfile } from "@/hooks/useOptimizedProfile";
+import { useUnifiedDashboardStats } from "@/hooks/useUnifiedDashboardStats";
 import { useEmailVerification } from "@/hooks/useEmailVerification";
 import { useNavigate } from "react-router-dom";
 import { Dashboard } from "@/components/Dashboard";
@@ -27,12 +28,13 @@ type ViewType = "dashboard" | "patients" | "calendar" | "messages" | "affiliates
 
 export default function Index() {
   const { user, loading: authLoading } = useAuth();
-  const { profile, psychologist, patient, loading: profileLoading, error: profileError, forceRefresh } = useProfile();
+  const { profile, psychologist, patient, loading: profileLoading, error: profileError, forceRefresh } = useOptimizedProfile();
+  const unifiedStats = useUnifiedDashboardStats(psychologist?.id);
   const [currentView, setCurrentView] = useState<ViewType>("dashboard");
   const [showTrialModal, setShowTrialModal] = useState(false);
   const navigate = useNavigate();
 
-  // Manejar verificación de email desde URL
+  // Handle email verification from URL
   useEmailVerification();
 
   // Basic logging for debugging
@@ -43,12 +45,14 @@ export default function Index() {
       hasUser: !!user,
       hasProfile: !!profile,
       profileUserType: profile?.user_type,
-      profileError
+      profileError,
+      psychologistName: unifiedStats.psychologistName,
+      planType: unifiedStats.planType
     });
-  }, [user, authLoading, profile, profileLoading, profileError]);
+  }, [user, authLoading, profile, profileLoading, profileError, unifiedStats]);
 
   useEffect(() => {
-    // Verificar si el trial ha expirado usando la función de Supabase
+    // Check trial status using Supabase function
     const checkTrialStatus = async () => {
       if (psychologist?.id) {
         try {
@@ -93,24 +97,31 @@ export default function Index() {
     );
   }
 
-  // Si no hay usuario después de auth, mostrar landing
+  // If no user after auth, show landing
   if (!user) {
     return <LandingPage />;
   }
 
-  // Profile loading only when we have user but loading profile
-  if (profileLoading) {
+  // Show optimized loading with better progress indicators
+  if (profileLoading || unifiedStats.profileLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600">Cargando perfil del usuario...</p>
+          <p className="text-slate-600">
+            {profileLoading ? 'Cargando perfil...' : 'Cargando información del profesional...'}
+          </p>
+          {unifiedStats.psychologistName && (
+            <p className="text-sm text-slate-500 mt-2">
+              Hola, {unifiedStats.psychologistName}
+            </p>
+          )}
         </div>
       </div>
     );
   }
 
-  // Si hay error de perfil
+  // If profile error
   if (profileError) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
@@ -134,7 +145,7 @@ export default function Index() {
     );
   }
 
-  // Si hay usuario pero no hay perfil después de cargar
+  // If user but no profile after loading
   if (!profile) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
@@ -210,8 +221,13 @@ export default function Index() {
               <SidebarTrigger className="-ml-1" />
               <div className="ml-auto flex items-center space-x-4">
                 <span className="text-sm text-muted-foreground">
-                  {psychologist?.first_name || 'Cargando...'} {psychologist?.last_name || ''}
+                  {unifiedStats.psychologistName || 'Cargando...'}
                 </span>
+                {unifiedStats.planType && (
+                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                    {unifiedStats.planType.toUpperCase()}
+                  </span>
+                )}
               </div>
             </header>
             <div className="flex flex-1 flex-col gap-4 p-4">
@@ -226,7 +242,7 @@ export default function Index() {
     );
   }
 
-  // FALLBACK FINAL - esto indica un problema
+  // FALLBACK FINAL
   console.error('Unexpected state reached:', {
     hasUser: !!user,
     hasProfile: !!profile,
