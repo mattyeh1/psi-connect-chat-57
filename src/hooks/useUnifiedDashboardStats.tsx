@@ -60,87 +60,126 @@ export const useUnifiedDashboardStats = (psychologistId?: string) => {
 
       if (psychError) {
         console.error('Error fetching psychologist info:', psychError);
-      } else {
         setStats(prev => ({
           ...prev,
-          psychologistName: `${psychData.first_name} ${psychData.last_name}`,
-          planType: psychData.plan_type || 'plus',
-          subscriptionStatus: psychData.subscription_status || 'trial',
-          profileLoading: false
+          profileLoading: false,
+          error: 'Error cargando información del profesional'
         }));
+        return;
       }
 
-      // Then fetch stats in the background (can be slower)
+      // Update basic info immediately
+      setStats(prev => ({
+        ...prev,
+        psychologistName: `${psychData.first_name} ${psychData.last_name}`,
+        planType: psychData.plan_type || 'plus',
+        subscriptionStatus: psychData.subscription_status || 'trial',
+        profileLoading: false
+      }));
+
+      // Then fetch stats in the background with timeout
       const today = new Date();
       const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 
-      // Parallel queries for stats
-      const [appointmentsResult, patientsResult, conversationsResult] = await Promise.allSettled([
-        supabase
+      // Use Promise.race to add timeout to queries
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Query timeout')), 10000)
+      );
+
+      try {
+        // Fetch appointment count with timeout
+        const appointmentsPromise = supabase
           .from('appointments')
           .select('id', { count: 'exact', head: true })
           .eq('psychologist_id', psychologistId)
           .gte('appointment_date', startOfDay.toISOString())
           .lt('appointment_date', endOfDay.toISOString())
-          .in('status', ['scheduled', 'confirmed', 'accepted']),
+          .in('status', ['scheduled', 'confirmed', 'accepted']);
+
+        const appointmentsResult = await Promise.race([appointmentsPromise, timeoutPromise]);
         
-        supabase
+        // Fetch patients count with timeout
+        const patientsPromise = supabase
           .from('patients')
           .select('id', { count: 'exact', head: true })
-          .eq('psychologist_id', psychologistId),
-        
-        supabase
-          .from('conversations')
-          .select('id')
-          .eq('psychologist_id', psychologistId)
-      ]);
+          .eq('psychologist_id', psychologistId);
 
-      let todayAppointments = 0;
-      let activePatients = 0;
-      let unreadMessages = 0;
+        const patientsResult = await Promise.race([patientsPromise, timeoutPromise]);
 
-      if (appointmentsResult.status === 'fulfilled' && !appointmentsResult.value.error) {
-        todayAppointments = appointmentsResult.value.count || 0;
-      }
+        let todayAppointments = 0;
+        let activePatients = 0;
+        let unreadMessages = 0;
 
-      if (patientsResult.status === 'fulfilled' && !patientsResult.value.error) {
-        activePatients = patientsResult.value.count || 0;
-      }
-
-      if (conversationsResult.status === 'fulfilled' && !conversationsResult.value.error) {
-        const conversations = conversationsResult.value.data || [];
-        if (conversations.length > 0) {
-          const conversationIds = conversations.map(c => c.id);
-          
-          const { data: unreadMessagesData } = await supabase
-            .from('messages')
-            .select('id', { count: 'exact', head: true })
-            .in('conversation_id', conversationIds)
-            .neq('sender_id', psychologistId)
-            .is('read_at', null);
-
-          unreadMessages = unreadMessagesData?.count || 0;
+        if (!appointmentsResult.error) {
+          todayAppointments = appointmentsResult.count || 0;
         }
+
+        if (!patientsResult.error) {
+          activePatients = patientsResult.count || 0;
+        }
+
+        // For messages, use a simpler approach to avoid hanging
+        try {
+          const { data: conversations } = await Promise.race([
+            supabase
+              .from('conversations')
+              .select('id')
+              .eq('psychologist_id', psychologistId)
+              .limit(10),
+            timeoutPromise
+          ]);
+
+          if (conversations && conversations.length > 0) {
+            const conversationIds = conversations.map(c => c.id);
+            
+            const { data: unreadData } = await Promise.race([
+              supabase
+                .from('messages')
+                .select('id', { count: 'exact', head: true })
+                .in('conversation_id', conversationIds)
+                .neq('sender_id', psychologistId)
+                .is('read_at', null),
+              timeoutPromise
+            ]);
+
+            unreadMessages = unreadData?.count || 0;
+          }
+        } catch (error) {
+          console.log('Messages query timeout, setting to 0');
+          unreadMessages = 0;
+        }
+
+        setStats(prev => ({
+          ...prev,
+          todayAppointments,
+          activePatients,
+          unreadMessages,
+          statsLoading: false,
+          error: null
+        }));
+
+        console.log('Unified stats loaded successfully');
+
+      } catch (error) {
+        console.log('Stats queries timeout, using default values');
+        setStats(prev => ({
+          ...prev,
+          statsLoading: false,
+          todayAppointments: 0,
+          activePatients: 0,
+          unreadMessages: 0,
+          error: null
+        }));
       }
-
-      setStats(prev => ({
-        ...prev,
-        todayAppointments,
-        activePatients,
-        unreadMessages,
-        statsLoading: false,
-        error: null
-      }));
-
-      console.log('Unified stats loaded successfully');
 
     } catch (error) {
       console.error('Error fetching unified stats:', error);
       setStats(prev => ({
         ...prev,
+        profileLoading: false,
         statsLoading: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Error desconocido'
       }));
     }
   };

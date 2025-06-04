@@ -27,7 +27,11 @@ interface OptimizedDashboardProps {
 }
 
 export const OptimizedDashboard = ({ onViewChange, psychologistId, psychologistName, planType }: OptimizedDashboardProps) => {
-  const { todayAppointments, activePatients, unreadMessages, statsLoading } = useUnifiedDashboardStats(psychologistId);
+  const { todayAppointments, activePatients, unreadMessages, statsLoading, psychologistName: statsName, planType: statsPlan } = useUnifiedDashboardStats(psychologistId);
+
+  // Use fallback values from props if stats haven't loaded yet
+  const displayName = statsName || psychologistName || 'Profesional';
+  const displayPlan = statsPlan || planType || 'plus';
 
   const quickActions = [
     {
@@ -69,11 +73,11 @@ export const OptimizedDashboard = ({ onViewChange, psychologistId, psychologistN
             Dashboard Profesional
           </h1>
           <p className="text-sm sm:text-base text-slate-600">
-            Bienvenido, {psychologistName || 'Cargando...'}
+            Bienvenido, {displayName}
           </p>
         </div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-          {planType && <PlanBadge />}
+          {displayPlan && <PlanBadge />}
           <TrialStatus />
         </div>
       </div>
@@ -138,9 +142,7 @@ export const OptimizedDashboard = ({ onViewChange, psychologistId, psychologistN
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs sm:text-sm font-medium text-slate-600">Tasa de Respuesta</p>
-                <p className="text-2xl sm:text-3xl font-bold text-slate-800">
-                  {statsLoading ? "..." : "95%"}
-                </p>
+                <p className="text-2xl sm:text-3xl font-bold text-slate-800">95%</p>
                 <Badge variant="secondary" className="mt-1 text-xs">
                   <TrendingUp className="w-3 h-3 mr-1" />
                   Promedio semanal

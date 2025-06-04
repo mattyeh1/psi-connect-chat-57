@@ -37,7 +37,7 @@ export default function Index() {
   // Handle email verification from URL
   useEmailVerification();
 
-  // Basic logging for debugging
+  // Simplified logging for debugging
   useEffect(() => {
     console.log('Index state:', {
       authLoading,
@@ -47,7 +47,9 @@ export default function Index() {
       profileUserType: profile?.user_type,
       profileError,
       psychologistName: unifiedStats.psychologistName,
-      planType: unifiedStats.planType
+      planType: unifiedStats.planType,
+      profileStatsLoading: unifiedStats.profileLoading,
+      dashboardStatsLoading: unifiedStats.statsLoading
     });
   }, [user, authLoading, profile, profileLoading, profileError, unifiedStats]);
 
@@ -102,20 +104,13 @@ export default function Index() {
     return <LandingPage />;
   }
 
-  // Show optimized loading with better progress indicators
-  if (profileLoading || unifiedStats.profileLoading) {
+  // Show loading only while profile is loading (not stats)
+  if (profileLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600">
-            {profileLoading ? 'Cargando perfil...' : 'Cargando información del profesional...'}
-          </p>
-          {unifiedStats.psychologistName && (
-            <p className="text-sm text-slate-500 mt-2">
-              Hola, {unifiedStats.psychologistName}
-            </p>
-          )}
+          <p className="text-slate-600">Cargando perfil...</p>
         </div>
       </div>
     );
@@ -181,7 +176,7 @@ export default function Index() {
     return null;
   }
 
-  // Psychologist dashboard
+  // Psychologist dashboard - Now loads immediately when profile is ready
   if (profile.user_type === 'psychologist') {
     const renderCurrentView = () => {
       switch (currentView) {
@@ -221,11 +216,11 @@ export default function Index() {
               <SidebarTrigger className="-ml-1" />
               <div className="ml-auto flex items-center space-x-4">
                 <span className="text-sm text-muted-foreground">
-                  {unifiedStats.psychologistName || 'Cargando...'}
+                  {unifiedStats.psychologistName || psychologist?.first_name + ' ' + psychologist?.last_name || 'Profesional'}
                 </span>
-                {unifiedStats.planType && (
+                {(unifiedStats.planType || psychologist?.plan_type) && (
                   <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                    {unifiedStats.planType.toUpperCase()}
+                    {(unifiedStats.planType || psychologist?.plan_type)?.toUpperCase()}
                   </span>
                 )}
               </div>
