@@ -1,173 +1,175 @@
 
-import { useState, useRef } from "react";
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
-import { Upload, File, X, Eye } from "lucide-react";
-import { usePaymentProof } from "@/hooks/usePaymentProof";
+import { usePaymentProof } from '@/hooks/usePaymentProof';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+import { Upload, FileText, CheckCircle } from 'lucide-react';
 
 interface PaymentProofUploaderProps {
   psychologistId: string;
   patientId: string;
-  onUploadComplete: (url: string) => void;
-  currentProofUrl?: string;
+  onUploadComplete?: () => void;
 }
 
-export const PaymentProofUploader = ({ 
-  psychologistId, 
-  patientId, 
-  onUploadComplete,
-  currentProofUrl 
-}: PaymentProofUploaderProps) => {
+export const PaymentProofUploader: React.FC<PaymentProofUploaderProps> = ({
+  psychologistId,
+  patientId,
+  onUploadComplete
+}) => {
   const { uploadPaymentProof, uploading } = usePaymentProof();
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dragActive, setDragActive] = useState(false);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileUpload(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    if (e.target.files && e.target.files[0]) {
+      handleFileUpload(e.target.files[0]);
+    }
+  };
+
+  const handleFileUpload = async (file: File) => {
+    try {
+      // Subir archivo usando el hook existente
+      const fileUrl = await uploadPaymentProof(file, psychologistId, patientId);
       
-      // Crear preview para imágenes
-      if (file.type.startsWith('image/')) {
-        const url = URL.createObjectURL(file);
-        setPreviewUrl(url);
-      } else {
-        setPreviewUrl(null);
+      if (fileUrl) {
+        // Crear registro en payment_receipts
+        const { data, error } = await supabase
+          .from('payment_receipts')
+          .insert({
+            psychologist_id: psychologistId,
+            patient_id: patientId,
+            original_file_url: fileUrl,
+            extraction_status: 'pending',
+            validation_status: 'pending'
+          })
+          .select()
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        // Iniciar procesamiento OCR
+        const { error: ocrError } = await supabase.functions.invoke('process-receipt-ocr', {
+          body: { 
+            fileUrl: fileUrl, 
+            receiptId: data.id 
+          }
+        });
+
+        if (ocrError) {
+          console.error('Error iniciando OCR:', ocrError);
+          // No lanzamos error aquí porque el archivo ya se subió exitosamente
+        }
+
+        toast({
+          title: "Comprobante subido exitosamente",
+          description: "El comprobante está siendo procesado automáticamente. El profesional lo revisará pronto.",
+        });
+
+        onUploadComplete?.();
       }
+    } catch (error) {
+      console.error('Error uploading payment proof:', error);
+      toast({
+        title: "Error al subir comprobante",
+        description: error instanceof Error ? error.message : 'Error desconocido',
+        variant: "destructive",
+      });
     }
-  };
-
-  const handleUpload = async () => {
-    if (!selectedFile) return;
-
-    const url = await uploadPaymentProof(selectedFile, psychologistId, patientId);
-    if (url) {
-      onUploadComplete(url);
-      setSelectedFile(null);
-      setPreviewUrl(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
-
-  const handleRemoveFile = () => {
-    setSelectedFile(null);
-    setPreviewUrl(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  const openFileViewer = (url: string) => {
-    // Con Supabase Storage, simplemente abrimos la URL directamente
-    window.open(url, '_blank');
   };
 
   return (
-    <div className="space-y-4">
-      <div>
-        <Label htmlFor="paymentProof">Comprobante de Pago *</Label>
-        <p className="text-sm text-slate-600 mb-2">
-          Sube una imagen o PDF de tu comprobante de pago (máximo 5MB)
-        </p>
-        
-        {/* Mostrar comprobante actual si existe */}
-        {currentProofUrl && !selectedFile && (
-          <Card className="border-emerald-200 bg-emerald-50 mb-4">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <File className="w-5 h-5 text-emerald-600" />
-                  <span className="text-sm font-medium text-emerald-800">
-                    Comprobante subido
-                  </span>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => openFileViewer(currentProofUrl)}
-                  className="border-emerald-200 text-emerald-700 hover:bg-emerald-100"
-                >
-                  <Eye className="w-4 h-4 mr-1" />
-                  Ver
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-emerald-400 transition-colors">
-          <input
-            ref={fileInputRef}
-            id="paymentProof"
-            type="file"
-            accept=".pdf,.jpg,.jpeg,.png"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-          
-          {!selectedFile ? (
-            <div>
-              <Upload className="w-12 h-12 mx-auto mb-4 text-slate-400" />
-              <p className="text-slate-600 mb-2">
-                Arrastra tu archivo aquí o haz clic para seleccionar
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                Seleccionar Archivo
-              </Button>
-              <p className="text-xs text-slate-500 mt-2">
-                Formatos permitidos: PDF, JPG, PNG (máx. 5MB)
-              </p>
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <FileText className="w-5 h-5" />
+          Subir Comprobante de Pago
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div
+          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+            dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+          }`}
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+        >
+          {uploading ? (
+            <div className="space-y-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+              <p className="text-slate-600">Subiendo y procesando comprobante...</p>
             </div>
           ) : (
-            <div>
-              <div className="flex items-center justify-center gap-2 mb-4">
-                <File className="w-8 h-8 text-emerald-600" />
-                <div className="text-left">
-                  <p className="font-medium text-slate-800">{selectedFile.name}</p>
-                  <p className="text-sm text-slate-600">
-                    {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleRemoveFile}
-                  className="ml-2"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
+            <div className="space-y-4">
+              <Upload className="w-12 h-12 text-slate-400 mx-auto" />
+              <div>
+                <p className="text-lg font-medium text-slate-700">
+                  Arrastra tu comprobante aquí o haz clic para seleccionar
+                </p>
+                <p className="text-sm text-slate-500 mt-2">
+                  Formatos aceptados: PDF, JPG, PNG (máximo 5MB)
+                </p>
               </div>
-
-              {/* Preview para imágenes */}
-              {previewUrl && (
-                <div className="mb-4">
-                  <img
-                    src={previewUrl}
-                    alt="Preview"
-                    className="max-w-full max-h-64 mx-auto rounded-lg shadow-md"
-                  />
-                </div>
-              )}
-
-              <Button
-                onClick={handleUpload}
+              
+              <input
+                type="file"
+                id="file-upload"
+                className="hidden"
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={handleChange}
                 disabled={uploading}
-                className="bg-emerald-600 hover:bg-emerald-700"
+              />
+              
+              <label
+                htmlFor="file-upload"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer transition-colors"
               >
-                {uploading ? "Subiendo..." : "Subir Comprobante"}
-              </Button>
+                <Upload className="w-4 h-4 mr-2" />
+                Seleccionar archivo
+              </label>
             </div>
           )}
         </div>
-      </div>
-    </div>
+
+        <div className="mt-6 bg-green-50 p-4 rounded-lg border border-green-200">
+          <div className="flex items-start gap-3">
+            <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+            <div>
+              <h4 className="font-medium text-green-800">Procesamiento automático</h4>
+              <p className="text-sm text-green-700 mt-1">
+                Una vez subido, el comprobante será procesado automáticamente para extraer:
+                fecha, monto, tipo de factura y método de pago. El profesional revisará 
+                y validará los datos antes de incluirlos en los reportes mensuales.
+              </p>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };

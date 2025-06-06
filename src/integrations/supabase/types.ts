@@ -9,6 +9,79 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      accounting_reports: {
+        Row: {
+          amount_by_payment_method: Json
+          annual_accumulated: number
+          created_at: string
+          generation_date: string | null
+          id: string
+          psychologist_id: string
+          report_file_url: string | null
+          report_month: number
+          report_year: number
+          sent_date: string | null
+          status: string
+          total_amount: number
+          total_receipts: number
+          updated_at: string
+        }
+        Insert: {
+          amount_by_payment_method?: Json
+          annual_accumulated?: number
+          created_at?: string
+          generation_date?: string | null
+          id?: string
+          psychologist_id: string
+          report_file_url?: string | null
+          report_month: number
+          report_year: number
+          sent_date?: string | null
+          status?: string
+          total_amount?: number
+          total_receipts?: number
+          updated_at?: string
+        }
+        Update: {
+          amount_by_payment_method?: Json
+          annual_accumulated?: number
+          created_at?: string
+          generation_date?: string | null
+          id?: string
+          psychologist_id?: string
+          report_file_url?: string | null
+          report_month?: number
+          report_year?: number
+          sent_date?: string | null
+          status?: string
+          total_amount?: number
+          total_receipts?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounting_reports_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_admin_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounting_reports_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "psychologist_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounting_reports_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "psychologists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admins: {
         Row: {
           created_at: string | null
@@ -490,6 +563,39 @@ export type Database = {
           },
         ]
       }
+      monotax_categories: {
+        Row: {
+          annual_limit: number
+          category_code: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          monthly_limit: number
+          updated_at: string
+        }
+        Insert: {
+          annual_limit: number
+          category_code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          monthly_limit: number
+          updated_at?: string
+        }
+        Update: {
+          annual_limit?: number
+          category_code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          monthly_limit?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       patient_documents: {
         Row: {
           content: Json
@@ -605,6 +711,101 @@ export type Database = {
           },
           {
             foreignKeyName: "patients_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "psychologists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_receipts: {
+        Row: {
+          amount: number | null
+          created_at: string
+          extracted_data: Json | null
+          extraction_status: string
+          id: string
+          include_in_report: boolean
+          original_file_url: string
+          patient_cuit: string | null
+          patient_id: string | null
+          payment_method: string | null
+          psychologist_id: string
+          receipt_date: string | null
+          receipt_number: string | null
+          receipt_type: string | null
+          updated_at: string
+          validated_at: string | null
+          validated_by: string | null
+          validation_notes: string | null
+          validation_status: string
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          extracted_data?: Json | null
+          extraction_status?: string
+          id?: string
+          include_in_report?: boolean
+          original_file_url: string
+          patient_cuit?: string | null
+          patient_id?: string | null
+          payment_method?: string | null
+          psychologist_id: string
+          receipt_date?: string | null
+          receipt_number?: string | null
+          receipt_type?: string | null
+          updated_at?: string
+          validated_at?: string | null
+          validated_by?: string | null
+          validation_notes?: string | null
+          validation_status?: string
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          extracted_data?: Json | null
+          extraction_status?: string
+          id?: string
+          include_in_report?: boolean
+          original_file_url?: string
+          patient_cuit?: string | null
+          patient_id?: string | null
+          payment_method?: string | null
+          psychologist_id?: string
+          receipt_date?: string | null
+          receipt_number?: string | null
+          receipt_type?: string | null
+          updated_at?: string
+          validated_at?: string | null
+          validated_by?: string | null
+          validation_notes?: string | null
+          validation_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_receipts_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_receipts_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_admin_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_receipts_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "psychologist_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_receipts_psychologist_id_fkey"
             columns: ["psychologist_id"]
             isOneToOne: false
             referencedRelation: "psychologists"
@@ -942,6 +1143,7 @@ export type Database = {
           id: string
           last_name: string
           license_number: string | null
+          monotax_category: string | null
           phone: string | null
           plan_type: string | null
           professional_code: string
@@ -961,6 +1163,7 @@ export type Database = {
           id: string
           last_name: string
           license_number?: string | null
+          monotax_category?: string | null
           phone?: string | null
           plan_type?: string | null
           professional_code: string
@@ -980,6 +1183,7 @@ export type Database = {
           id?: string
           last_name?: string
           license_number?: string | null
+          monotax_category?: string | null
           phone?: string | null
           plan_type?: string | null
           professional_code?: string
@@ -1005,6 +1209,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "psychologists_monotax_category_fkey"
+            columns: ["monotax_category"]
+            isOneToOne: false
+            referencedRelation: "monotax_categories"
+            referencedColumns: ["category_code"]
           },
         ]
       }
@@ -1312,6 +1523,10 @@ export type Database = {
       }
       calculate_affiliate_commission: {
         Args: { affiliate_code_id: string; subscription_amount: number }
+        Returns: number
+      }
+      calculate_annual_accumulated: {
+        Args: { psychologist_id_param: string; year_param: number }
         Returns: number
       }
       cancel_appointment: {

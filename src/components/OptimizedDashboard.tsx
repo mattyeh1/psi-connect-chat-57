@@ -10,14 +10,17 @@ import {
   Clock,
   AlertCircle,
   DollarSign,
-  Settings
+  Settings,
+  Calculator,
+  FileText
 } from "lucide-react";
 import { useUnifiedDashboardStats } from "@/hooks/useUnifiedDashboardStats";
+import { usePaymentReceipts } from "@/hooks/usePaymentReceipts";
 import { AppointmentRequests } from "./AppointmentRequests";
 import { TrialStatus } from "./TrialStatus";
 import { PlanBadge } from "./PlanBadge";
 
-type ViewType = "dashboard" | "patients" | "calendar" | "messages" | "affiliates" | "seo" | "reports" | "support" | "early-access" | "visibility" | "rates";
+type ViewType = "dashboard" | "patients" | "calendar" | "messages" | "affiliates" | "seo" | "reports" | "support" | "early-access" | "visibility" | "rates" | "accounting";
 
 interface OptimizedDashboardProps {
   onViewChange: (view: ViewType) => void;
@@ -28,10 +31,22 @@ interface OptimizedDashboardProps {
 
 export const OptimizedDashboard = ({ onViewChange, psychologistId, psychologistName, planType }: OptimizedDashboardProps) => {
   const { todayAppointments, activePatients, unreadMessages, statsLoading, psychologistName: statsName, planType: statsPlan } = useUnifiedDashboardStats(psychologistId);
+  const { receipts } = usePaymentReceipts(psychologistId);
 
   // Use fallback values from props if stats haven't loaded yet, with proper cleaning
   const displayName = (statsName || psychologistName || 'Profesional').trim();
   const displayPlan = statsPlan || planType || 'plus';
+
+  // Contabilidad stats
+  const pendingReceipts = receipts.filter(r => r.validation_status === 'pending').length;
+  const thisMonthReceipts = receipts.filter(r => {
+    const receiptDate = new Date(r.receipt_date || r.created_at);
+    const currentDate = new Date();
+    return receiptDate.getMonth() === currentDate.getMonth() && 
+           receiptDate.getFullYear() === currentDate.getFullYear() &&
+           r.validation_status === 'approved';
+  });
+  const thisMonthRevenue = thisMonthReceipts.reduce((sum, receipt) => sum + (receipt.amount || 0), 0);
 
   const quickActions = [
     {
@@ -54,6 +69,14 @@ export const OptimizedDashboard = ({ onViewChange, psychologistId, psychologistN
       icon: MessageSquare,
       action: () => onViewChange("messages"),
       color: "bg-purple-500"
+    },
+    {
+      title: "Sistema Contable",
+      description: "Reportes y comprobantes",
+      icon: Calculator,
+      action: () => onViewChange("accounting"),
+      color: "bg-orange-600",
+      badge: pendingReceipts > 0 ? pendingReceipts.toString() : undefined
     },
     {
       title: "Configurar Tarifas",
@@ -83,7 +106,7 @@ export const OptimizedDashboard = ({ onViewChange, psychologistId, psychologistN
       </div>
 
       {/* Stats Cards - Responsive Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6">
         <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
@@ -141,15 +164,38 @@ export const OptimizedDashboard = ({ onViewChange, psychologistId, psychologistN
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs sm:text-sm font-medium text-slate-600">Tasa de Respuesta</p>
-                <p className="text-2xl sm:text-3xl font-bold text-slate-800">95%</p>
-                <Badge variant="secondary" className="mt-1 text-xs">
-                  <TrendingUp className="w-3 h-3 mr-1" />
-                  Promedio semanal
-                </Badge>
+                <p className="text-xs sm:text-sm font-medium text-slate-600">Comprobantes Pendientes</p>
+                <p className="text-2xl sm:text-3xl font-bold text-orange-600">
+                  {pendingReceipts}
+                </p>
+                {pendingReceipts > 0 && (
+                  <Badge variant="outline" className="mt-1 text-xs">
+                    Requieren validación
+                  </Badge>
+                )}
               </div>
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-500 rounded-full flex items-center justify-center">
-                <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs sm:text-sm font-medium text-slate-600">Ingresos del Mes</p>
+                <p className="text-xl sm:text-2xl font-bold text-green-600">
+                  ${thisMonthRevenue.toLocaleString()}
+                </p>
+                <Badge variant="secondary" className="mt-1 text-xs">
+                  <TrendingUp className="w-3 h-3 mr-1" />
+                  {thisMonthReceipts.length} comprobantes
+                </Badge>
+              </div>
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-500 rounded-full flex items-center justify-center">
+                <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
             </div>
           </CardContent>
@@ -165,14 +211,19 @@ export const OptimizedDashboard = ({ onViewChange, psychologistId, psychologistN
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
             {quickActions.map((action, index) => (
               <Button
                 key={index}
                 variant="outline"
-                className="h-auto p-4 text-left flex flex-col items-start gap-3 hover:bg-slate-50 min-h-[80px] sm:min-h-[100px]"
+                className="h-auto p-4 text-left flex flex-col items-start gap-3 hover:bg-slate-50 min-h-[80px] sm:min-h-[100px] relative"
                 onClick={action.action}
               >
+                {action.badge && (
+                  <Badge className="absolute -top-2 -right-2 bg-red-500 text-white text-xs">
+                    {action.badge}
+                  </Badge>
+                )}
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${action.color}`}>
                   <action.icon className="w-4 h-4 text-white" />
                 </div>
