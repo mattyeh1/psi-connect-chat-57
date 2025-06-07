@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,9 +12,10 @@ import { useAuth } from "@/hooks/useAuth";
 interface PatientAppointmentRequestFormProps {
   psychologistId: string;
   onClose: () => void;
+  onRequestCreated?: () => void;
 }
 
-export const PatientAppointmentRequestForm = ({ psychologistId, onClose }: PatientAppointmentRequestFormProps) => {
+export const PatientAppointmentRequestForm = ({ psychologistId, onClose, onRequestCreated }: PatientAppointmentRequestFormProps) => {
   const { user } = useAuth();
   const [formData, setFormData] = useState({
     patientName: "",
@@ -99,18 +99,16 @@ export const PatientAppointmentRequestForm = ({ psychologistId, onClose }: Patie
         proofUrl = publicUrl;
       }
 
-      // Create appointment request
+      // Create appointment request with correct schema
       const { error } = await supabase
         .from('appointment_requests')
         .insert({
           psychologist_id: psychologistId,
-          patient_name: formData.patientName,
-          patient_email: formData.patientEmail,
-          patient_phone: formData.patientPhone,
+          patient_id: user?.id || '', // Use authenticated user ID or empty string
           preferred_date: formData.preferredDate,
           preferred_time: formData.preferredTime,
-          session_type: formData.sessionType,
-          notes: formData.notes,
+          type: 'individual', // Use a valid type from the schema
+          notes: `Nombre: ${formData.patientName}\nEmail: ${formData.patientEmail}\nTeléfono: ${formData.patientPhone}\nTipo de sesión: ${formData.sessionType}\n\nNotas adicionales: ${formData.notes}`,
           payment_proof_url: proofUrl,
           status: 'pending'
         });
@@ -122,6 +120,7 @@ export const PatientAppointmentRequestForm = ({ psychologistId, onClose }: Patie
         description: "Tu solicitud de cita ha sido enviada exitosamente. El psicólogo se contactará contigo pronto."
       });
 
+      onRequestCreated?.();
       onClose();
     } catch (error) {
       console.error('Error submitting appointment request:', error);

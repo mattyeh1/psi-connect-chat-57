@@ -41,6 +41,7 @@ export const PatientPortal = () => {
   const [nextAppointment, setNextAppointment] = useState<Appointment | null>(null);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showRequestForm, setShowRequestForm] = useState(false);
 
   useEffect(() => {
     if (patient?.id) {
@@ -442,7 +443,21 @@ export const PatientPortal = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="relative">
-                <PatientAppointmentRequestForm onRequestCreated={fetchPatientData} />
+                {!showRequestForm ? (
+                  <Button 
+                    onClick={() => setShowRequestForm(true)}
+                    className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white shadow-lg transform hover:scale-105 transition-all duration-300"
+                  >
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Nueva Solicitud de Cita
+                  </Button>
+                ) : (
+                  <PatientAppointmentRequestForm 
+                    psychologistId={patient.psychologist_id || ''} 
+                    onClose={() => setShowRequestForm(false)}
+                    onRequestCreated={fetchPatientData}
+                  />
+                )}
               </CardContent>
             </Card>
 
