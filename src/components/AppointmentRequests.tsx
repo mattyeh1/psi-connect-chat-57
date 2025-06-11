@@ -166,7 +166,15 @@ export const AppointmentRequests = ({ isDashboardView = false }: AppointmentRequ
     }
   }, [psychologistId]);
 
-  const createPaymentReceipt = async (requestData: PaymentReceiptData) => {
+  const createPaymentReceipt = async (requestData: {
+    psychologist_id: string;
+    patient_id: string;
+    payment_proof_url: string;
+    preferred_date: string;
+    payment_amount?: number;
+    notes: string;
+    id: string;
+  }) => {
     if (!requestData.payment_proof_url || !requestData.payment_amount) {
       console.log('AppointmentRequests: No payment proof or amount, skipping receipt creation');
       return;

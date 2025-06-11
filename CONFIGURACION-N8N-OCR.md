@@ -38,15 +38,31 @@ N8N_WEBHOOK_URL = https://tu-instancia-n8n.com/webhook/receipt-ocr
 3. Host: `https://your-supabase-url.supabase.co`
 4. Service Role Key: Tu service role key de Supabase
 
-### Configurar el Nodo OpenAI Vision
-1. Abre el workflow importado
-2. Ve al nodo "OpenAI Vision Analysis"
-3. Configura:
-   - **Resource**: "image" 
-   - **Operation**: "analyze"
-   - **Image Input**: "binary"
+### ⚠️ CONFIGURACIÓN CRÍTICA: Nodo OpenAI Vision
+
+**IMPORTANTE**: El nodo OpenAI debe configurarse exactamente así:
+
+1. **Tipo de Nodo**: Usar "OpenAI" (no "OpenAI Chat Model" ni otros)
+2. **Operación**: Seleccionar "Analyze Image" 
+3. **Configuración específica**:
+   - **Image Input Type**: "Binary Data"
+   - **Binary Property**: `data` (por defecto)
    - **Prompt**: (ya está configurado en el JSON)
-   - **Credentials**: Selecciona "openai-credentials"
+   - **Model**: `gpt-4o` o `gpt-4-vision-preview`
+   - **Max Tokens**: 500
+   - **Temperature**: 0.1
+
+### Pasos Detallados para Configurar el Nodo OpenAI:
+
+1. Abre el workflow importado
+2. Haz clic en el nodo "OpenAI Vision Analysis"
+3. En "Operation", selecciona "Analyze Image"
+4. En "Image Input Type", selecciona "Binary Data"
+5. En "Credentials", selecciona "openai-credentials"
+6. Verifica que el prompt esté configurado
+7. Configura las opciones avanzadas:
+   - Max Tokens: 500
+   - Temperature: 0.1
 
 ### Actualizar URLs en el Workflow
 1. Abre el workflow importado
@@ -66,7 +82,34 @@ const webhookUrl = 'https://tu-instancia-n8n.com/webhook/receipt-ocr';
 ```
 Por tu URL real del webhook de n8n.
 
-## 4. Flujo Completo del Sistema
+## 4. Resolución de Problemas Específicos
+
+### Si el nodo OpenAI no aparece o no funciona:
+
+1. **Verificar instalación del nodo**:
+   - Ve a Settings > Community Nodes
+   - Busca e instala "@n8n/n8n-nodes-openai" si no está instalado
+
+2. **Configuración correcta del nodo**:
+   - **NO uses**: "Chat" o "Custom API Call"
+   - **SÍ usa**: "Analyze Image" operation
+   - **Importante**: El tipo debe ser "OpenAI" (base node)
+
+3. **Verificar credenciales**:
+   - La API key debe ser válida y tener acceso a modelos de visión
+   - Probar la conexión en las credenciales
+
+4. **Formato de imagen**:
+   - Asegurar que el archivo se descarga como binary
+   - Verificar que es JPG, PNG o PDF válido
+
+### Si continúa sin funcionar:
+1. Check logs del workflow execution
+2. Verificar que el archivo se descarga correctamente
+3. Probar el nodo OpenAI manualmente con una imagen de prueba
+4. Revisar que las credenciales tengan permisos para Vision API
+
+## 5. Flujo Completo del Sistema
 
 ### Cuando un paciente sube un comprobante:
 
@@ -81,46 +124,30 @@ Por tu URL real del webhook de n8n.
 7. **Real-time**: Frontend recibe notificación de procesamiento completo
 8. **Profesional**: Ve comprobante procesado para validación
 
-### Estados del Comprobante:
-- `pending`: Recién subido, esperando procesamiento
-- `processing`: Siendo procesado por IA
-- `extracted`: Datos extraídos exitosamente, necesita validación
-- `error`: Error en procesamiento automático
-- `approved`: Validado y aprobado por profesional
-- `rejected`: Rechazado por profesional
+## 6. Testing del Workflow
 
-## 5. Datos Extraídos Automáticamente
+Para probar que el nodo OpenAI funciona:
 
-El sistema extrae:
-- **Fecha**: Del comprobante
-- **Monto**: Valor total a pagar
-- **Tipo**: factura_a, factura_b, factura_c, recibo, etc.
-- **Número**: Número del comprobante
-- **CUIT**: Del emisor (si está presente)
-- **Método de Pago**: transferencia, efectivo, tarjeta
-- **Descripción**: Del servicio prestado
-- **Confianza**: Nivel de precisión de la extracción (0-1)
+1. **Test Manual**:
+   - En n8n, abre el workflow
+   - Haz clic en "Execute Workflow"
+   - Proporciona datos de prueba:
+     ```json
+     {
+       "fileUrl": "URL_DE_IMAGEN_DE_PRUEBA",
+       "receiptId": "test-123"
+     }
+     ```
 
-## 6. Configuración Específica del Nodo OpenAI Vision
+2. **Test desde Sistema**:
+   - Sube un comprobante como paciente
+   - Verifica logs del workflow en n8n
+   - Check que el nodo OpenAI ejecute correctamente
 
-⚠️ **IMPORTANTE**: El nodo OpenAI debe configurarse así:
-
-```json
-{
-  "resource": "image",
-  "operation": "analyze",
-  "imageInput": "binary",
-  "prompt": "Analiza este comprobante...",
-  "options": {
-    "maxTokens": 500,
-    "temperature": 0.1
-  }
-}
-```
-
-**NO uses**: 
-- `resource: "assistant"`
-- `operation: "customApiCall"`
+3. **Verificación de Resultados**:
+   - El nodo debe retornar JSON con datos extraídos
+   - La base de datos debe actualizarse con status "extracted"
+   - El frontend debe mostrar notificación de procesamiento completo
 
 ## 7. Beneficios del Sistema
 
@@ -130,33 +157,3 @@ El sistema extrae:
 - ✅ **Alta Precisión**: OpenAI Vision API
 - ✅ **Validación Humana**: Profesional revisa antes de aprobar
 - ✅ **Integración Contable**: Automáticamente en reportes mensuales
-
-## 8. Resolución de Problemas
-
-### Si OCR falla:
-1. Check logs en Supabase Functions
-2. Verificar que OpenAI API key esté configurada
-3. Verificar formato del archivo (JPG, PNG, PDF)
-4. Usar botón "Reintentar OCR" en el panel del profesional
-
-### Si n8n no funciona:
-1. Verificar que el workflow esté activo
-2. Check credenciales de OpenAI y Supabase
-3. Verificar URL del webhook en el código
-4. El sistema funcionará solo con Edge Function como respaldo
-
-### Si OpenAI Vision no funciona en n8n:
-1. Verificar que usas `resource: "image"` y `operation: "analyze"`
-2. Asegurar que el archivo se descarga como binary
-3. Verificar que las credenciales OpenAI estén bien configuradas
-4. Check logs del workflow en n8n
-
-## 9. Testing
-
-Para probar el sistema:
-1. Sube un comprobante como paciente
-2. Verifica que aparece con status "processing"
-3. Espera 30-60 segundos
-4. Debe cambiar a "extracted" con datos extraídos
-5. Como profesional, valida y aprueba
-6. Verifica que aparece en reportes contables
