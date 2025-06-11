@@ -71,32 +71,62 @@ export const PatientAppointmentRequestForm = ({ psychologistId, onClose, onReque
     fileInputRef.current?.click();
   };
 
-  const triggerN8nWebhook = async (receiptId: string, fileUrl: string) => {
-    try {
-      console.log('Triggering n8n webhook for receipt:', receiptId);
-      
-      // Esta URL se debe configurar en el environment de n8n
-      const webhookUrl = 'https://mattyeh.app.n8n.cloud/webhook/receipt-ocr';
-      
-      await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          receiptId,
-          fileUrl,
-          psychologistId,
-          timestamp: new Date().toISOString(),
-          source: 'patient_appointment_form'
-        })
+  const uploadFileToStorage = async (file: File): Promise<string> => {
+    console.log('=== UPLOADING FILE TO SUPABASE STORAGE ===');
+    console.log('File details:', {
+      name: file.name,
+      size: file.size,
+      type: file.type
+    });
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${user?.id || 'anonymous'}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    
+    console.log('Generated filename:', fileName);
+
+    // Verificar que el bucket existe, si no, intentar crearlo
+    const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+    
+    if (bucketsError) {
+      console.error('Error listing buckets:', bucketsError);
+    } else {
+      const paymentProofsBucket = buckets.find(bucket => bucket.id === 'payment-proofs');
+      if (!paymentProofsBucket) {
+        console.warn('payment-proofs bucket not found in bucket list');
+      } else {
+        console.log('payment-proofs bucket exists:', paymentProofsBucket);
+      }
+    }
+
+    // Subir archivo a Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('payment-proofs')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false
       });
 
-      console.log('n8n webhook triggered successfully');
-    } catch (error) {
-      console.error('Error triggering n8n webhook:', error);
-      // No lanzamos error aquí para no bloquear el flujo principal
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      throw new Error(`Error al subir archivo: ${uploadError.message}`);
     }
+    
+    console.log('Upload successful:', uploadData);
+    
+    // Obtener URL pública válida
+    const { data: urlData } = supabase.storage
+      .from('payment-proofs')
+      .getPublicUrl(fileName);
+    
+    const publicUrl = urlData.publicUrl;
+    console.log('Generated public URL:', publicUrl);
+    
+    // Validar que la URL es correcta
+    if (!publicUrl || !publicUrl.startsWith('http')) {
+      throw new Error('No se pudo generar una URL válida para el archivo');
+    }
+
+    return publicUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -119,22 +149,13 @@ export const PatientAppointmentRequestForm = ({ psychologistId, onClose, onReque
 
       // Upload payment proof if provided
       if (paymentProof) {
-        const fileExt = paymentProof.name.split('.').pop();
-        const fileName = `payment-proof-${Date.now()}.${fileExt}`;
+        console.log('=== STARTING PAYMENT PROOF PROCESSING ===');
         
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('payment-proofs')
-          .upload(fileName, paymentProof);
-
-        if (uploadError) throw uploadError;
+        // 1. Subir archivo y obtener URL válida
+        proofUrl = await uploadFileToStorage(paymentProof);
         
-        const { data: { publicUrl } } = supabase.storage
-          .from('payment-proofs')
-          .getPublicUrl(fileName);
-        
-        proofUrl = publicUrl;
-
-        // Crear registro en payment_receipts para el OCR
+        // 2. Crear registro en payment_receipts
+        console.log('=== CREATING PAYMENT RECEIPT RECORD ===');
         const { data: receiptData, error: receiptError } = await supabase
           .from('payment_receipts')
           .insert({
@@ -149,27 +170,40 @@ export const PatientAppointmentRequestForm = ({ psychologistId, onClose, onReque
           .select()
           .single();
 
-        if (receiptError) throw receiptError;
+        if (receiptError) {
+          console.error('Receipt creation error:', receiptError);
+          throw receiptError;
+        }
         
         receiptId = receiptData.id;
+        console.log('Receipt record created:', receiptId);
 
-        // Disparar webhook n8n para procesamiento OCR
-        await triggerN8nWebhook(receiptId, proofUrl);
-
-        // También disparar la función edge como respaldo
+        // 3. Disparar procesamiento OCR
+        console.log('=== STARTING OCR PROCESSING ===');
+        
         try {
-          await supabase.functions.invoke('process-receipt-ocr', {
+          console.log('=== TRIGGERING EDGE FUNCTION ===');
+          const { data: ocrData, error: ocrError } = await supabase.functions.invoke('process-receipt-ocr', {
             body: { 
               fileUrl: proofUrl, 
               receiptId: receiptId 
             }
           });
-        } catch (ocrError) {
-          console.error('Error in backup OCR processing:', ocrError);
+          
+          if (ocrError) {
+            console.error('Edge function error:', ocrError);
+            // Continue without blocking the flow
+          } else {
+            console.log('Edge function completed:', ocrData);
+          }
+        } catch (edgeFunctionError) {
+          console.error('Edge function exception:', edgeFunctionError);
+          // Continue without blocking the flow
         }
       }
 
       // Create appointment request
+      console.log('=== CREATING APPOINTMENT REQUEST ===');
       const { error } = await supabase
         .from('appointment_requests')
         .insert({
@@ -183,7 +217,12 @@ export const PatientAppointmentRequestForm = ({ psychologistId, onClose, onReque
           status: 'pending'
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Appointment request creation error:', error);
+        throw error;
+      }
+
+      console.log('Appointment request created successfully');
 
       toast({
         title: "Solicitud enviada",

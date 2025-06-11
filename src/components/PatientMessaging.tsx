@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,6 +6,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useConversations } from "@/hooks/useConversations";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useRealtimeChannel } from "@/hooks/useRealtimeChannel";
 
 interface Message {
   id: string;
@@ -29,6 +29,18 @@ export const PatientMessaging = ({ onBack }: PatientMessagingProps) => {
   const [newMessage, setNewMessage] = useState("");
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Messages realtime subscription
+  useRealtimeChannel({
+    channelName: `patient-messages-${conversationId}`,
+    enabled: !!conversationId,
+    table: 'messages',
+    filter: `conversation_id=eq.${conversationId}`,
+    onUpdate: () => {
+      console.log('Patient messages updated, refetching...');
+      fetchMessages();
+    }
+  });
 
   useEffect(() => {
     if (patient?.id) {

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useRealtimeChannel } from './useRealtimeChannel';
 
 interface PaymentReceipt {
   id: string;
@@ -11,16 +12,17 @@ interface PaymentReceipt {
   receipt_date?: string;
   amount?: number;
   receipt_type?: string;
+  payment_method?: string;
   receipt_number?: string;
   patient_cuit?: string;
-  payment_method?: string;
   extraction_status: string;
   validation_status: string;
-  include_in_report: boolean;
-  extracted_data?: any;
-  validation_notes?: string;
-  validated_by?: string;
+  auto_approved?: boolean;
   validated_at?: string;
+  validated_by?: string;
+  validation_notes?: string;
+  extracted_data?: any;
+  include_in_report: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -30,189 +32,284 @@ export const usePaymentReceipts = (psychologistId?: string) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  console.log('=== USE PAYMENT RECEIPTS ===');
+  console.log('Psychologist ID:', psychologistId);
+
   const fetchReceipts = async () => {
     if (!psychologistId) {
+      console.log('No psychologist ID provided, skipping fetch');
       setLoading(false);
       return;
     }
 
     try {
       setLoading(true);
+      
+      console.log('Fetching payment receipts for psychologist:', psychologistId);
+      
       const { data, error } = await supabase
         .from('payment_receipts')
         .select('*')
         .eq('psychologist_id', psychologistId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching payment receipts:', error);
+        throw error;
+      }
+
+      console.log(`Fetched ${data?.length || 0} receipts`);
+      console.log('Receipt details:', data?.map(r => ({
+        id: r.id,
+        amount: r.amount,
+        date: r.receipt_date || r.created_at,
+        status: r.validation_status,
+        include: r.include_in_report
+      })));
+
       setReceipts(data || []);
+      setError(null);
+      
     } catch (err) {
-      console.error('Error fetching payment receipts:', err);
+      console.error('Error in fetchReceipts:', err);
       setError(err instanceof Error ? err.message : 'Error desconocido');
+      toast({
+        title: "Error",
+        description: "Error al cargar los comprobantes de pago",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  // Set up real-time subscription for payment receipts
-  useEffect(() => {
-    if (!psychologistId) return;
+  // Use realtime channel for updates
+  useRealtimeChannel({
+    channelName: `payment-receipts-${psychologistId}`,
+    enabled: !!psychologistId,
+    table: 'payment_receipts',
+    filter: `psychologist_id=eq.${psychologistId}`,
+    onUpdate: (payload) => {
+      console.log('Payment receipt real-time update:', payload);
+      fetchReceipts(); // Refetch all data when any receipt changes
+    }
+  });
 
-    const channel = supabase
-      .channel('payment-receipts-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'payment_receipts',
-          filter: `psychologist_id=eq.${psychologistId}`
-        },
-        (payload) => {
-          console.log('Payment receipts real-time update:', payload);
-          
-          // Mostrar notificación cuando se complete el procesamiento OCR
-          if (payload.eventType === 'UPDATE' && payload.new.extraction_status === 'extracted') {
-            toast({
-              title: "OCR Completado",
-              description: "Un comprobante ha sido procesado automáticamente por IA",
-            });
-          }
-          
-          // Mostrar notificación cuando hay error en el procesamiento
-          if (payload.eventType === 'UPDATE' && payload.new.extraction_status === 'error') {
-            toast({
-              title: "Error en OCR",
-              description: "Hubo un error procesando un comprobante automáticamente",
-              variant: "destructive"
-            });
-          }
-          
-          fetchReceipts(); // Refetch data when changes occur
-        }
-      )
-      .subscribe();
+  const uploadReceipt = async (file: File, patientId?: string) => {
+    if (!psychologistId) {
+      throw new Error('Psychologist ID is required');
+    }
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [psychologistId]);
-
-  const validateReceipt = async (
-    receiptId: string, 
-    validationStatus: 'approved' | 'rejected' | 'needs_correction',
-    validationNotes?: string,
-    extractedData?: any
-  ) => {
     try {
-      const { error } = await supabase
+      console.log('Uploading receipt file:', file.name);
+
+      // Upload file to Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${psychologistId}/${Date.now()}.${fileExt}`;
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('payment-proofs')
+        .upload(fileName, file);
+
+      if (uploadError) {
+        console.error('Error uploading file:', uploadError);
+        throw uploadError;
+      }
+
+      console.log('File uploaded successfully:', uploadData.path);
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('payment-proofs')
+        .getPublicUrl(uploadData.path);
+
+      // Create payment receipt record
+      const { data: receiptData, error: receiptError } = await supabase
         .from('payment_receipts')
-        .update({
-          validation_status: validationStatus,
-          validation_notes: validationNotes,
-          validated_by: psychologistId,
-          validated_at: new Date().toISOString(),
-          include_in_report: validationStatus === 'approved',
-          ...extractedData
+        .insert({
+          psychologist_id: psychologistId,
+          patient_id: patientId,
+          original_file_url: urlData.publicUrl,
+          extraction_status: 'pending',
+          validation_status: 'pending',
+          include_in_report: true
         })
-        .eq('id', receiptId);
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (receiptError) {
+        console.error('Error creating receipt record:', receiptError);
+        throw receiptError;
+      }
 
-      const statusMessages = {
-        approved: 'aprobado',
-        rejected: 'rechazado',
-        needs_correction: 'marcado para corrección'
-      };
+      console.log('Receipt record created:', receiptData.id);
+
+      // Trigger OCR processing
+      const { error: ocrError } = await supabase.functions.invoke('process-receipt-ocr', {
+        body: { 
+          fileUrl: urlData.publicUrl, 
+          receiptId: receiptData.id 
+        }
+      });
+
+      if (ocrError) {
+        console.error('Error triggering OCR:', ocrError);
+        // Don't throw here, let the receipt be processed manually
+      }
 
       toast({
-        title: "Comprobante actualizado",
-        description: `El comprobante ha sido ${statusMessages[validationStatus]}`
+        title: "Comprobante subido",
+        description: "El comprobante se ha subido y está siendo procesado"
       });
 
       fetchReceipts();
-    } catch (err) {
-      console.error('Error validating receipt:', err);
+      return receiptData;
+
+    } catch (error) {
+      console.error('Error uploading receipt:', error);
+      toast({
+        title: "Error",
+        description: "Error al subir el comprobante",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
+  const validateReceipt = async (receiptId: string, status: 'approved' | 'rejected', notes?: string) => {
+    try {
+      console.log('Validating receipt:', { receiptId, status, notes });
+
+      const { error } = await supabase
+        .from('payment_receipts')
+        .update({
+          validation_status: status,
+          validated_at: new Date().toISOString(),
+          validated_by: psychologistId,
+          validation_notes: notes
+        })
+        .eq('id', receiptId);
+
+      if (error) {
+        console.error('Error validating receipt:', error);
+        throw error;
+      }
+
+      toast({
+        title: "Comprobante validado",
+        description: `El comprobante ha sido ${status === 'approved' ? 'aprobado' : 'rechazado'}`
+      });
+
+      fetchReceipts();
+
+    } catch (error) {
+      console.error('Error validating receipt:', error);
       toast({
         title: "Error",
         description: "Error al validar el comprobante",
         variant: "destructive"
       });
+      throw error;
     }
   };
 
   const updateReceiptInclusion = async (receiptId: string, includeInReport: boolean) => {
     try {
+      console.log('Updating receipt inclusion:', { receiptId, includeInReport });
+
       const { error } = await supabase
         .from('payment_receipts')
-        .update({ include_in_report: includeInReport })
-        .eq('id', receiptId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Inclusión actualizada",
-        description: `Comprobante ${includeInReport ? 'incluido en' : 'excluido del'} reporte`
-      });
-
-      fetchReceipts();
-    } catch (err) {
-      console.error('Error updating receipt inclusion:', err);
-      toast({
-        title: "Error",
-        description: "Error al actualizar la inclusión del comprobante",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const retryOCRProcessing = async (receiptId: string, fileUrl: string) => {
-    try {
-      // Actualizar estado a "processing"
-      const { error: updateError } = await supabase
-        .from('payment_receipts')
         .update({
-          extraction_status: 'processing',
-          validation_notes: 'Reintentando procesamiento OCR...'
+          include_in_report: includeInReport
         })
         .eq('id', receiptId);
 
-      if (updateError) throw updateError;
+      if (error) {
+        console.error('Error updating receipt inclusion:', error);
+        throw error;
+      }
 
-      // Llamar a la función de procesamiento OCR
+      toast({
+        title: "Comprobante actualizado",
+        description: `El comprobante ha sido ${includeInReport ? 'incluido en' : 'excluido del'} reporte`
+      });
+
+      fetchReceipts();
+
+    } catch (error) {
+      console.error('Error updating receipt inclusion:', error);
+      toast({
+        title: "Error",
+        description: "Error al actualizar el comprobante",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
+  const retryOCRProcessing = async (receiptId: string) => {
+    try {
+      console.log('Retrying OCR processing for receipt:', receiptId);
+
+      const receipt = receipts.find(r => r.id === receiptId);
+      if (!receipt) {
+        throw new Error('Receipt not found');
+      }
+
+      // Update status to pending
+      const { error: updateError } = await supabase
+        .from('payment_receipts')
+        .update({
+          extraction_status: 'pending'
+        })
+        .eq('id', receiptId);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Trigger OCR processing again
       const { error: ocrError } = await supabase.functions.invoke('process-receipt-ocr', {
         body: { 
-          fileUrl: fileUrl, 
+          fileUrl: receipt.original_file_url, 
           receiptId: receiptId 
         }
       });
 
-      if (ocrError) throw ocrError;
+      if (ocrError) {
+        console.error('Error triggering OCR retry:', ocrError);
+        throw ocrError;
+      }
 
       toast({
-        title: "Reintentando OCR",
-        description: "El comprobante está siendo reprocesado automáticamente"
+        title: "Procesando comprobante",
+        description: "El comprobante está siendo procesado nuevamente"
       });
 
       fetchReceipts();
-    } catch (err) {
-      console.error('Error retrying OCR processing:', err);
+
+    } catch (error) {
+      console.error('Error retrying OCR processing:', error);
       toast({
         title: "Error",
-        description: "Error al reintentar el procesamiento OCR",
+        description: "Error al procesar el comprobante",
         variant: "destructive"
       });
+      throw error;
     }
   };
 
   useEffect(() => {
-    fetchReceipts();
+    if (psychologistId) {
+      fetchReceipts();
+    }
   }, [psychologistId]);
 
   return {
     receipts,
     loading,
     error,
+    uploadReceipt,
     validateReceipt,
     updateReceiptInclusion,
     retryOCRProcessing,

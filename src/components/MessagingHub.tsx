@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,6 +6,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useConversations } from "@/hooks/useConversations";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useRealtimeChannel } from "@/hooks/useRealtimeChannel";
 
 interface Conversation {
   id: string;
@@ -40,11 +40,38 @@ export const MessagingHub = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Conversations realtime subscription
+  useRealtimeChannel({
+    channelName: `conversations-${psychologist?.id}`,
+    enabled: !!psychologist?.id,
+    table: 'conversations',
+    filter: `psychologist_id=eq.${psychologist?.id}`,
+    onUpdate: () => {
+      console.log('Conversations updated, refetching...');
+      fetchConversations();
+    }
+  });
+
+  // Messages realtime subscription for selected conversation
+  useRealtimeChannel({
+    channelName: `messages-${selectedConversation}`,
+    enabled: !!selectedConversation,
+    table: 'messages',
+    filter: `conversation_id=eq.${selectedConversation}`,
+    onUpdate: () => {
+      console.log('Messages updated, refetching...');
+      if (selectedConversation) {
+        fetchMessages(selectedConversation);
+        fetchConversations(); // Update conversations list
+      }
+    }
+  });
+
   useEffect(() => {
     if (psychologist?.id) {
       fetchConversations();
     }
-  }, [psychologist]);
+  }, [psychologist?.id]);
 
   useEffect(() => {
     if (selectedConversation) {
@@ -117,7 +144,6 @@ export const MessagingHub = () => {
 
       setConversations(formattedConversations);
 
-      // Select first conversation if none selected
       if (!selectedConversation && formattedConversations.length > 0) {
         setSelectedConversation(formattedConversations[0].id);
       }
@@ -180,11 +206,8 @@ export const MessagingHub = () => {
     const messageData = await sendMessage(selectedConversation, psychologist.id, newMessage);
     
     if (messageData) {
-      // Update local state
       setMessages(prev => [...prev, messageData]);
       setNewMessage("");
-
-      // Refresh conversations to update order
       fetchConversations();
 
       toast({
@@ -258,7 +281,6 @@ export const MessagingHub = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
-        {/* Conversations List */}
         <Card className="border-0 shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-slate-800">
@@ -326,7 +348,6 @@ export const MessagingHub = () => {
           </CardContent>
         </Card>
 
-        {/* Chat Area */}
         <div className="lg:col-span-2">
           <Card className="border-0 shadow-lg h-full flex flex-col">
             {selectedConv ? (

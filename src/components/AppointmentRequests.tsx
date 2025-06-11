@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -55,53 +56,16 @@ export const AppointmentRequests = ({ isDashboardView = false }: AppointmentRequ
   const { user } = useAuth();
   const [requests, setRequests] = useState<AppointmentRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [psychologistId, setPsychologistId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const getPsychologistId = async () => {
-      if (user) {
-        try {
-          const { data: psychologistData, error: psychologistError } = await supabase
-            .from('psychologists')
-            .select('id')
-            .eq('user_id', user.id)
-            .single();
-
-          if (psychologistError) {
-            console.error('Error fetching psychologist ID:', psychologistError);
-            toast({
-              title: "Error",
-              description: "Error al obtener el ID del psicólogo",
-              variant: "destructive"
-            });
-            return;
-          }
-
-          if (psychologistData && psychologistData.id) {
-            setPsychologistId(psychologistData.id);
-            console.log('AppointmentRequests: Psychologist ID set to:', psychologistData.id);
-          } else {
-            console.warn('AppointmentRequests: No psychologist ID found for user:', user.id);
-          }
-        } catch (error) {
-          console.error('AppointmentRequests: Unexpected error fetching psychologist ID:', error);
-          toast({
-            title: "Error",
-            description: "Error inesperado al obtener el ID del psicólogo",
-            variant: "destructive"
-          });
-        }
-      }
-    };
-
-    getPsychologistId();
-  }, [user]);
 
   const fetchRequests = async () => {
-    if (!psychologistId) return;
+    if (!user?.id) {
+      console.log('AppointmentRequests: No user ID available');
+      setLoading(false);
+      return;
+    }
 
     console.log('AppointmentRequests: === FETCHING APPOINTMENT REQUESTS ===');
-    console.log('AppointmentRequests: Psychologist ID:', psychologistId);
+    console.log('AppointmentRequests: User ID (Psychologist ID):', user.id);
 
     try {
       setLoading(true);
@@ -109,7 +73,7 @@ export const AppointmentRequests = ({ isDashboardView = false }: AppointmentRequ
       const { data: requestsData, error: requestsError } = await supabase
         .from('appointment_requests')
         .select('*')
-        .eq('psychologist_id', psychologistId)
+        .eq('psychologist_id', user.id)
         .order('created_at', { ascending: false });
 
       if (requestsError) {
@@ -118,7 +82,6 @@ export const AppointmentRequests = ({ isDashboardView = false }: AppointmentRequ
       }
 
       console.log('AppointmentRequests: Raw requests data:', requestsData);
-      console.log('AppointmentRequests: Requests error:', requestsError);
 
       if (requestsData && requestsData.length > 0) {
         const patientIds = [...new Set(requestsData.map(req => req.patient_id))];
@@ -161,20 +124,10 @@ export const AppointmentRequests = ({ isDashboardView = false }: AppointmentRequ
   };
 
   useEffect(() => {
-    if (psychologistId) {
-      fetchRequests();
-    }
-  }, [psychologistId]);
+    fetchRequests();
+  }, [user?.id]);
 
-  const createPaymentReceipt = async (requestData: {
-    psychologist_id: string;
-    patient_id: string;
-    payment_proof_url: string;
-    preferred_date: string;
-    payment_amount?: number;
-    notes: string;
-    id: string;
-  }) => {
+  const createPaymentReceipt = async (requestData: PaymentReceiptData) => {
     if (!requestData.payment_proof_url || !requestData.payment_amount) {
       console.log('AppointmentRequests: No payment proof or amount, skipping receipt creation');
       return;
@@ -241,6 +194,8 @@ export const AppointmentRequests = ({ isDashboardView = false }: AppointmentRequ
   };
 
   const approveRequest = async (request: AppointmentRequest) => {
+    if (!user?.id) return;
+
     console.log('AppointmentRequests: Approving request:', request.id);
     console.log('AppointmentRequests: Creating appointment for request:', request);
 
@@ -249,7 +204,7 @@ export const AppointmentRequests = ({ isDashboardView = false }: AppointmentRequ
       
       const appointmentData = {
         patient_id: request.patient_id,
-        psychologist_id: request.psychologist_id,
+        psychologist_id: user.id,
         appointment_date: appointmentDateTime.toISOString(),
         type: request.type || 'individual',
         notes: request.notes,
@@ -273,7 +228,7 @@ export const AppointmentRequests = ({ isDashboardView = false }: AppointmentRequ
       }
 
       await createPaymentReceipt({
-        psychologist_id: request.psychologist_id,
+        psychologist_id: user.id,
         patient_id: request.patient_id,
         payment_proof_url: request.payment_proof_url || '',
         preferred_date: request.preferred_date,

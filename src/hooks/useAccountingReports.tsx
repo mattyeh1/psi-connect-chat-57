@@ -1,7 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useRealtimeChannel } from './useRealtimeChannel';
 
 interface AccountingReport {
   id: string;
@@ -11,11 +11,19 @@ interface AccountingReport {
   total_amount: number;
   total_receipts: number;
   amount_by_payment_method: Record<string, number>;
+  amount_by_receipt_type?: Record<string, number>;
   annual_accumulated: number;
   status: string;
   report_file_url?: string;
   generation_date?: string;
   sent_date?: string;
+  auto_approved_receipts?: number;
+  manually_reviewed_receipts?: number;
+  monotax_alert?: {
+    level: 'warning' | 'critical';
+    message: string;
+    percentage?: number;
+  };
   created_at: string;
   updated_at: string;
 }
@@ -43,7 +51,10 @@ export const useAccountingReports = (psychologistId?: string) => {
     try {
       setLoading(true);
       
-      // Fetch reports
+      console.log('=== FETCHING ACCOUNTING REPORTS ===');
+      console.log('Psychologist ID:', psychologistId);
+      
+      // Fetch reports - ordenar por año y mes descendente
       const { data: reportsData, error: reportsError } = await supabase
         .from('accounting_reports')
         .select('*')
@@ -51,7 +62,12 @@ export const useAccountingReports = (psychologistId?: string) => {
         .order('report_year', { ascending: false })
         .order('report_month', { ascending: false });
 
-      if (reportsError) throw reportsError;
+      if (reportsError) {
+        console.error('Error fetching reports:', reportsError);
+        throw reportsError;
+      }
+
+      console.log(`Fetched ${reportsData?.length || 0} reports`);
 
       // Fetch psychologist's current monotax category
       const { data: psychData, error: psychError } = await supabase
@@ -60,25 +76,68 @@ export const useAccountingReports = (psychologistId?: string) => {
         .eq('id', psychologistId)
         .single();
 
-      if (psychError) throw psychError;
+      if (psychError && psychError.code !== 'PGRST116') { // Ignore not found
+        console.error('Error fetching psychologist data:', psychError);
+        throw psychError;
+      }
 
       // Transform the data to match our interface
       const transformedReports = (reportsData || []).map(report => ({
         ...report,
         amount_by_payment_method: typeof report.amount_by_payment_method === 'object' 
           ? report.amount_by_payment_method as Record<string, number>
-          : {}
+          : {},
+        amount_by_receipt_type: typeof report.amount_by_receipt_type === 'object' 
+          ? report.amount_by_receipt_type as Record<string, number>
+          : {},
+        monotax_alert: report.monotax_alert ? report.monotax_alert as any : undefined
       }));
 
+      console.log('Transformed reports:', transformedReports.length);
+      
       setReports(transformedReports);
       setCurrentCategory(psychData?.monotax_category || null);
+      setError(null);
+      
     } catch (err) {
-      console.error('Error fetching accounting reports:', err);
+      console.error('Error in fetchReports:', err);
       setError(err instanceof Error ? err.message : 'Error desconocido');
+      toast({
+        title: "Error",
+        description: "Error al cargar los reportes contables",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
   };
+
+  // Use the new realtime hook
+  useRealtimeChannel({
+    channelName: `accounting-receipts-${psychologistId}`,
+    enabled: !!psychologistId,
+    table: 'payment_receipts',
+    filter: `psychologist_id=eq.${psychologistId}`,
+    onUpdate: (payload) => {
+      console.log('Payment receipt changed:', payload);
+      
+      const newRecord = payload.new as any;
+      const oldRecord = payload.old as any;
+      
+      if (
+        payload.eventType === 'INSERT' ||
+        payload.eventType === 'DELETE' ||
+        (payload.eventType === 'UPDATE' && (
+          newRecord?.validation_status !== oldRecord?.validation_status ||
+          newRecord?.amount !== oldRecord?.amount ||
+          newRecord?.include_in_report !== oldRecord?.include_in_report
+        ))
+      ) {
+        console.log('Refreshing reports due to receipt changes');
+        fetchReports();
+      }
+    }
+  });
 
   const fetchMonotaxCategories = async () => {
     try {
@@ -96,32 +155,52 @@ export const useAccountingReports = (psychologistId?: string) => {
   };
 
   const generateMonthlyReport = async (month: number, year: number) => {
+    if (!psychologistId) {
+      throw new Error('Psychologist ID is required');
+    }
+
     try {
+      console.log(`=== GENERATING MONTHLY REPORT ===`);
+      console.log(`Period: ${month}/${year}, Psychologist: ${psychologistId}`);
+
       const { data, error } = await supabase.functions.invoke('generate-monthly-report', {
         body: { psychologist_id: psychologistId, month, year }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Edge function error:', error);
+        throw error;
+      }
+
+      console.log('Report generation response:', data);
+
+      if (!data.success) {
+        throw new Error(data.error || 'Error generating monthly report');
+      }
 
       toast({
         title: "Reporte generado",
         description: `Reporte de ${month}/${year} generado exitosamente`
       });
 
-      fetchReports();
+      await fetchReports();
       return data;
+      
     } catch (err) {
       console.error('Error generating monthly report:', err);
       toast({
         title: "Error",
-        description: "Error al generar el reporte mensual",
+        description: "Error al generar el reporte mensual. Intenta nuevamente más tarde.",
         variant: "destructive"
       });
+      throw err;
     }
   };
 
   const updateMonotaxCategory = async (categoryCode: string) => {
     try {
+      if (!psychologistId) return;
+      
       const { error } = await supabase
         .from('psychologists')
         .update({ monotax_category: categoryCode })
@@ -134,6 +213,8 @@ export const useAccountingReports = (psychologistId?: string) => {
         title: "Categoría actualizada",
         description: `Categoría de monotributo actualizada a ${categoryCode}`
       });
+      
+      fetchReports();
     } catch (err) {
       console.error('Error updating monotax category:', err);
       toast({
@@ -154,15 +235,17 @@ export const useAccountingReports = (psychologistId?: string) => {
 
     if (percentage >= 90) {
       return {
-        level: 'critical',
-        message: `¡Atención! Has alcanzado el ${percentage.toFixed(1)}% del límite anual (${category.annual_limit.toLocaleString()})`,
-        remaining: category.annual_limit - annualAccumulated
+        level: 'critical' as const,
+        message: `¡Atención! Has alcanzado el ${percentage.toFixed(1)}% del límite anual`,
+        remaining: category.annual_limit - annualAccumulated,
+        percentage: Math.round(percentage)
       };
     } else if (percentage >= 80) {
       return {
-        level: 'warning',
+        level: 'warning' as const,
         message: `Advertencia: Has alcanzado el ${percentage.toFixed(1)}% del límite anual`,
-        remaining: category.annual_limit - annualAccumulated
+        remaining: category.annual_limit - annualAccumulated,
+        percentage: Math.round(percentage)
       };
     }
 
@@ -170,8 +253,10 @@ export const useAccountingReports = (psychologistId?: string) => {
   };
 
   useEffect(() => {
-    fetchReports();
-    fetchMonotaxCategories();
+    if (psychologistId) {
+      fetchReports();
+      fetchMonotaxCategories();
+    }
   }, [psychologistId]);
 
   return {

@@ -11,11 +11,17 @@ export type Database = {
     Tables: {
       accounting_reports: {
         Row: {
+          ai_analysis: string | null
           amount_by_payment_method: Json
+          amount_by_receipt_type: Json | null
           annual_accumulated: number
+          auto_approved_receipts: number | null
           created_at: string
           generation_date: string | null
           id: string
+          manually_reviewed_receipts: number | null
+          monotax_alert: Json | null
+          monthly_growth_percentage: number | null
           psychologist_id: string
           report_file_url: string | null
           report_month: number
@@ -27,11 +33,17 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ai_analysis?: string | null
           amount_by_payment_method?: Json
+          amount_by_receipt_type?: Json | null
           annual_accumulated?: number
+          auto_approved_receipts?: number | null
           created_at?: string
           generation_date?: string | null
           id?: string
+          manually_reviewed_receipts?: number | null
+          monotax_alert?: Json | null
+          monthly_growth_percentage?: number | null
           psychologist_id: string
           report_file_url?: string | null
           report_month: number
@@ -43,11 +55,17 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ai_analysis?: string | null
           amount_by_payment_method?: Json
+          amount_by_receipt_type?: Json | null
           annual_accumulated?: number
+          auto_approved_receipts?: number | null
           created_at?: string
           generation_date?: string | null
           id?: string
+          manually_reviewed_receipts?: number | null
+          monotax_alert?: Json | null
+          monthly_growth_percentage?: number | null
           psychologist_id?: string
           report_file_url?: string | null
           report_month?: number
@@ -721,6 +739,7 @@ export type Database = {
       payment_receipts: {
         Row: {
           amount: number | null
+          auto_approved: boolean | null
           created_at: string
           extracted_data: Json | null
           extraction_status: string
@@ -742,6 +761,7 @@ export type Database = {
         }
         Insert: {
           amount?: number | null
+          auto_approved?: boolean | null
           created_at?: string
           extracted_data?: Json | null
           extraction_status?: string
@@ -763,6 +783,7 @@ export type Database = {
         }
         Update: {
           amount?: number | null
+          auto_approved?: boolean | null
           created_at?: string
           extracted_data?: Json | null
           extraction_status?: string
@@ -1567,6 +1588,15 @@ export type Database = {
       }
       process_affiliate_referral: {
         Args: { new_psychologist_id: string; affiliate_code_param: string }
+        Returns: undefined
+      }
+      update_receipt_from_n8n: {
+        Args: {
+          receipt_id_param: string
+          extracted_data_param: Json
+          validation_status_param?: string
+          auto_approved_param?: boolean
+        }
         Returns: undefined
       }
       validate_affiliate_code: {

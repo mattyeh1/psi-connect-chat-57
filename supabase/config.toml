@@ -1,17 +1,1 @@
-
 project_id = "scikpgzpgzevkgwwobrf"
-
-[functions.api-psychologists]
-verify_jwt = false
-
-[functions.api-patients]
-verify_jwt = false
-
-[functions.api-accounts]
-verify_jwt = false
-
-[functions.api-subscriptions]
-verify_jwt = false
-
-[functions.api-stats]
-verify_jwt = false
