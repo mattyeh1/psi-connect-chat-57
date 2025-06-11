@@ -76,7 +76,7 @@ export const PatientAppointmentRequestForm = ({ psychologistId, onClose, onReque
       console.log('Triggering n8n webhook for receipt:', receiptId);
       
       // Esta URL se debe configurar en el environment de n8n
-      const webhookUrl = 'https://tu-instancia-n8n.com/webhook/receipt-ocr';
+      const webhookUrl = 'https://mattyeh.app.n8n.cloud/webhook/receipt-ocr';
       
       await fetch(webhookUrl, {
         method: 'POST',
