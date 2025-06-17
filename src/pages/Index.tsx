@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useOptimizedProfile } from "@/hooks/useOptimizedProfile";
@@ -23,10 +22,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { PsychologistRatesManager } from "@/components/PsychologistRatesManager";
 import { AccountingDashboard } from "@/components/AccountingDashboard";
 import { DocumentsSection } from "@/components/DocumentsSection";
+import { AppointmentRequests } from "@/components/AppointmentRequests";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 
-type ViewType = "dashboard" | "patients" | "calendar" | "messages" | "affiliates" | "seo" | "reports" | "support" | "early-access" | "visibility" | "rates" | "accounting" | "documents";
+type ViewType = "dashboard" | "patients" | "calendar" | "messages" | "affiliates" | "seo" | "reports" | "support" | "early-access" | "visibility" | "rates" | "accounting" | "documents" | "appointment-requests";
 
 export default function Index() {
   const { user, loading: authLoading } = useAuth();
@@ -39,7 +39,6 @@ export default function Index() {
   // Handle email verification from URL
   useEmailVerification();
 
-  // Simplified logging for debugging
   useEffect(() => {
     console.log('Index state:', {
       authLoading,
@@ -89,7 +88,6 @@ export default function Index() {
     }
   }, [psychologist]);
 
-  // Show auth loading if truly authenticating
   if (authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
@@ -101,12 +99,10 @@ export default function Index() {
     );
   }
 
-  // If no user after auth, show landing
   if (!user) {
     return <LandingPage />;
   }
 
-  // Show loading only while profile is loading (not stats)
   if (profileLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
@@ -118,7 +114,6 @@ export default function Index() {
     );
   }
 
-  // If profile error
   if (profileError) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
@@ -142,7 +137,6 @@ export default function Index() {
     );
   }
 
-  // If user but no profile after loading
   if (!profile) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
@@ -167,12 +161,10 @@ export default function Index() {
     );
   }
 
-  // Patient portal
   if (profile.user_type === 'patient') {
     return <PatientPortal />;
   }
 
-  // Admin redirect
   if (profile.user_type === 'admin') {
     navigate('/admin/dashboard');
     return null;
@@ -186,6 +178,8 @@ export default function Index() {
           return <Dashboard />;
         case "patients":
           return <PatientManagement />;
+        case "appointment-requests":
+          return <AppointmentRequests />;
         case "calendar":
           return <Calendar />;
         case "messages":
@@ -213,7 +207,6 @@ export default function Index() {
       }
     };
 
-    // Clean and format names properly for display
     const firstName = (psychologist?.first_name ?? '').trim();
     const lastName = (psychologist?.last_name ?? '').trim();
     const displayName = unifiedStats.psychologistName || 
@@ -250,7 +243,6 @@ export default function Index() {
     );
   }
 
-  // FALLBACK FINAL
   console.error('Unexpected state reached:', {
     hasUser: !!user,
     hasProfile: !!profile,

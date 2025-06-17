@@ -74,17 +74,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Create base profile if it doesn't exist
       if (!existingProfile) {
         console.log('=== CREATING BASE PROFILE ===');
+        
+        // Use upsert to handle potential race conditions
         const { error: createProfileError } = await supabase
           .from('profiles')
-          .insert({
+          .upsert({
             id: user.id,
             email: user.email!,
             user_type: user.user_metadata.user_type || 'patient'
+          }, {
+            onConflict: 'id'
           });
           
         if (createProfileError) {
           console.error('=== ERROR CREATING BASE PROFILE ===', createProfileError);
-          return;
+          // Don't return here, continue with role-specific profile creation
         } else {
           console.log('=== BASE PROFILE CREATED ===');
         }

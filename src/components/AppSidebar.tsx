@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -18,12 +17,14 @@ import {
   ChevronDown, 
   ChevronRight,
   Calculator,
-  FileText
+  FileText,
+  CalendarCheck
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { usePlanCapabilities } from "@/hooks/usePlanCapabilities";
 import { usePaymentReceipts } from "@/hooks/usePaymentReceipts";
+import { usePendingAppointmentRequests } from "@/hooks/usePendingAppointmentRequests";
 import { ProfessionalCodeDisplay } from "./ProfessionalCodeDisplay";
 import {
   Sidebar,
@@ -39,7 +40,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
-type ViewType = "dashboard" | "patients" | "calendar" | "messages" | "affiliates" | "seo" | "reports" | "support" | "early-access" | "visibility" | "rates" | "accounting" | "documents";
+type ViewType = "dashboard" | "patients" | "calendar" | "messages" | "affiliates" | "seo" | "reports" | "support" | "early-access" | "visibility" | "rates" | "accounting" | "documents" | "appointment-requests";
 
 interface AppSidebarProps {
   currentView: ViewType;
@@ -50,6 +51,7 @@ export function AppSidebar({ currentView, onViewChange }: AppSidebarProps) {
   const { psychologist } = useProfile();
   const { capabilities } = usePlanCapabilities();
   const { receipts } = usePaymentReceipts(psychologist?.id);
+  const { pendingCount } = usePendingAppointmentRequests(psychologist?.id);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const handleLogout = async () => {
@@ -70,6 +72,13 @@ export function AppSidebar({ currentView, onViewChange }: AppSidebarProps) {
       label: "Pacientes",
       icon: Users,
       available: true
+    },
+    {
+      id: "appointment-requests" as ViewType,
+      label: "Solicitudes de Citas",
+      icon: CalendarCheck,
+      available: true,
+      badge: pendingCount > 0 ? pendingCount.toString() : undefined
     },
     {
       id: "calendar" as ViewType,

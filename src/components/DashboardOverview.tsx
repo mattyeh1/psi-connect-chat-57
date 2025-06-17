@@ -1,11 +1,15 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MessageSquare, Users, Bell, Activity, DollarSign, TrendingUp, Clock, Target, UserCheck } from "lucide-react";
+import { Calendar, MessageSquare, Users, Bell, Activity, DollarSign, TrendingUp, Clock, Target, UserCheck, CalendarCheck } from "lucide-react";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { useUnifiedDashboardStats } from "@/hooks/useUnifiedDashboardStats";
 import { useProfile } from "@/hooks/useProfile";
 import { usePaymentReceipts } from "@/hooks/usePaymentReceipts";
+import { AppointmentRequests } from "@/components/AppointmentRequests";
+import { usePendingAppointmentRequests } from "@/hooks/usePendingAppointmentRequests";
+
 interface StatCardProps {
   title: string;
   value: string | number;
@@ -15,6 +19,7 @@ interface StatCardProps {
   bgColor?: string;
   textColor?: string;
 }
+
 const StatCard = ({
   title,
   value,
@@ -23,7 +28,8 @@ const StatCard = ({
   trend,
   bgColor = "bg-slate-50",
   textColor = "text-slate-800"
-}: StatCardProps) => <Card className="border-0 shadow-sm hover:shadow-md transition-shadow">
+}: StatCardProps) => (
+  <Card className="border-0 shadow-sm hover:shadow-md transition-shadow">
     <CardContent className="p-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -36,20 +42,20 @@ const StatCard = ({
             {description && <p className="text-xs text-slate-500 mt-1">{description}</p>}
           </div>
         </div>
-        {trend && <div className="text-right">
+        {trend && (
+          <div className="text-right">
             <Badge variant="secondary" className="text-xs">
               {trend}
             </Badge>
-          </div>}
+          </div>
+        )}
       </div>
     </CardContent>
-  </Card>;
+  </Card>
+);
+
 export const DashboardOverview = () => {
-  const {
-    psychologist,
-    patient,
-    profile
-  } = useProfile();
+  const { psychologist, patient, profile } = useProfile();
   const {
     todayAppointments,
     activePatients,
@@ -57,9 +63,8 @@ export const DashboardOverview = () => {
     loading: statsLoading
   } = useDashboardStats();
   const unifiedStats = useUnifiedDashboardStats(psychologist?.id);
-  const {
-    receipts
-  } = usePaymentReceipts(psychologist?.id);
+  const { receipts } = usePaymentReceipts(psychologist?.id);
+  const { pendingCount, loading: requestsLoading } = usePendingAppointmentRequests(psychologist?.id);
 
   // Calculate additional metrics
   const pendingReceipts = receipts.filter(r => r.validation_status === 'pending').length;
@@ -78,9 +83,11 @@ export const DashboardOverview = () => {
       color: 'text-slate-600',
       bgColor: 'bg-slate-100'
     };
+
     const now = new Date();
     const trialEnd = psychologist.trial_end_date ? new Date(psychologist.trial_end_date) : null;
     const subEnd = psychologist.subscription_end_date ? new Date(psychologist.subscription_end_date) : null;
+
     if (psychologist.subscription_status === 'trial') {
       if (trialEnd && trialEnd > now) {
         const daysLeft = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
@@ -110,9 +117,12 @@ export const DashboardOverview = () => {
       };
     }
   };
+
   const subscriptionInfo = getSubscriptionStatus();
+
   if (profile?.user_type === 'psychologist') {
-    return <div className="space-y-6">
+    return (
+      <div className="space-y-6">
         {/* Header con información del profesional */}
         <div className="flex items-center justify-between">
           <div>
@@ -132,23 +142,88 @@ export const DashboardOverview = () => {
         </div>
 
         {/* Grid de estadísticas principales */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard title="Citas de hoy" value={unifiedStats.statsLoading ? "..." : todayAppointments} icon={<Calendar className="w-6 h-6 text-blue-600" />} description="Programadas para hoy" bgColor="bg-blue-100" textColor="text-blue-800" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          <StatCard 
+            title="Citas de hoy" 
+            value={unifiedStats.statsLoading ? "..." : todayAppointments} 
+            icon={<Calendar className="w-6 h-6 text-blue-600" />} 
+            description="Programadas para hoy" 
+            bgColor="bg-blue-100" 
+            textColor="text-blue-800" 
+          />
           
-          <StatCard title="Pacientes activos" value={unifiedStats.statsLoading ? "..." : activePatients} icon={<Users className="w-6 h-6 text-emerald-600" />} description="En seguimiento" bgColor="bg-emerald-100" textColor="text-emerald-800" />
+          <StatCard 
+            title="Pacientes activos" 
+            value={unifiedStats.statsLoading ? "..." : activePatients} 
+            icon={<Users className="w-6 h-6 text-emerald-600" />} 
+            description="En seguimiento" 
+            bgColor="bg-emerald-100" 
+            textColor="text-emerald-800" 
+          />
           
-          <StatCard title="Mensajes sin leer" value={unifiedStats.statsLoading ? "..." : unreadMessages} icon={<MessageSquare className="w-6 h-6 text-purple-600" />} description="Requieren atención" bgColor="bg-purple-100" textColor="text-purple-800" />
+          <StatCard 
+            title="Mensajes sin leer" 
+            value={unifiedStats.statsLoading ? "..." : unreadMessages} 
+            icon={<MessageSquare className="w-6 h-6 text-purple-600" />} 
+            description="Requieren atención" 
+            bgColor="bg-purple-100" 
+            textColor="text-purple-800" 
+          />
+
+          <StatCard 
+            title="Solicitudes pendientes" 
+            value={requestsLoading ? "..." : pendingCount} 
+            icon={<CalendarCheck className="w-6 h-6 text-amber-600" />} 
+            description="Citas por aprobar" 
+            bgColor="bg-amber-100" 
+            textColor="text-amber-800" 
+          />
           
-          <StatCard title="Ingresos del mes" value={`$${monthlyIncome.toLocaleString()}`} icon={<DollarSign className="w-6 h-6 text-green-600" />} description="Comprobantes aprobados" bgColor="bg-green-100" textColor="text-green-800" />
+          <StatCard 
+            title="Ingresos del mes" 
+            value={`$${monthlyIncome.toLocaleString()}`} 
+            icon={<DollarSign className="w-6 h-6 text-green-600" />} 
+            description="Comprobantes aprobados" 
+            bgColor="bg-green-100" 
+            textColor="text-green-800" 
+          />
         </div>
+
+        {/* Solicitudes de citas pendientes */}
+        {pendingCount > 0 && (
+          <div className="mb-6">
+            <AppointmentRequests isDashboardView={true} />
+          </div>
+        )}
 
         {/* Segunda fila de estadísticas */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <StatCard title="Comprobantes pendientes" value={pendingReceipts} icon={<Clock className="w-6 h-6 text-orange-600" />} description="Esperando validación" bgColor="bg-orange-100" textColor="text-orange-800" />
+          <StatCard 
+            title="Comprobantes pendientes" 
+            value={pendingReceipts} 
+            icon={<Clock className="w-6 h-6 text-orange-600" />} 
+            description="Esperando validación" 
+            bgColor="bg-orange-100" 
+            textColor="text-orange-800" 
+          />
           
-          <StatCard title="Comprobantes aprobados" value={approvedReceipts} icon={<UserCheck className="w-6 h-6 text-green-600" />} description="Este mes" bgColor="bg-green-100" textColor="text-green-800" />
+          <StatCard 
+            title="Comprobantes aprobados" 
+            value={approvedReceipts} 
+            icon={<UserCheck className="w-6 h-6 text-green-600" />} 
+            description="Este mes" 
+            bgColor="bg-green-100" 
+            textColor="text-green-800" 
+          />
           
-          <StatCard title="Referidos totales" value={(psychologist as any)?.total_referrals || 0} icon={<Target className="w-6 h-6 text-indigo-600" />} description="Sistema de afiliados" bgColor="bg-indigo-100" textColor="text-indigo-800" />
+          <StatCard 
+            title="Referidos totales" 
+            value={(psychologist as any)?.total_referrals || 0} 
+            icon={<Target className="w-6 h-6 text-indigo-600" />} 
+            description="Sistema de afiliados" 
+            bgColor="bg-indigo-100" 
+            textColor="text-indigo-800" 
+          />
         </div>
 
         {/* Sección de actividad reciente */}
@@ -161,10 +236,13 @@ export const DashboardOverview = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {unifiedStats.statsLoading ? <div className="flex items-center justify-center p-8">
+              {unifiedStats.statsLoading ? (
+                <div className="flex items-center justify-center p-8">
                   <div className="w-6 h-6 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div>
                   <span className="ml-2 text-slate-600">Cargando estado...</span>
-                </div> : <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-3">
                     <h4 className="font-semibold text-slate-700 mb-3">Actividad de hoy</h4>
                     
@@ -182,6 +260,14 @@ export const DashboardOverview = () => {
                         <span className="text-sm text-slate-700">Mensajes nuevos</span>
                       </div>
                       <span className="font-semibold text-slate-800">{unreadMessages}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <CalendarCheck className="w-4 h-4 text-amber-600" />
+                        <span className="text-sm text-slate-700">Solicitudes de cita</span>
+                      </div>
+                      <span className="font-semibold text-slate-800">{pendingCount}</span>
                     </div>
                   </div>
 
@@ -206,15 +292,18 @@ export const DashboardOverview = () => {
                       </span>
                     </div>
                   </div>
-                </div>}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
-      </div>;
+      </div>
+    );
   }
 
   // Patient view - simplified
-  return <Card className="border-0 shadow-lg">
+  return (
+    <Card className="border-0 shadow-lg">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-slate-800">
           <Bell className="w-5 h-5" />
@@ -247,5 +336,6 @@ export const DashboardOverview = () => {
           </div>
         </div>
       </CardContent>
-    </Card>;
+    </Card>
+  );
 };
