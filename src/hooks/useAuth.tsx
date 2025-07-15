@@ -106,20 +106,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           
         if (!existingPsych && user.user_metadata.first_name) {
           console.log('=== CREATING PSYCHOLOGIST FROM METADATA ===');
+          console.log('User metadata:', user.user_metadata);
+          console.log('Professional type from metadata:', user.user_metadata.professionalType || user.user_metadata.profession_type);
           
           // Generate professional code
           const { data: codeData } = await supabase.rpc('generate_professional_code');
           
           if (codeData) {
-            const { error: psychError } = await supabase.from('psychologists').insert({
+            // Priorizar professionalType sobre profession_type
+            const professionType = user.user_metadata.professionalType || user.user_metadata.profession_type || 'psychologist';
+            
+            const psychologistData = {
               id: user.id,
               first_name: user.user_metadata.first_name,
               last_name: user.user_metadata.last_name,
               professional_code: codeData,
               phone: user.user_metadata.phone,
+              profession_type: professionType,
               specialization: user.user_metadata.specialization,
               license_number: user.user_metadata.license_number
-            });
+            };
+            
+            console.log('=== PSYCHOLOGIST DATA TO INSERT ===', psychologistData);
+            
+            const { error: psychError } = await supabase.from('psychologists').insert(psychologistData);
             
             if (psychError) {
               console.error('=== ERROR CREATING PSYCHOLOGIST ===', psychError);

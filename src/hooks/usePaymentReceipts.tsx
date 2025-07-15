@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -32,20 +31,25 @@ export const usePaymentReceipts = (psychologistId?: string) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  console.log('=== USE PAYMENT RECEIPTS ===');
-  console.log('Psychologist ID:', psychologistId);
+  const { isDisabled } = useRealtimeChannel({
+    channelName: `payment-receipts-${psychologistId}`,
+    enabled: !!psychologistId && !error,
+    table: 'payment_receipts',
+    filter: `psychologist_id=eq.${psychologistId}`,
+    onUpdate: (payload) => {
+      console.log('Payment receipt real-time update:', payload);
+      fetchReceipts();
+    }
+  });
 
   const fetchReceipts = async () => {
     if (!psychologistId) {
-      console.log('No psychologist ID provided, skipping fetch');
       setLoading(false);
       return;
     }
 
     try {
       setLoading(true);
-      
-      console.log('Fetching payment receipts for psychologist:', psychologistId);
       
       const { data, error } = await supabase
         .from('payment_receipts')
@@ -57,15 +61,6 @@ export const usePaymentReceipts = (psychologistId?: string) => {
         console.error('Error fetching payment receipts:', error);
         throw error;
       }
-
-      console.log(`Fetched ${data?.length || 0} receipts`);
-      console.log('Receipt details:', data?.map(r => ({
-        id: r.id,
-        amount: r.amount,
-        date: r.receipt_date || r.created_at,
-        status: r.validation_status,
-        include: r.include_in_report
-      })));
 
       setReceipts(data || []);
       setError(null);
@@ -82,18 +77,6 @@ export const usePaymentReceipts = (psychologistId?: string) => {
       setLoading(false);
     }
   };
-
-  // Use realtime channel for updates
-  useRealtimeChannel({
-    channelName: `payment-receipts-${psychologistId}`,
-    enabled: !!psychologistId,
-    table: 'payment_receipts',
-    filter: `psychologist_id=eq.${psychologistId}`,
-    onUpdate: (payload) => {
-      console.log('Payment receipt real-time update:', payload);
-      fetchReceipts(); // Refetch all data when any receipt changes
-    }
-  });
 
   const uploadReceipt = async (file: File, patientId?: string) => {
     if (!psychologistId) {
@@ -302,8 +285,17 @@ export const usePaymentReceipts = (psychologistId?: string) => {
   useEffect(() => {
     if (psychologistId) {
       fetchReceipts();
+      
+      // Si realtime está deshabilitado, configurar polling
+      if (isDisabled) {
+        const interval = setInterval(() => {
+          fetchReceipts();
+        }, 60000); // Polling cada minuto para receipts
+
+        return () => clearInterval(interval);
+      }
     }
-  }, [psychologistId]);
+  }, [psychologistId, isDisabled]);
 
   return {
     receipts,

@@ -25,6 +25,7 @@ interface Psychologist {
   trial_end_date?: string;
   subscription_end_date?: string;
   plan_type?: string;
+  profession_type?: string;
 }
 
 interface Patient {
@@ -170,12 +171,13 @@ export const useProfile = () => {
         
         if (psychError) {
           console.error('=== PSYCHOLOGIST ERROR ===', psychError);
-          setError('Error al cargar datos del psicólogo');
+          setError('Error al cargar datos del profesional');
         } else if (psychResult) {
           console.log('=== PSYCHOLOGIST DATA FOUND ===', {
             id: psychResult.id,
             first_name: psychResult.first_name,
             last_name: psychResult.last_name,
+            profession_type: psychResult.profession_type,
             hasNames: !!(psychResult.first_name && psychResult.last_name)
           });
           psychData = psychResult;
@@ -229,7 +231,8 @@ export const useProfile = () => {
         hasPsychData: !!psychData,
         hasPatientData: !!patientData,
         psychHasNames: psychData ? !!(psychData.first_name && psychData.last_name) : false,
-        patientHasNames: patientData ? !!(patientData.first_name && patientData.last_name) : false
+        patientHasNames: patientData ? !!(patientData.first_name && patientData.last_name) : false,
+        professionType: psychData?.profession_type
       });
 
     } catch (error) {
@@ -346,7 +349,7 @@ export const useProfile = () => {
         return { data: existingPsych, error: null };
       }
 
-      // Create the psychologist profile
+      // Create the psychologist profile with profession_type
       console.log('=== INSERTING NEW PSYCHOLOGIST ===');
       const psychologistData = {
         id: user.id,
@@ -355,7 +358,8 @@ export const useProfile = () => {
         last_name: data.last_name,
         phone: data.phone || null,
         specialization: data.specialization || null,
-        license_number: data.license_number || null
+        license_number: data.license_number || null,
+        profession_type: data.profession_type || 'psychologist'
       };
 
       console.log('=== PSYCHOLOGIST DATA TO INSERT ===', psychologistData);
@@ -382,7 +386,7 @@ export const useProfile = () => {
       
       toast({
         title: "Perfil creado",
-        description: "Perfil de psicólogo creado exitosamente",
+        description: "Perfil de profesional creado exitosamente",
       });
       
       return { data: result, error: null };

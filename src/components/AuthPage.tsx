@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -5,6 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Mail, Lock, User, Phone, FileText, Stethoscope } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -92,7 +100,7 @@ export const AuthPage = ({ affiliateCode, registrationOnly = false }: AuthPagePr
     setSignInData({ ...signInData, [e.target.name]: e.target.value });
   };
 
-  const handleSignUpChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleSignUpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     
     if (name === 'userType') {
@@ -103,19 +111,31 @@ export const AuthPage = ({ affiliateCode, registrationOnly = false }: AuthPagePr
         otherProfessionalType: ""
       });
       setShowOtherInput(false);
-    } else if (name === 'professionalType') {
-      setSignUpData({ 
-        ...signUpData, 
-        professionalType: value,
-        otherProfessionalType: ""
-      });
-      setShowOtherInput(value === "Otros...");
     } else {
       setSignUpData({ 
         ...signUpData, 
         [name]: value 
       });
     }
+  };
+
+  const handleUserTypeChange = (value: string) => {
+    setSignUpData({ 
+      ...signUpData, 
+      userType: value as "patient" | "psychologist",
+      professionalType: "",
+      otherProfessionalType: ""
+    });
+    setShowOtherInput(false);
+  };
+
+  const handleProfessionalTypeChange = (value: string) => {
+    setSignUpData({ 
+      ...signUpData, 
+      professionalType: value,
+      otherProfessionalType: ""
+    });
+    setShowOtherInput(value === "Otros...");
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -169,7 +189,8 @@ export const AuthPage = ({ affiliateCode, registrationOnly = false }: AuthPagePr
         ...(signUpData.userType === 'psychologist' && {
           license_number: signUpData.licenseNumber,
           specialization: signUpData.specialization,
-          professional_type: finalProfessionalType
+          professionalType: finalProfessionalType, // Cambiado de professional_type a professionalType
+          profession_type: finalProfessionalType   // Mantengo también esta clave para compatibilidad
         }),
         ...(signUpData.userType === 'patient' && {
           professional_code: signUpData.professionalCode
@@ -326,52 +347,44 @@ export const AuthPage = ({ affiliateCode, registrationOnly = false }: AuthPagePr
 
               <div className="space-y-2">
                 <Label htmlFor="userType" className="text-slate-700 font-medium">¿Eres paciente o profesional?</Label>
-                <select
-                  id="userType"
-                  name="userType"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white"
-                  value={signUpData.userType}
-                  onChange={handleSignUpChange}
-                >
-                  <option value="patient">Paciente</option>
-                  <option value="psychologist">Profesional</option>
-                </select>
+                <Select onValueChange={handleUserTypeChange} value={signUpData.userType}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecciona una opción" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border shadow-lg">
+                    <SelectItem value="patient">Paciente</SelectItem>
+                    <SelectItem value="psychologist">Profesional</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {signUpData.userType === "psychologist" && (
                 <>
                   <div className="space-y-2">
                     <Label htmlFor="professionalType" className="text-slate-700 font-medium">Tipo de Profesional</Label>
-                    <select
-                      id="professionalType"
-                      name="professionalType"
-                      className="w-full px-3 py-2 border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white"
-                      value={signUpData.professionalType}
-                      onChange={handleSignUpChange}
-                      required
-                    >
-                      <option value="">Selecciona tu profesión</option>
-                      
-                      <optgroup label="Salud Mental">
+                    <Select onValueChange={handleProfessionalTypeChange} value={signUpData.professionalType}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Selecciona tu profesión" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border shadow-lg max-h-60 overflow-y-auto">
+                        <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase">Salud Mental</div>
                         {PROFESSIONAL_CATEGORIES.mentalHealth.map(type => (
-                          <option key={type} value={type}>{type}</option>
+                          <SelectItem key={type} value={type}>{type}</SelectItem>
                         ))}
-                      </optgroup>
-                      
-                      <optgroup label="Salud General">
+                        
+                        <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase">Salud General</div>
                         {PROFESSIONAL_CATEGORIES.generalHealth.map(type => (
-                          <option key={type} value={type}>{type}</option>
+                          <SelectItem key={type} value={type}>{type}</SelectItem>
                         ))}
-                      </optgroup>
-                      
-                      <optgroup label="Bienestar y Belleza">
+                        
+                        <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase">Bienestar y Belleza</div>
                         {PROFESSIONAL_CATEGORIES.wellness.map(type => (
-                          <option key={type} value={type}>{type}</option>
+                          <SelectItem key={type} value={type}>{type}</SelectItem>
                         ))}
-                      </optgroup>
-                      
-                      <option value="Otros...">Otros...</option>
-                    </select>
+                        
+                        <SelectItem value="Otros...">Otros...</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {showOtherInput && (
@@ -435,7 +448,7 @@ export const AuthPage = ({ affiliateCode, registrationOnly = false }: AuthPagePr
                       id="professionalCode"
                       type="text"
                       name="professionalCode"
-                      placeholder="Ingresa el código de tu psicólogo"
+                      placeholder="Ingresa el código de tu profesional"
                       className="pl-9 border-slate-200 focus:border-blue-400 focus:ring-blue-400"
                       value={signUpData.professionalCode}
                       onChange={handleSignUpChange}
@@ -653,51 +666,43 @@ export const AuthPage = ({ affiliateCode, registrationOnly = false }: AuthPagePr
 
               <div className="space-y-2">
                 <Label htmlFor="userType" className="text-slate-700 font-medium">¿Eres paciente o profesional?</Label>
-                <select
-                  id="userType"
-                  name="userType"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white"
-                  value={signUpData.userType}
-                  onChange={handleSignUpChange}
-                >
-                  <option value="patient">Paciente</option>
-                  <option value="psychologist">Profesional</option>
-                </select>
+                <Select onValueChange={handleUserTypeChange} value={signUpData.userType}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecciona una opción" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border shadow-lg">
+                    <SelectItem value="patient">Paciente</SelectItem>
+                    <SelectItem value="psychologist">Profesional</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {signUpData.userType === "psychologist" && (
                 <div className="space-y-2">
                   <Label htmlFor="professionalType" className="text-slate-700 font-medium">Tipo de Profesional</Label>
-                  <select
-                    id="professionalType"
-                    name="professionalType"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white"
-                    value={signUpData.professionalType}
-                    onChange={handleSignUpChange}
-                    required
-                  >
-                    <option value="">Selecciona tu profesión</option>
-                    
-                    <optgroup label="Salud Mental">
+                  <Select onValueChange={handleProfessionalTypeChange} value={signUpData.professionalType}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecciona tu profesión" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border shadow-lg max-h-60 overflow-y-auto">
+                      <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase">Salud Mental</div>
                       {PROFESSIONAL_CATEGORIES.mentalHealth.map(type => (
-                        <option key={type} value={type}>{type}</option>
+                        <SelectItem key={type} value={type}>{type}</SelectItem>
                       ))}
-                    </optgroup>
-                    
-                    <optgroup label="Salud General">
+                      
+                      <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase">Salud General</div>
                       {PROFESSIONAL_CATEGORIES.generalHealth.map(type => (
-                        <option key={type} value={type}>{type}</option>
+                        <SelectItem key={type} value={type}>{type}</SelectItem>
                       ))}
-                    </optgroup>
-                    
-                    <optgroup label="Bienestar y Belleza">
+                      
+                      <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase">Bienestar y Belleza</div>
                       {PROFESSIONAL_CATEGORIES.wellness.map(type => (
-                        <option key={type} value={type}>{type}</option>
+                        <SelectItem key={type} value={type}>{type}</SelectItem>
                       ))}
-                    </optgroup>
-                    
-                    <option value="Otros...">Otros...</option>
-                  </select>
+                      
+                      <SelectItem value="Otros...">Otros...</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
 
@@ -710,7 +715,7 @@ export const AuthPage = ({ affiliateCode, registrationOnly = false }: AuthPagePr
                       id="professionalCode"
                       type="text"
                       name="professionalCode"
-                      placeholder="Código de tu psicólogo"
+                      placeholder="Código de tu profesional"
                       className="pl-9 border-slate-200 focus:border-blue-400 focus:ring-blue-400"
                       value={signUpData.professionalCode}
                       onChange={handleSignUpChange}

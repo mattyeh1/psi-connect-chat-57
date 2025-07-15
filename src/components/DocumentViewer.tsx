@@ -1,7 +1,9 @@
+
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Download, X } from "lucide-react";
+import { TemplateDocumentRenderer } from "./TemplateDocumentRenderer";
 
 interface Document {
   id: string;
@@ -58,6 +60,29 @@ export const DocumentViewer = ({ document, isOpen, onClose }: DocumentViewerProp
   const renderContent = () => {
     const content = document.content;
     
+    // Check if content exists and is an object
+    if (!content || typeof content !== 'object') {
+      return (
+        <div className="space-y-4">
+          <p className="text-slate-600">No hay contenido disponible para este documento.</p>
+        </div>
+      );
+    }
+
+    console.log('Document content:', content);
+
+    // Check if this document was generated from a template
+    if (content.generated_from_template) {
+      console.log('Document generated from template, using TemplateDocumentRenderer');
+      return (
+        <TemplateDocumentRenderer
+          content={content}
+          templateContent={content.template_content}
+        />
+      );
+    }
+    
+    // Legacy handling for manually created documents
     switch (document.type) {
       case 'assessment':
         return (
@@ -148,12 +173,12 @@ export const DocumentViewer = ({ document, isOpen, onClose }: DocumentViewerProp
         );
       
       default:
+        // Use the new template renderer as fallback for any other document type
         return (
-          <div className="space-y-4">
-            <pre className="bg-slate-50 p-4 rounded-lg text-sm overflow-auto">
-              {JSON.stringify(content, null, 2)}
-            </pre>
-          </div>
+          <TemplateDocumentRenderer
+            content={content}
+            templateContent={undefined}
+          />
         );
     }
   };

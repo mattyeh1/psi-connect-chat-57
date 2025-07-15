@@ -4,12 +4,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Clock, User, FileText, Upload, X } from "lucide-react";
+import { Calendar, Clock, User, FileText, Upload, X, DollarSign } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAvailableSlots } from "@/hooks/useAvailableSlots";
+import { useAppointmentRates } from "@/hooks/useAppointmentRates";
+import { useConversations } from "@/hooks/useConversations";
+import { PhoneInput } from "@/components/forms/PhoneInput";
+import { isValidArgentinePhoneNumber } from "@/utils/phoneValidation";
 
 interface PatientAppointmentRequestFormProps {
   psychologistId: string;
@@ -19,20 +23,24 @@ interface PatientAppointmentRequestFormProps {
 
 export const PatientAppointmentRequestForm = ({ psychologistId, onClose, onRequestCreated }: PatientAppointmentRequestFormProps) => {
   const { user } = useAuth();
+  const { createOrGetConversation, sendMessage } = useConversations();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     patientName: "",
     patientEmail: "",
     patientPhone: "",
+    patientAge: "",
     preferredDate: "",
     preferredTime: "",
-    sessionType: "presencial",
+    sessionType: "individual",
+    consultationReason: "",
     notes: ""
   });
   const [paymentProof, setPaymentProof] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [phoneError, setPhoneError] = useState("");
 
-  // -------- useAvailableSlots
+  // Available slots and rates
   const {
     getAvailableSlots,
     loading: slotsLoading,
@@ -41,9 +49,12 @@ export const PatientAppointmentRequestForm = ({ psychologistId, onClose, onReque
     psychologistId,
     selectedDate: formData.preferredDate
   });
+  
+  const { getRateForType, formatPrice, loading: ratesLoading } = useAppointmentRates(psychologistId);
   const availableSlots = getAvailableSlots();
+  const selectedRate = getRateForType(formData.sessionType);
 
-  // -------- Actualizar available slots cuando cambia preferredDate
+  // Update available slots when date changes
   const handlePreferredDateChange = (date: string) => {
     setFormData(prev => ({
       ...prev,
@@ -55,6 +66,30 @@ export const PatientAppointmentRequestForm = ({ psychologistId, onClose, onReque
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Clear phone error when user starts typing
+    if (field === 'patientPhone' && phoneError) {
+      setPhoneError("");
+    }
+  };
+
+  const handlePhoneChange = (phone: string) => {
+    setFormData(prev => ({ ...prev, patientPhone: phone }));
+    setPhoneError("");
+  };
+
+  const validatePhone = () => {
+    if (!formData.patientPhone.trim()) {
+      setPhoneError("El número de teléfono es obligatorio");
+      return false;
+    }
+    
+    if (!isValidArgentinePhoneNumber(formData.patientPhone)) {
+      setPhoneError("Ingresa un número de teléfono válido");
+      return false;
+    }
+    
+    return true;
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -107,21 +142,6 @@ export const PatientAppointmentRequestForm = ({ psychologistId, onClose, onReque
     
     console.log('Generated filename:', fileName);
 
-    // Verificar que el bucket existe, si no, intentar crearlo
-    const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
-    
-    if (bucketsError) {
-      console.error('Error listing buckets:', bucketsError);
-    } else {
-      const paymentProofsBucket = buckets.find(bucket => bucket.id === 'payment-proofs');
-      if (!paymentProofsBucket) {
-        console.warn('payment-proofs bucket not found in bucket list');
-      } else {
-        console.log('payment-proofs bucket exists:', paymentProofsBucket);
-      }
-    }
-
-    // Subir archivo a Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('payment-proofs')
       .upload(fileName, file, {
@@ -136,7 +156,6 @@ export const PatientAppointmentRequestForm = ({ psychologistId, onClose, onReque
     
     console.log('Upload successful:', uploadData);
     
-    // Obtener URL pública válida
     const { data: urlData } = supabase.storage
       .from('payment-proofs')
       .getPublicUrl(fileName);
@@ -144,7 +163,6 @@ export const PatientAppointmentRequestForm = ({ psychologistId, onClose, onReque
     const publicUrl = urlData.publicUrl;
     console.log('Generated public URL:', publicUrl);
     
-    // Validar que la URL es correcta
     if (!publicUrl || !publicUrl.startsWith('http')) {
       throw new Error('No se pudo generar una URL válida para el archivo');
     }
@@ -152,10 +170,53 @@ export const PatientAppointmentRequestForm = ({ psychologistId, onClose, onReque
     return publicUrl;
   };
 
+  const createAutomaticMessage = async () => {
+    try {
+      if (!user?.id) return;
+
+      const conversation = await createOrGetConversation(psychologistId, user.id);
+      if (!conversation) return;
+
+      const messageContent = `Nueva solicitud de cita recibida:
+
+📅 Fecha: ${formData.preferredDate}
+🕐 Hora: ${formData.preferredTime}
+👤 Paciente: ${formData.patientName} (${formData.patientAge} años)
+📧 Email: ${formData.patientEmail}
+📞 Teléfono: ${formData.patientPhone}
+🏥 Tipo de consulta: ${getTypeLabel(formData.sessionType)}
+💰 Tarifa: ${selectedRate ? formatPrice(selectedRate.price, selectedRate.currency) : 'No definida'}
+
+📝 Motivo de consulta:
+${formData.consultationReason}
+
+${formData.notes ? `📋 Notas adicionales:\n${formData.notes}` : ''}
+
+${paymentProof ? '💳 Comprobante de pago adjunto' : ''}`;
+
+      await sendMessage(conversation.id, user.id, messageContent);
+      console.log('Automatic message sent to psychologist');
+    } catch (error) {
+      console.error('Error sending automatic message:', error);
+    }
+  };
+
+  const getTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      individual: "Terapia Individual",
+      couple: "Terapia de Pareja",
+      family: "Terapia Familiar",
+      evaluation: "Evaluación",
+      follow_up: "Seguimiento"
+    };
+    return labels[type] || type;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.patientName || !formData.patientEmail || !formData.preferredDate || !formData.preferredTime) {
+    if (!formData.patientName || !formData.patientEmail || !formData.patientAge || 
+        !formData.preferredDate || !formData.preferredTime || !formData.consultationReason) {
       toast({
         title: "Error",
         description: "Por favor completa todos los campos obligatorios",
@@ -164,14 +225,22 @@ export const PatientAppointmentRequestForm = ({ psychologistId, onClose, onReque
       return;
     }
 
-    // Validar que el preferredTime es uno de los disponibles estrictamente
+    // Validar teléfono obligatorio
+    if (!validatePhone()) {
+      toast({
+        title: "Error",
+        description: "Por favor ingresa un número de teléfono válido",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!availableSlots.includes(formData.preferredTime)) {
       toast({
         title: "Error",
-        description: "El horario seleccionado no es válido o ya no está disponible. Elige uno de la lista.",
+        description: "El horario seleccionado no es válido o ya no está disponible.",
         variant: "destructive"
       });
-      setFormData(prev => ({ ...prev, preferredTime: "" }));
       return;
     }
 
@@ -184,12 +253,8 @@ export const PatientAppointmentRequestForm = ({ psychologistId, onClose, onReque
       // Upload payment proof if provided
       if (paymentProof) {
         console.log('=== STARTING PAYMENT PROOF PROCESSING ===');
-        
-        // 1. Subir archivo y obtener URL válida
         proofUrl = await uploadFileToStorage(paymentProof);
         
-        // 2. Crear registro en payment_receipts
-        console.log('=== CREATING PAYMENT RECEIPT RECORD ===');
         const { data: receiptData, error: receiptError } = await supabase
           .from('payment_receipts')
           .insert({
@@ -212,11 +277,7 @@ export const PatientAppointmentRequestForm = ({ psychologistId, onClose, onReque
         receiptId = receiptData.id;
         console.log('Receipt record created:', receiptId);
 
-        // 3. Disparar procesamiento OCR
-        console.log('=== STARTING OCR PROCESSING ===');
-        
         try {
-          console.log('=== TRIGGERING EDGE FUNCTION ===');
           const { data: ocrData, error: ocrError } = await supabase.functions.invoke('process-receipt-ocr', {
             body: { 
               fileUrl: proofUrl, 
@@ -226,17 +287,15 @@ export const PatientAppointmentRequestForm = ({ psychologistId, onClose, onReque
           
           if (ocrError) {
             console.error('Edge function error:', ocrError);
-            // Continue without blocking the flow
           } else {
             console.log('Edge function completed:', ocrData);
           }
         } catch (edgeFunctionError) {
           console.error('Edge function exception:', edgeFunctionError);
-          // Continue without blocking the flow
         }
       }
 
-      // Create appointment request
+      // Create appointment request with phone number
       console.log('=== CREATING APPOINTMENT REQUEST ===');
       const { error } = await supabase
         .from('appointment_requests')
@@ -245,8 +304,8 @@ export const PatientAppointmentRequestForm = ({ psychologistId, onClose, onReque
           patient_id: user?.id || '',
           preferred_date: formData.preferredDate,
           preferred_time: formData.preferredTime,
-          type: 'individual',
-          notes: `Nombre: ${formData.patientName}\nEmail: ${formData.patientEmail}\nTeléfono: ${formData.patientPhone}\nTipo de sesión: ${formData.sessionType}\n\nNotas adicionales: ${formData.notes}`,
+          type: formData.sessionType,
+          notes: `Nombre: ${formData.patientName}\nEdad: ${formData.patientAge} años\nEmail: ${formData.patientEmail}\nTeléfono: ${formData.patientPhone}\n\nMotivo de consulta: ${formData.consultationReason}\n\nNotas adicionales: ${formData.notes}`,
           payment_proof_url: proofUrl,
           status: 'pending'
         });
@@ -256,13 +315,16 @@ export const PatientAppointmentRequestForm = ({ psychologistId, onClose, onReque
         throw error;
       }
 
+      // Send automatic message to psychologist
+      await createAutomaticMessage();
+
       console.log('Appointment request created successfully');
 
       toast({
         title: "Solicitud enviada",
         description: paymentProof 
-          ? "Tu solicitud y comprobante han sido enviados. El comprobante está siendo procesado automáticamente."
-          : "Tu solicitud de cita ha sido enviada exitosamente. El psicólogo se contactará contigo pronto."
+          ? "Tu solicitud y comprobante han sido enviados. El psicólogo ha sido notificado automáticamente."
+          : "Tu solicitud de cita ha sido enviada exitosamente. El psicólogo ha sido notificado automáticamente."
       });
 
       onRequestCreated?.();
@@ -311,26 +373,39 @@ export const PatientAppointmentRequestForm = ({ psychologistId, onClose, onReque
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="patientPhone">Teléfono</Label>
+                <Label htmlFor="patientAge">Edad *</Label>
                 <Input
-                  id="patientPhone"
-                  type="tel"
-                  value={formData.patientPhone}
-                  onChange={(e) => handleInputChange('patientPhone', e.target.value)}
-                  placeholder="+54 9 11 1234-5678"
+                  id="patientAge"
+                  type="number"
+                  min="1"
+                  max="120"
+                  value={formData.patientAge}
+                  onChange={(e) => handleInputChange('patientAge', e.target.value)}
+                  placeholder="Tu edad"
+                  required
                 />
               </div>
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="patientEmail">Email *</Label>
-              <Input
-                id="patientEmail"
-                type="email"
-                value={formData.patientEmail}
-                onChange={(e) => handleInputChange('patientEmail', e.target.value)}
-                placeholder="tu@email.com"
-                required
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="patientEmail">Email *</Label>
+                <Input
+                  id="patientEmail"
+                  type="email"
+                  value={formData.patientEmail}
+                  onChange={(e) => handleInputChange('patientEmail', e.target.value)}
+                  placeholder="tu@email.com"
+                  required
+                />
+              </div>
+              
+              <PhoneInput
+                value={formData.patientPhone}
+                onChange={handlePhoneChange}
+                label="Teléfono"
+                required={true}
+                error={phoneError}
               />
             </div>
           </div>
@@ -339,6 +414,46 @@ export const PatientAppointmentRequestForm = ({ psychologistId, onClose, onReque
             <div className="flex items-center gap-2 mb-3">
               <Clock className="w-4 h-4" />
               <h3 className="font-medium">Detalles de la Cita</h3>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="sessionType">Tipo de Consulta *</Label>
+              <Select
+                value={formData.sessionType}
+                onValueChange={(value) => handleInputChange('sessionType', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona el tipo de consulta" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="individual">Terapia Individual</SelectItem>
+                  <SelectItem value="couple">Terapia de Pareja</SelectItem>
+                  <SelectItem value="family">Terapia Familiar</SelectItem>
+                  <SelectItem value="evaluation">Evaluación</SelectItem>
+                  <SelectItem value="follow_up">Seguimiento</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              {selectedRate && !ratesLoading && (
+                <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
+                  <DollarSign className="w-4 h-4 text-green-600" />
+                  <span className="text-sm font-medium text-green-800">
+                    Tarifa: {formatPrice(selectedRate.price, selectedRate.currency)}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="consultationReason">Motivo de Consulta *</Label>
+              <Textarea
+                id="consultationReason"
+                value={formData.consultationReason}
+                onChange={(e) => handleInputChange('consultationReason', e.target.value)}
+                placeholder="Describe brevemente el motivo de tu consulta..."
+                rows={3}
+                required
+              />
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -381,19 +496,6 @@ export const PatientAppointmentRequestForm = ({ psychologistId, onClose, onReque
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="sessionType">Tipo de Sesión</Label>
-              <select
-                id="sessionType"
-                value={formData.sessionType}
-                onChange={(e) => handleInputChange('sessionType', e.target.value)}
-                className="w-full p-2 border border-slate-200 rounded-md"
-              >
-                <option value="presencial">Presencial</option>
-                <option value="virtual">Virtual</option>
-              </select>
             </div>
           </div>
 

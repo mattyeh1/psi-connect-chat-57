@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instanciate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "12.2.3 (519615d)"
+  }
   public: {
     Tables: {
       accounting_reports: {
@@ -323,6 +328,63 @@ export type Database = {
           },
         ]
       }
+      ai_configurations: {
+        Row: {
+          ai_enabled: boolean | null
+          custom_prompt: string | null
+          excluded_chats: Json | null
+          id: number
+          response_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ai_enabled?: boolean | null
+          custom_prompt?: string | null
+          excluded_chats?: Json | null
+          id?: number
+          response_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ai_enabled?: boolean | null
+          custom_prompt?: string | null
+          excluded_chats?: Json | null
+          id?: number
+          response_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      appointment_confirmations: {
+        Row: {
+          appointment_id: string
+          confirmation_token: string
+          confirmed_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          status: string
+        }
+        Insert: {
+          appointment_id: string
+          confirmation_token: string
+          confirmed_at?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          status?: string
+        }
+        Update: {
+          appointment_id?: string
+          confirmation_token?: string
+          confirmed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       appointment_requests: {
         Row: {
           created_at: string
@@ -480,6 +542,33 @@ export type Database = {
           },
         ]
       }
+      bot_configuration: {
+        Row: {
+          config_key: string
+          config_value: Json | null
+          created_at: string | null
+          description: string | null
+          id: number
+          updated_at: string | null
+        }
+        Insert: {
+          config_key: string
+          config_value?: Json | null
+          created_at?: string | null
+          description?: string | null
+          id?: number
+          updated_at?: string | null
+        }
+        Update: {
+          config_key?: string
+          config_value?: Json | null
+          created_at?: string | null
+          description?: string | null
+          id?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       clinical_records: {
         Row: {
           created_at: string
@@ -584,6 +673,144 @@ export type Database = {
           },
         ]
       }
+      document_notifications: {
+        Row: {
+          created_at: string
+          document_id: string
+          id: string
+          is_read: boolean
+          message: string
+          metadata: Json | null
+          notification_type: string
+          read_at: string | null
+          recipient_id: string
+          recipient_type: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          id?: string
+          is_read?: boolean
+          message: string
+          metadata?: Json | null
+          notification_type: string
+          read_at?: string | null
+          recipient_id: string
+          recipient_type: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          metadata?: Json | null
+          notification_type?: string
+          read_at?: string | null
+          recipient_id?: string
+          recipient_type?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_notifications_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "patient_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_templates: {
+        Row: {
+          created_at: string
+          document_type: string
+          id: string
+          is_active: boolean
+          is_default: boolean
+          name: string
+          psychologist_id: string
+          template_content: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          document_type: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name: string
+          psychologist_id: string
+          template_content?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          document_type?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name?: string
+          psychologist_id?: string
+          template_content?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_templates_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_admin_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_templates_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "psychologist_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_templates_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "psychologists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      error_logs: {
+        Row: {
+          context: Json | null
+          created_at: string | null
+          error_message: string | null
+          error_type: string | null
+          id: number
+          resolved: boolean | null
+          stack_trace: string | null
+        }
+        Insert: {
+          context?: Json | null
+          created_at?: string | null
+          error_message?: string | null
+          error_type?: string | null
+          id?: number
+          resolved?: boolean | null
+          stack_trace?: string | null
+        }
+        Update: {
+          context?: Json | null
+          created_at?: string | null
+          error_message?: string | null
+          error_type?: string | null
+          id?: number
+          resolved?: boolean | null
+          stack_trace?: string | null
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
@@ -666,35 +893,44 @@ export type Database = {
         Row: {
           content: Json
           created_at: string
+          due_date: string | null
           id: string
           patient_id: string
+          priority: string | null
           psychologist_id: string
           status: string
           title: string
           type: string
           updated_at: string
+          workflow_step: number | null
         }
         Insert: {
           content: Json
           created_at?: string
+          due_date?: string | null
           id?: string
           patient_id: string
+          priority?: string | null
           psychologist_id: string
           status?: string
           title: string
           type: string
           updated_at?: string
+          workflow_step?: number | null
         }
         Update: {
           content?: Json
           created_at?: string
+          due_date?: string | null
           id?: string
           patient_id?: string
+          priority?: string | null
           psychologist_id?: string
           status?: string
           title?: string
           type?: string
           updated_at?: string
+          workflow_step?: number | null
         }
         Relationships: []
       }
@@ -1218,6 +1454,7 @@ export type Database = {
           pdf_primary_color: string | null
           phone: string | null
           plan_type: string | null
+          profession_type: string
           professional_code: string
           profile_image_url: string | null
           specialization: string | null
@@ -1242,6 +1479,7 @@ export type Database = {
           pdf_primary_color?: string | null
           phone?: string | null
           plan_type?: string | null
+          profession_type?: string
           professional_code: string
           profile_image_url?: string | null
           specialization?: string | null
@@ -1266,6 +1504,7 @@ export type Database = {
           pdf_primary_color?: string | null
           phone?: string | null
           plan_type?: string | null
+          profession_type?: string
           professional_code?: string
           profile_image_url?: string | null
           specialization?: string | null
@@ -1379,6 +1618,42 @@ export type Database = {
           },
         ]
       }
+      reminder_settings: {
+        Row: {
+          created_at: string
+          custom_message: string | null
+          delivery_methods: string[]
+          enabled: boolean
+          hours_before: number
+          id: string
+          psychologist_id: string
+          reminder_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          custom_message?: string | null
+          delivery_methods?: string[]
+          enabled?: boolean
+          hours_before?: number
+          id?: string
+          psychologist_id: string
+          reminder_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          custom_message?: string | null
+          delivery_methods?: string[]
+          enabled?: boolean
+          hours_before?: number
+          id?: string
+          psychologist_id?: string
+          reminder_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       subscription_plans: {
         Row: {
           created_at: string
@@ -1421,6 +1696,51 @@ export type Database = {
           savings_text?: string | null
           title?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      system_notifications: {
+        Row: {
+          created_at: string | null
+          id: number
+          message: string | null
+          metadata: Json | null
+          notification_type: string
+          priority: string | null
+          recipient_phone: string | null
+          scheduled_for: string | null
+          sent_at: string | null
+          status: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          message?: string | null
+          metadata?: Json | null
+          notification_type: string
+          priority?: string | null
+          recipient_phone?: string | null
+          scheduled_for?: string | null
+          sent_at?: string | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          message?: string | null
+          metadata?: Json | null
+          notification_type?: string
+          priority?: string | null
+          recipient_phone?: string | null
+          scheduled_for?: string | null
+          sent_at?: string | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -1481,6 +1801,228 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      whatsapp_bot_stats: {
+        Row: {
+          avg_response_time: number | null
+          created_at: string | null
+          errors_count: number | null
+          id: number
+          messages_received: number | null
+          messages_sent: number | null
+          metadata: Json | null
+          stat_date: string
+          success_rate: number | null
+          unique_contacts: number | null
+          updated_at: string | null
+          uptime_seconds: number | null
+        }
+        Insert: {
+          avg_response_time?: number | null
+          created_at?: string | null
+          errors_count?: number | null
+          id?: number
+          messages_received?: number | null
+          messages_sent?: number | null
+          metadata?: Json | null
+          stat_date?: string
+          success_rate?: number | null
+          unique_contacts?: number | null
+          updated_at?: string | null
+          uptime_seconds?: number | null
+        }
+        Update: {
+          avg_response_time?: number | null
+          created_at?: string | null
+          errors_count?: number | null
+          id?: number
+          messages_received?: number | null
+          messages_sent?: number | null
+          metadata?: Json | null
+          stat_date?: string
+          success_rate?: number | null
+          unique_contacts?: number | null
+          updated_at?: string | null
+          uptime_seconds?: number | null
+        }
+        Relationships: []
+      }
+      whatsapp_config: {
+        Row: {
+          config_key: string
+          config_value: Json
+          created_at: string | null
+          description: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          config_key: string
+          config_value: Json
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          config_key?: string
+          config_value?: Json
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      whatsapp_contacts: {
+        Row: {
+          created_at: string | null
+          id: number
+          is_business: boolean | null
+          last_message_at: string | null
+          metadata: Json | null
+          name: string | null
+          phone_number: string
+          profile_pic_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          is_business?: boolean | null
+          last_message_at?: string | null
+          metadata?: Json | null
+          name?: string | null
+          phone_number: string
+          profile_pic_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          is_business?: boolean | null
+          last_message_at?: string | null
+          metadata?: Json | null
+          name?: string | null
+          phone_number?: string
+          profile_pic_url?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      whatsapp_messages: {
+        Row: {
+          ack_status: number | null
+          body: string | null
+          contact_phone: string | null
+          created_at: string | null
+          direction: string | null
+          from_number: string
+          id: number
+          media_url: string | null
+          message_id: string | null
+          message_timestamp: string | null
+          message_type: string | null
+          metadata: Json | null
+          status: string | null
+          to_number: string
+        }
+        Insert: {
+          ack_status?: number | null
+          body?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          direction?: string | null
+          from_number: string
+          id?: number
+          media_url?: string | null
+          message_id?: string | null
+          message_timestamp?: string | null
+          message_type?: string | null
+          metadata?: Json | null
+          status?: string | null
+          to_number: string
+        }
+        Update: {
+          ack_status?: number | null
+          body?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          direction?: string | null
+          from_number?: string
+          id?: number
+          media_url?: string | null
+          message_id?: string | null
+          message_timestamp?: string | null
+          message_type?: string | null
+          metadata?: Json | null
+          status?: string | null
+          to_number?: string
+        }
+        Relationships: []
+      }
+      whatsapp_session_storage: {
+        Row: {
+          created_at: string | null
+          id: string
+          session_data: Json
+          session_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          session_data: Json
+          session_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          session_data?: Json
+          session_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      whatsapp_sessions: {
+        Row: {
+          created_at: string | null
+          device_info: Json | null
+          id: number
+          last_seen: string | null
+          phone_number: string | null
+          qr_code: string | null
+          session_data: Json | null
+          session_key: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          device_info?: Json | null
+          id?: number
+          last_seen?: string | null
+          phone_number?: string | null
+          qr_code?: string | null
+          session_data?: Json | null
+          session_key?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          device_info?: Json | null
+          id?: number
+          last_seen?: string | null
+          phone_number?: string | null
+          qr_code?: string | null
+          session_data?: Json | null
+          session_key?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {
@@ -1614,7 +2156,24 @@ export type Database = {
         Args: { appointment_id: string; cancellation_reason?: string }
         Returns: undefined
       }
+      create_appointment_confirmation: {
+        Args: { appointment_id: string }
+        Returns: string
+      }
+      create_missing_appointment_reminders: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          appointment_id: string
+          patient_name: string
+          reminders_created: number
+          status: string
+        }[]
+      }
       generate_affiliate_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_confirmation_token: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
@@ -1642,6 +2201,18 @@ export type Database = {
         Args: { psychologist_id: string }
         Returns: boolean
       }
+      log_whatsapp_message: {
+        Args: {
+          session_id_param: string
+          from_number_param: string
+          to_number_param: string
+          message_body_param: string
+          direction_param: string
+          whatsapp_message_id_param?: string
+          notification_id_param?: string
+        }
+        Returns: string
+      }
       process_affiliate_commission: {
         Args: { referred_psychologist_id: string; subscription_amount: number }
         Returns: undefined
@@ -1656,6 +2227,16 @@ export type Database = {
           extracted_data_param: Json
           validation_status_param?: string
           auto_approved_param?: boolean
+        }
+        Returns: undefined
+      }
+      update_whatsapp_session_status: {
+        Args: {
+          session_id_param: string
+          new_status: string
+          qr_code_param?: string
+          phone_number_param?: string
+          device_info_param?: Json
         }
         Returns: undefined
       }
@@ -1681,21 +2262,25 @@ export type Database = {
   }
 }
 
-type DefaultSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
@@ -1713,14 +2298,16 @@ export type Tables<
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
@@ -1736,14 +2323,16 @@ export type TablesInsert<
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
@@ -1759,14 +2348,16 @@ export type TablesUpdate<
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
@@ -1774,14 +2365,16 @@ export type Enums<
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never

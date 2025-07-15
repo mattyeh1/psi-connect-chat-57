@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/hooks/useAuth";
@@ -9,9 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, Clock, MessageSquare, FileText, User, CheckCircle, XCircle, AlertCircle, LogOut, Sparkles } from "lucide-react";
 import { PatientMessaging } from "./PatientMessaging";
-import { DocumentsSection } from "./DocumentsSection";
+import { PatientDocumentsSection } from "./PatientDocumentsSection";
 import { PatientAppointmentRequestForm } from "./PatientAppointmentRequestForm";
 import { toast } from "@/hooks/use-toast";
+import { PatientEditableDocuments } from './PatientEditableDocuments';
 
 interface Appointment {
   id: string;
@@ -159,7 +159,6 @@ export const PatientPortal = () => {
 
   const formatDate = (dateString: string) => {
     try {
-      // Si es una fecha en formato YYYY-MM-DD, crear la fecha directamente sin UTC
       if (dateString.includes('-') && dateString.split('-').length === 3) {
         const [year, month, day] = dateString.split('-');
         const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
@@ -171,7 +170,6 @@ export const PatientPortal = () => {
         });
       }
       
-      // Para fechas con timestamp completo
       return new Date(dateString).toLocaleDateString('es-ES', {
         weekday: 'long',
         year: 'numeric',
@@ -268,8 +266,8 @@ export const PatientPortal = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white text-gray-800">
-      <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <div className="max-w-7xl mx-auto">
         <header className="mb-8 flex flex-col md:flex-row justify-between md:items-center gap-4">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 flex-shrink-0 flex items-center justify-center rounded-full bg-blue-100">
@@ -305,12 +303,14 @@ export const PatientPortal = () => {
           </Button>
         </header>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 bg-transparent p-0 h-auto rounded-none border-b border-gray-200">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none pb-2">Resumen</TabsTrigger>
-            <TabsTrigger value="appointments" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none pb-2">Citas</TabsTrigger>
-            <TabsTrigger value="messages" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none pb-2">Mensajes</TabsTrigger>
-            <TabsTrigger value="documents" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none pb-2">Documentos</TabsTrigger>
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="overview">Resumen</TabsTrigger>
+            <TabsTrigger value="appointments">Citas</TabsTrigger>
+            <TabsTrigger value="documents">Documentos</TabsTrigger>
+            <TabsTrigger value="editable-docs">Docs Editables</TabsTrigger>
+            <TabsTrigger value="messages">Mensajes</TabsTrigger>
+            <TabsTrigger value="billing">Facturación</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="mt-6 space-y-6">
@@ -514,9 +514,11 @@ export const PatientPortal = () => {
           </TabsContent>
 
           <TabsContent value="documents" className="mt-6">
-            <Card>
-              <DocumentsSection />
-            </Card>
+            <PatientDocumentsSection patientId={patient.id} />
+          </TabsContent>
+
+          <TabsContent value="editable-docs">
+            <PatientEditableDocuments patientId={patient.id} />
           </TabsContent>
         </Tabs>
       </div>

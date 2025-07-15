@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -18,7 +19,11 @@ import {
   ChevronRight,
   Calculator,
   FileText,
-  CalendarCheck
+  CalendarCheck,
+  Bell,
+  Clock,
+  MessageCircle,
+  BarChart
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
@@ -40,7 +45,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
-type ViewType = "dashboard" | "patients" | "calendar" | "messages" | "affiliates" | "seo" | "reports" | "support" | "early-access" | "visibility" | "rates" | "accounting" | "documents" | "appointment-requests";
+type ViewType = "dashboard" | "patients" | "calendar" | "messages" | "affiliates" | "seo" | "reports" | "support" | "early-access" | "visibility" | "rates" | "accounting" | "documents" | "appointment-requests" | "notifications" | "reminder-settings" | "advanced-reminder-settings" | "notification-dashboard";
 
 interface AppSidebarProps {
   currentView: ViewType;
@@ -48,11 +53,67 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ currentView, onViewChange }: AppSidebarProps) {
+  const getProfessionTypeDisplay = (professionType?: string) => {
+    console.log('=== PROFESSION TYPE DISPLAY ===', professionType);
+    
+    if (!professionType) return 'Profesional';
+    
+    // Si ya es un valor formateado (contiene /), lo mostramos tal como está
+    if (professionType.includes('/')) {
+      return professionType;
+    }
+    
+    // Mapeo para todos los tipos de profesión
+    const professionMap: Record<string, string> = {
+      // Mapeo legacy
+      'psychologist': 'Psicólogo/a',
+      
+      // Mapeo para profesiones de salud mental
+      'Psicólogo/a': 'Psicólogo/a',
+      'Psiquiatra': 'Psiquiatra',
+      'Terapeuta': 'Terapeuta',
+      'Psicoanalista': 'Psicoanalista',
+      'Consejero/a': 'Consejero/a',
+      'Trabajador/a Social': 'Trabajador/a Social',
+      'Terapista Ocupacional': 'Terapista Ocupacional',
+      'Neuropsicólogo/a': 'Neuropsicólogo/a',
+      
+      // Mapeo para profesiones médicas
+      'Dermatólogo/a': 'Dermatólogo/a',
+      'Médico General': 'Médico General',
+      'Enfermero/a': 'Enfermero/a',
+      'Nutricionista': 'Nutricionista',
+      'Fisioterapeuta': 'Fisioterapeuta',
+      'Odontólogo/a': 'Odontólogo/a',
+      'Ginecólogo/a': 'Ginecólogo/a',
+      'Pediatra': 'Pediatra',
+      
+      // Mapeo para profesiones de belleza
+      'Manicurista': 'Manicurista',
+      'Esteticista': 'Esteticista',
+      'Masajista': 'Masajista',
+      'Peluquero/a': 'Peluquero/a',
+      'Maquillador/a': 'Maquillador/a',
+      'Cosmetólogo/a': 'Cosmetólogo/a'
+    };
+    
+    // Buscar la profesión en el mapeo
+    const mappedProfession = professionMap[professionType];
+    if (mappedProfession) {
+      return mappedProfession;
+    }
+    
+    // Si no se encuentra en el mapeo, devolver el valor original
+    return professionType;
+  };
+
   const { psychologist } = useProfile();
+  console.log('=== PSYCHOLOGIST DATA IN SIDEBAR ===', psychologist);
   const { capabilities } = usePlanCapabilities();
   const { receipts } = usePaymentReceipts(psychologist?.id);
   const { pendingCount } = usePendingAppointmentRequests(psychologist?.id);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -111,6 +172,35 @@ export function AppSidebar({ currentView, onViewChange }: AppSidebarProps) {
       icon: DollarSign,
       available: true,
       badge: "Nuevo"
+    }
+  ];
+
+  const notificationItems = [
+    {
+      id: "notification-dashboard" as ViewType,
+      label: "Panel de Notificaciones",
+      icon: BarChart,
+      available: true,
+      badge: "Nuevo"
+    },
+    {
+      id: "notifications" as ViewType,
+      label: "Centro de Notificaciones",
+      icon: Bell,
+      available: true
+    },
+    {
+      id: "reminder-settings" as ViewType,
+      label: "Recordatorios Básicos",
+      icon: Clock,
+      available: true
+    },
+    {
+      id: "advanced-reminder-settings" as ViewType,
+      label: "Recordatorios Avanzados",
+      icon: MessageCircle,
+      available: true,
+      badge: "Pro"
     }
   ];
 
@@ -206,6 +296,45 @@ export function AppSidebar({ currentView, onViewChange }: AppSidebarProps) {
         </SidebarGroup>
 
         <SidebarGroup>
+          <Collapsible open={showNotifications} onOpenChange={setShowNotifications}>
+            <SidebarGroupLabel asChild>
+              <CollapsibleTrigger className="flex w-full items-center justify-between">
+                🔔 Sistema de Notificaciones
+                {showNotifications ? (
+                  <ChevronDown className="w-4 h-4" />
+                ) : (
+                  <ChevronRight className="w-4 h-4" />
+                )}
+              </CollapsibleTrigger>
+            </SidebarGroupLabel>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {notificationItems.map((item) => (
+                    <SidebarMenuItem key={item.id}>
+                      <SidebarMenuButton
+                        onClick={() => onViewChange(item.id)}
+                        isActive={currentView === item.id}
+                        disabled={!item.available}
+                        className="w-full"
+                      >
+                        <item.icon className="w-4 h-4" />
+                        <span>{item.label}</span>
+                        {item.badge && (
+                          <Badge variant="secondary" className="ml-auto text-xs">
+                            {item.badge}
+                          </Badge>
+                        )}
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </SidebarGroup>
+
+        <SidebarGroup>
           <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
             <SidebarGroupLabel asChild>
               <CollapsibleTrigger className="flex w-full items-center justify-between">
@@ -252,7 +381,9 @@ export function AppSidebar({ currentView, onViewChange }: AppSidebarProps) {
               <p className="text-sm font-medium text-slate-800">
                 {psychologist?.first_name} {psychologist?.last_name}
               </p>
-              <p className="text-xs text-slate-600">Psicólogo Profesional</p>
+              <p className="text-xs text-slate-600">
+                {getProfessionTypeDisplay(psychologist?.profession_type) || 'Profesional'}
+              </p>
             </div>
             <SidebarMenuButton onClick={handleLogout} className="w-full text-red-600 hover:bg-red-50">
               <LogOut className="w-4 h-4" />

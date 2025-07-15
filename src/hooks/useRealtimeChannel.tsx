@@ -1,6 +1,7 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useRealtimeContext } from '@/contexts/RealtimeContext';
 
 interface UseRealtimeChannelProps {
   channelName: string;
@@ -19,32 +20,55 @@ export const useRealtimeChannel = ({
   filter,
   schema = 'public'
 }: UseRealtimeChannelProps) => {
+  const { isRealtimeEnabled, isChannelDisabled, disableChannel } = useRealtimeContext();
   const channelRef = useRef<any>(null);
   const isSubscribedRef = useRef(false);
   const mountedRef = useRef(true);
+  const failureCountRef = useRef(0);
+  const lastErrorTimeRef = useRef(0);
+  const maxFailures = 3;
+  const silentPeriod = 60000; // 1 minuto de silencio después de fallar
 
   const cleanup = useCallback(() => {
     if (channelRef.current) {
-      console.log(`Cleaning up channel: ${channelName}`);
       try {
         supabase.removeChannel(channelRef.current);
       } catch (error) {
-        console.warn('Error removing channel:', error);
+        // Silenciar errores de limpieza
       }
       channelRef.current = null;
       isSubscribedRef.current = false;
     }
-  }, [channelName]);
+  }, []);
 
   const setup = useCallback(() => {
-    if (!enabled || !table || isSubscribedRef.current || channelRef.current) {
+    // No configurar si realtime está deshabilitado globalmente o el canal específico está deshabilitado
+    if (!enabled || !table || !mountedRef.current || !isRealtimeEnabled || isChannelDisabled(channelName)) {
       return;
     }
 
-    console.log(`Setting up realtime channel: ${channelName}`);
-    
+    // Si ya hay un canal activo, no crear otro
+    if (channelRef.current || isSubscribedRef.current) {
+      return;
+    }
+
+    // Si hemos fallado muchas veces, no intentar de nuevo por un tiempo
+    if (failureCountRef.current >= maxFailures) {
+      const now = Date.now();
+      if (now - lastErrorTimeRef.current < silentPeriod) {
+        return;
+      }
+      // Reset después del período de silencio
+      failureCountRef.current = 0;
+    }
+
     try {
-      const channel = supabase.channel(channelName);
+      const channel = supabase.channel(channelName, {
+        config: {
+          broadcast: { self: false },
+          presence: { key: channelName }
+        }
+      });
       
       channel
         .on(
@@ -57,30 +81,45 @@ export const useRealtimeChannel = ({
           },
           (payload) => {
             if (mountedRef.current && onUpdate) {
-              console.log(`Realtime update on ${channelName}:`, payload);
               onUpdate(payload);
             }
           }
         )
         .subscribe((status) => {
-          console.log(`Channel ${channelName} status:`, status);
           if (status === 'SUBSCRIBED') {
             isSubscribedRef.current = true;
-          } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+            failureCountRef.current = 0; // Reset en conexión exitosa
+          } else if (status === 'CLOSED') {
             isSubscribedRef.current = false;
+            channelRef.current = null;
+          } else if (status === 'CHANNEL_ERROR') {
+            isSubscribedRef.current = false;
+            channelRef.current = null;
+            failureCountRef.current++;
+            lastErrorTimeRef.current = Date.now();
+            
+            // Deshabilitar canal después de muchos fallos
+            if (failureCountRef.current >= maxFailures) {
+              disableChannel(channelName);
+            }
           }
         });
 
       channelRef.current = channel;
     } catch (error) {
-      console.error(`Error setting up channel ${channelName}:`, error);
+      failureCountRef.current++;
+      lastErrorTimeRef.current = Date.now();
+      
+      if (failureCountRef.current >= maxFailures) {
+        disableChannel(channelName);
+      }
     }
-  }, [channelName, enabled, table, filter, schema, onUpdate]);
+  }, [channelName, enabled, table, filter, schema, onUpdate, isRealtimeEnabled, isChannelDisabled, disableChannel]);
 
   useEffect(() => {
     mountedRef.current = true;
     
-    if (enabled) {
+    if (enabled && isRealtimeEnabled && !isChannelDisabled(channelName)) {
       setup();
     }
 
@@ -88,10 +127,11 @@ export const useRealtimeChannel = ({
       mountedRef.current = false;
       cleanup();
     };
-  }, [enabled, setup, cleanup]);
+  }, [enabled, setup, cleanup, isRealtimeEnabled, isChannelDisabled, channelName]);
 
   return {
     isSubscribed: isSubscribedRef.current,
-    cleanup
+    cleanup,
+    isDisabled: isChannelDisabled(channelName)
   };
 };

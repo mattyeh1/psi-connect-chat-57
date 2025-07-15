@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Clock, User, Send, AlertCircle } from "lucide-react";
+import { Calendar, Clock, User, Send, AlertCircle, DollarSign } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useAvailableSlots } from "@/hooks/useAvailableSlots";
+import { useAppointmentRates } from "@/hooks/useAppointmentRates";
 
 interface AppointmentRequestFormProps {
   psychologistId: string;
@@ -25,6 +26,8 @@ export const AppointmentRequestForm = ({
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [appointmentType, setAppointmentType] = useState("");
+  const [patientAge, setPatientAge] = useState("");
+  const [consultationReason, setConsultationReason] = useState("");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -39,6 +42,9 @@ export const AppointmentRequestForm = ({
     selectedDate
   });
 
+  const { getRateForType, formatPrice, loading: ratesLoading } = useAppointmentRates(psychologistId);
+  const selectedRate = getRateForType(appointmentType);
+
   // Refresh availability when date changes
   useEffect(() => {
     if (selectedDate) {
@@ -50,7 +56,7 @@ export const AppointmentRequestForm = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedDate || !selectedTime || !appointmentType) {
+    if (!selectedDate || !selectedTime || !appointmentType || !patientAge || !consultationReason) {
       toast({
         title: "Error",
         description: "Por favor completa todos los campos requeridos",
@@ -78,7 +84,7 @@ export const AppointmentRequestForm = ({
         preferred_date: selectedDate,
         preferred_time: selectedTime,
         type: appointmentType,
-        notes: notes || null
+        notes: `Edad: ${patientAge} años\nMotivo de consulta: ${consultationReason}\n\nNotas adicionales: ${notes || 'Ninguna'}`
       });
 
       const { error } = await supabase
@@ -89,7 +95,7 @@ export const AppointmentRequestForm = ({
           preferred_date: selectedDate,
           preferred_time: selectedTime,
           type: appointmentType,
-          notes: notes || null
+          notes: `Edad: ${patientAge} años\nMotivo de consulta: ${consultationReason}\n\nNotas adicionales: ${notes || 'Ninguna'}`
         });
 
       if (error) {
@@ -106,6 +112,8 @@ export const AppointmentRequestForm = ({
       setSelectedDate("");
       setSelectedTime("");
       setAppointmentType("");
+      setPatientAge("");
+      setConsultationReason("");
       setNotes("");
       
       onSuccess?.();
@@ -167,7 +175,71 @@ export const AppointmentRequestForm = ({
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="date">Fecha preferida</Label>
+            <Label htmlFor="type">Tipo de consulta *</Label>
+            <Select value={appointmentType} onValueChange={setAppointmentType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona el tipo de consulta" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="individual">
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    {getTypeLabel("individual")}
+                  </div>
+                </SelectItem>
+                <SelectItem value="couple">
+                  {getTypeLabel("couple")}
+                </SelectItem>
+                <SelectItem value="family">
+                  {getTypeLabel("family")}
+                </SelectItem>
+                <SelectItem value="evaluation">
+                  {getTypeLabel("evaluation")}
+                </SelectItem>
+                <SelectItem value="follow_up">
+                  {getTypeLabel("follow_up")}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {selectedRate && !ratesLoading && (
+              <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
+                <DollarSign className="w-4 h-4 text-green-600" />
+                <span className="text-sm font-medium text-green-800">
+                  Tarifa: {formatPrice(selectedRate.price, selectedRate.currency)}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="patientAge">Edad del paciente *</Label>
+            <Input
+              id="patientAge"
+              type="number"
+              min="1"
+              max="120"
+              value={patientAge}
+              onChange={(e) => setPatientAge(e.target.value)}
+              placeholder="Edad en años"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="consultationReason">Motivo de consulta *</Label>
+            <Textarea
+              id="consultationReason"
+              value={consultationReason}
+              onChange={(e) => setConsultationReason(e.target.value)}
+              placeholder="Describe brevemente el motivo de la consulta..."
+              className="min-h-[80px]"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="date">Fecha preferida *</Label>
             <Input
               id="date"
               type="date"
@@ -185,7 +257,7 @@ export const AppointmentRequestForm = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="time">Hora preferida</Label>
+            <Label htmlFor="time">Hora preferida *</Label>
             <Select 
               value={selectedTime} 
               onValueChange={setSelectedTime}
@@ -241,48 +313,19 @@ export const AppointmentRequestForm = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="type">Tipo de consulta</Label>
-            <Select value={appointmentType} onValueChange={setAppointmentType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecciona el tipo de consulta" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="individual">
-                  <div className="flex items-center gap-2">
-                    <User className="w-4 h-4" />
-                    {getTypeLabel("individual")}
-                  </div>
-                </SelectItem>
-                <SelectItem value="couple">
-                  {getTypeLabel("couple")}
-                </SelectItem>
-                <SelectItem value="family">
-                  {getTypeLabel("family")}
-                </SelectItem>
-                <SelectItem value="evaluation">
-                  {getTypeLabel("evaluation")}
-                </SelectItem>
-                <SelectItem value="follow_up">
-                  {getTypeLabel("follow_up")}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="notes">Notas adicionales (opcional)</Label>
             <Textarea
               id="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Describe brevemente el motivo de la consulta o cualquier información adicional..."
+              placeholder="Cualquier información adicional que consideres importante..."
               className="min-h-[100px]"
             />
           </div>
 
           <Button 
             type="submit" 
-            disabled={loading || !selectedDate || !selectedTime || !appointmentType || availableSlots.length === 0}
+            disabled={loading || !selectedDate || !selectedTime || !appointmentType || !patientAge || !consultationReason || availableSlots.length === 0}
             className="w-full bg-gradient-to-r from-blue-500 to-emerald-500 hover:shadow-lg transition-all duration-200"
           >
             <Send className="w-4 h-4 mr-2" />

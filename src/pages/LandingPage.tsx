@@ -422,7 +422,7 @@ export const LandingPage = () => {
                     <Star className="w-6 h-6 text-blue-500" />
                     Plan Plus
                   </CardTitle>
-                  <div className="text-4xl font-bold text-slate-800 group-hover:scale-110 transition-transform duration-300">$99.999</div>
+                  <div className="text-4xl font-bold text-slate-800 group-hover:scale-110 transition-transform duration-300">$34.999</div>
                   <div className="text-slate-600">/mes</div>
                 </CardHeader>
                 <CardContent>
@@ -479,7 +479,7 @@ export const LandingPage = () => {
                     <Crown className="w-6 h-6 text-purple-500" />
                     Plan Pro
                   </CardTitle>
-                  <div className="text-4xl font-bold text-slate-800 group-hover:scale-110 transition-transform duration-300">$149.999</div>
+                  <div className="text-4xl font-bold text-slate-800 group-hover:scale-110 transition-transform duration-300">$74.999</div>
                   <div className="text-slate-600">/mes</div>
                 </CardHeader>
                 <CardContent>
@@ -615,7 +615,7 @@ export const LandingPage = () => {
               </div>
 
               <div className="border-t border-slate-700 mt-8 pt-8 text-center text-slate-400 hover:text-slate-300 transition-colors duration-300">
-                <p>&copy; 2024 ProConnection. Todos los derechos reservados.</p>
+                <p>&copy; 2025 ProConnection. Todos los derechos reservados.</p>
               </div>
             </div>
           </footer>

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useOptimizedProfile } from "@/hooks/useOptimizedProfile";
@@ -23,10 +24,15 @@ import { PsychologistRatesManager } from "@/components/PsychologistRatesManager"
 import { AccountingDashboard } from "@/components/AccountingDashboard";
 import { DocumentsSection } from "@/components/DocumentsSection";
 import { AppointmentRequests } from "@/components/AppointmentRequests";
+import { NotificationCenter } from "@/components/NotificationCenter";
+import { ReminderSettingsManager } from "@/components/ReminderSettingsManager";
+import { AdvancedReminderSettings } from "@/components/AdvancedReminderSettings";
+import { NotificationDashboard } from "@/components/NotificationDashboard";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { RealtimeProvider } from "@/contexts/RealtimeContext";
 
-type ViewType = "dashboard" | "patients" | "calendar" | "messages" | "affiliates" | "seo" | "reports" | "support" | "early-access" | "visibility" | "rates" | "accounting" | "documents" | "appointment-requests";
+type ViewType = "dashboard" | "patients" | "calendar" | "messages" | "affiliates" | "seo" | "reports" | "support" | "early-access" | "visibility" | "rates" | "accounting" | "documents" | "appointment-requests" | "notifications" | "reminder-settings" | "advanced-reminder-settings" | "notification-dashboard";
 
 export default function Index() {
   const { user, loading: authLoading } = useAuth();
@@ -202,6 +208,14 @@ export default function Index() {
           return <PsychologistRatesManager />;
         case "accounting":
           return <AccountingDashboard psychologistId={psychologist?.id || ''} />;
+        case "notifications":
+          return <NotificationCenter />;
+        case "reminder-settings":
+          return <ReminderSettingsManager />;
+        case "advanced-reminder-settings":
+          return <AdvancedReminderSettings />;
+        case "notification-dashboard":
+          return <NotificationDashboard />;
         default:
           return <Dashboard />;
       }
@@ -213,32 +227,38 @@ export default function Index() {
                        [firstName, lastName].filter(Boolean).join(' ') || 
                        'Profesional';
 
+    const handleViewChange = (view: ViewType) => {
+      setCurrentView(view);
+    };
+
     return (
       <SidebarProvider>
-        <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 to-blue-50">
-          <AppSidebar currentView={currentView} onViewChange={setCurrentView} />
-          <SidebarInset>
-            <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-              <SidebarTrigger className="-ml-1" />
-              <div className="ml-auto flex items-center space-x-4">
-                <span className="text-sm text-muted-foreground">
-                  {displayName}
-                </span>
-                {(unifiedStats.planType || psychologist?.plan_type) && (
-                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                    {(unifiedStats.planType || psychologist?.plan_type)?.toUpperCase()}
+        <RealtimeProvider>
+          <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 to-blue-50">
+            <AppSidebar currentView={currentView} onViewChange={handleViewChange} />
+            <SidebarInset>
+              <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+                <SidebarTrigger className="-ml-1" />
+                <div className="ml-auto flex items-center space-x-4">
+                  <span className="text-sm text-muted-foreground">
+                    {displayName}
                   </span>
-                )}
+                  {(unifiedStats.planType || psychologist?.plan_type) && (
+                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                      {(unifiedStats.planType || psychologist?.plan_type)?.toUpperCase()}
+                    </span>
+                  )}
+                </div>
+              </header>
+              <div className="flex flex-1 flex-col gap-4 p-4">
+                {renderCurrentView()}
               </div>
-            </header>
-            <div className="flex flex-1 flex-col gap-4 p-4">
-              {renderCurrentView()}
-            </div>
-          </SidebarInset>
-          {showTrialModal && (
-            <TrialExpiredModal onUpgrade={() => setShowTrialModal(false)} />
-          )}
-        </div>
+            </SidebarInset>
+            {showTrialModal && (
+              <TrialExpiredModal onUpgrade={() => setShowTrialModal(false)} />
+            )}
+          </div>
+        </RealtimeProvider>
       </SidebarProvider>
     );
   }

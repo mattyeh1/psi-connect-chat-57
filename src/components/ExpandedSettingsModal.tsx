@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useProfile } from "@/hooks/useProfile";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,8 +16,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Crown, Mail, Phone, Shield, CreditCard, Clock, AlertTriangle } from "lucide-react";
+import { Calendar, Crown, Mail, Phone, Shield, CreditCard, Clock, AlertTriangle, Bell, Settings as SettingsIcon } from "lucide-react";
 import { toast } from "sonner";
+import { ReminderSettingsManager } from "./ReminderSettingsManager";
+import { NotificationCenter } from "./NotificationCenter";
 
 interface ExpandedSettingsModalProps {
   isOpen: boolean;
@@ -157,24 +158,26 @@ export const ExpandedSettingsModal = ({ isOpen, onClose }: ExpandedSettingsModal
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[800px] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Configuración Profesional</DialogTitle>
           <DialogDescription>
-            Gestiona tu perfil, suscripción, notificaciones y configuración de privacidad.
+            Gestiona tu perfil, suscripción, notificaciones y recordatorios.
           </DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="profile">Perfil</TabsTrigger>
             <TabsTrigger value="subscription">Suscripción</TabsTrigger>
             <TabsTrigger value="notifications">Notificaciones</TabsTrigger>
+            <TabsTrigger value="reminders">Recordatorios</TabsTrigger>
             <TabsTrigger value="privacy">Privacidad</TabsTrigger>
           </TabsList>
 
           {/* Profile Tab */}
           <TabsContent value="profile" className="space-y-4">
+            {/* ... keep existing code (profile tab content) */}
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -254,6 +257,7 @@ export const ExpandedSettingsModal = ({ isOpen, onClose }: ExpandedSettingsModal
 
           {/* Subscription Tab */}
           <TabsContent value="subscription" className="space-y-4">
+            {/* ... keep existing code (subscription tab content) */}
             <div className="space-y-4">
               <Card>
                 <CardHeader>
@@ -342,52 +346,32 @@ export const ExpandedSettingsModal = ({ isOpen, onClose }: ExpandedSettingsModal
 
           {/* Notifications Tab */}
           <TabsContent value="notifications" className="space-y-4">
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Notificaciones por email</Label>
-                  <p className="text-sm text-slate-600">
-                    Recibe notificaciones importantes por correo electrónico
-                  </p>
-                </div>
-                <Switch
-                  checked={emailNotifications}
-                  onCheckedChange={setEmailNotifications}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Notificaciones push</Label>
-                  <p className="text-sm text-slate-600">
-                    Recibe notificaciones en tiempo real en el navegador
-                  </p>
-                </div>
-                <Switch
-                  checked={pushNotifications}
-                  onCheckedChange={setPushNotifications}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Recordatorios de citas</Label>
-                  <p className="text-sm text-slate-600">
-                    Recibe recordatorios antes de tus citas programadas
-                  </p>
-                </div>
-                <Switch
-                  checked={appointmentReminders}
-                  onCheckedChange={setAppointmentReminders}
-                />
-              </div>
-              
-              <Separator />
-              
-              <Button className="w-full">
-                Guardar Configuración
-              </Button>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Bell className="w-5 h-5" />
+                  Centro de Notificaciones
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <NotificationCenter />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Reminders Tab */}
+          <TabsContent value="reminders" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <SettingsIcon className="w-5 h-5" />
+                  Configuración de Recordatorios
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ReminderSettingsManager />
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Privacy Tab */}

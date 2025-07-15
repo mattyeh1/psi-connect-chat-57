@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Plus, FileText, Download, Eye, Calendar, Printer } from "lucide-react";
+import { Plus, FileText, Download, Eye, Calendar, Printer, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,7 @@ import { AssessmentFormModal } from "@/components/forms/AssessmentFormModal";
 import { ConsentFormModal } from "@/components/forms/ConsentFormModal";
 import { TreatmentPlanModal } from "@/components/forms/TreatmentPlanModal";
 import { ProgressReportModal } from "@/components/forms/ProgressReportModal";
+import { TemplateUsageManager } from "@/components/template-usage/TemplateUsageManager";
 import { exportAsText, exportAsJSON, printDocument, DocumentData } from "@/utils/documentExporter";
 import { useProfile } from "@/hooks/useProfile";
 import { toast } from "sonner";
@@ -28,6 +29,7 @@ export const PatientDocuments = ({ documents, patientId, onRefresh, patient }: P
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [showTreatmentModal, setShowTreatmentModal] = useState(false);
   const [showProgressModal, setShowProgressModal] = useState(false);
+  const [showTemplateManager, setShowTemplateManager] = useState(false);
   const [exportingDocument, setExportingDocument] = useState<string | null>(null);
 
   const getDocumentTypeLabel = (type: string) => {
@@ -149,10 +151,25 @@ export const PatientDocuments = ({ documents, patientId, onRefresh, patient }: P
       case 'progress':
         setShowProgressModal(false);
         break;
+      case 'template':
+        setShowTemplateManager(false);
+        break;
     }
-    // Refresh documents when modal closes
     onRefresh();
   };
+
+  if (showTemplateManager) {
+    return (
+      <TemplateUsageManager
+        patientId={patientId}
+        onBack={() => setShowTemplateManager(false)}
+        onDocumentCreated={() => {
+          setShowTemplateManager(false);
+          onRefresh();
+        }}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -164,6 +181,10 @@ export const PatientDocuments = ({ documents, patientId, onRefresh, patient }: P
           </p>
         </div>
         <div className="flex space-x-2">
+          <Button size="sm" variant="outline" onClick={() => setShowTemplateManager(true)}>
+            <Palette className="h-4 w-4 mr-2" />
+            Usar Plantillas
+          </Button>
           <Button size="sm" onClick={() => setShowAssessmentModal(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Evaluación

@@ -14,6 +14,8 @@ import { useForm } from 'react-hook-form';
 import { Loader2, Eye, Save, Plus } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
 import { toast } from '@/hooks/use-toast';
+import { TextareaWithAutocomplete } from '@/components/ui/textarea-with-autocomplete';
+import { useSmartAutocomplete } from '@/hooks/useSmartAutocomplete';
 
 interface FormData {
   custom_url: string;
@@ -157,6 +159,16 @@ export const ExpandedPublicProfileManager = () => {
     loadOrCreateProfile();
   }, [psychologist, getMyExpandedProfile, createOrUpdateExpandedProfile, getProfileSpecialties, reset]);
 
+  const autocomplete = useSmartAutocomplete({
+    professionType: watch('profession_type') || 'psychologist',
+    specialties: selectedSpecialties.map(id => 
+      specialties.find(s => s.id === id)?.name || ''
+    ).filter(Boolean),
+    yearsExperience: watch('years_experience') || 0,
+    firstName: psychologist?.first_name,
+    lastName: psychologist?.last_name
+  });
+
   const onSubmit = useCallback(async (formData: FormData) => {
     try {
       const result = await createOrUpdateExpandedProfile({
@@ -276,10 +288,20 @@ export const ExpandedPublicProfileManager = () => {
               
               <div>
                 <Label htmlFor="about_description">Acerca de mí</Label>
-                <Textarea
+                <TextareaWithAutocomplete
                   {...register('about_description')}
                   placeholder="Describe tu experiencia, enfoque profesional y lo que te hace único..."
                   rows={4}
+                  suggestions={autocomplete.suggestions}
+                  isLoading={autocomplete.isLoading}
+                  showSuggestions={autocomplete.showSuggestions}
+                  selectedIndex={autocomplete.selectedIndex}
+                  onGenerateSuggestions={autocomplete.generateSuggestions}
+                  onHideSuggestions={autocomplete.hideSuggestions}
+                  onSelectSuggestion={autocomplete.selectSuggestion}
+                  onNavigateUp={autocomplete.navigateUp}
+                  onNavigateDown={autocomplete.navigateDown}
+                  getSelectedSuggestion={autocomplete.getSelectedSuggestion}
                 />
               </div>
 

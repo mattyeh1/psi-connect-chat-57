@@ -11,6 +11,9 @@ import { toast } from "@/hooks/use-toast";
 import { useProfile } from "@/hooks/useProfile";
 import { PatientSelector } from "./forms/PatientSelector";
 import { useAvailableSlots } from "@/hooks/useAvailableSlots";
+import { PhoneInput } from "@/components/forms/PhoneInput";
+import { useReminderSettings } from "@/hooks/useReminderSettings";
+import { isValidArgentinePhoneNumber } from "@/utils/phoneValidation";
 
 interface NewAppointmentModalProps {
   onAppointmentCreated: () => void;
@@ -18,19 +21,22 @@ interface NewAppointmentModalProps {
 
 export const NewAppointmentModal = ({ onAppointmentCreated }: NewAppointmentModalProps) => {
   const { psychologist } = useProfile();
+  const { createScheduledNotification } = useReminderSettings();
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     patientId: "",
     patientName: "",
+    patientPhone: "",
     appointmentDate: "",
     appointmentTime: "",
     type: "",
     notes: ""
   });
+  const [phoneError, setPhoneError] = useState("");
 
   // Solo usar el hook si tenemos un psychologist ID válido y fecha seleccionada
-  const { getAvailableSlots, loading: slotsLoading, refreshAvailability } = useAvailableSlots({
+  const { getAvailableSlots, loading: slotsLoading } = useAvailableSlots({
     psychologistId: psychologist?.id || "",
     selectedDate: formData.appointmentDate
   });
@@ -57,8 +63,25 @@ export const NewAppointmentModal = ({ onAppointmentCreated }: NewAppointmentModa
       appointmentDate: date,
       appointmentTime: "" // Reset time when date changes
     }));
+  };
+
+  const handlePhoneChange = (phone: string) => {
+    setFormData(prev => ({ ...prev, patientPhone: phone }));
+    setPhoneError("");
+  };
+
+  const validatePhone = () => {
+    if (!formData.patientPhone.trim()) {
+      setPhoneError("El número de teléfono es obligatorio para los recordatorios");
+      return false;
+    }
     
-    // No need to manually call refreshAvailability - the hook will handle it automatically
+    if (!isValidArgentinePhoneNumber(formData.patientPhone)) {
+      setPhoneError("Ingresa un número de teléfono válido");
+      return false;
+    }
+    
+    return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -82,6 +105,16 @@ export const NewAppointmentModal = ({ onAppointmentCreated }: NewAppointmentModa
       return;
     }
 
+    // Validar teléfono obligatorio
+    if (!validatePhone()) {
+      toast({
+        title: "Error",
+        description: "Por favor ingresa un número de teléfono válido para enviar recordatorios",
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Verificar que el horario seleccionado esté disponible
     if (formData.appointmentDate && !availableSlots.includes(formData.appointmentTime)) {
       toast({
@@ -100,8 +133,21 @@ export const NewAppointmentModal = ({ onAppointmentCreated }: NewAppointmentModa
 
       console.log('Creating appointment with datetime:', appointmentDateTime.toISOString());
 
+      // Actualizar información del paciente con el teléfono
+      const { error: patientUpdateError } = await supabase
+        .from('patients')
+        .update({
+          phone: formData.patientPhone
+        })
+        .eq('id', formData.patientId);
+
+      if (patientUpdateError) {
+        console.error('Error updating patient phone:', patientUpdateError);
+        // No fallar por esto, pero logearlo
+      }
+
       // Crear la cita directamente con el paciente seleccionado
-      const { error: appointmentError } = await supabase
+      const { data: appointmentData, error: appointmentError } = await supabase
         .from('appointments')
         .insert({
           psychologist_id: psychologist.id,
@@ -110,27 +156,53 @@ export const NewAppointmentModal = ({ onAppointmentCreated }: NewAppointmentModa
           type: formData.type,
           status: 'scheduled',
           notes: formData.notes || null
-        });
+        })
+        .select()
+        .single();
 
       if (appointmentError) {
         console.error('Error creating appointment:', appointmentError);
         throw new Error('Error al crear la cita');
       }
 
+      // Crear recordatorio automático si hay configuración
+      try {
+        await createScheduledNotification(
+          formData.patientId,
+          'appointment_reminder',
+          {
+            patient_name: formData.patientName,
+            appointment_date: appointmentDateTime.toLocaleDateString('es-ES'),
+            appointment_time: appointmentDateTime.toLocaleTimeString('es-ES', { 
+              hour: '2-digit', 
+              minute: '2-digit' 
+            }),
+            phone_number: formData.patientPhone
+          },
+          'whatsapp'
+        );
+        console.log('Appointment reminder scheduled successfully');
+      } catch (reminderError) {
+        console.error('Error scheduling reminder:', reminderError);
+        // No fallar la creación de la cita por esto
+      }
+
       toast({
         title: "Cita creada",
-        description: "La cita ha sido creada exitosamente"
+        description: "La cita ha sido creada exitosamente y se programó un recordatorio automático"
       });
 
       // Resetear formulario y cerrar modal
       setFormData({
         patientId: "",
         patientName: "",
+        patientPhone: "",
         appointmentDate: "",
         appointmentTime: "",
         type: "",
         notes: ""
       });
+      setPhoneError("");
       setIsOpen(false);
       onAppointmentCreated();
 
@@ -187,6 +259,15 @@ export const NewAppointmentModal = ({ onAppointmentCreated }: NewAppointmentModa
             selectedPatientId={formData.patientId}
             onPatientSelect={handlePatientSelect}
             required={true}
+          />
+
+          <PhoneInput
+            value={formData.patientPhone}
+            onChange={handlePhoneChange}
+            label="Teléfono del Paciente"
+            placeholder="+54 9 11 1234-5678"
+            required={true}
+            error={phoneError}
           />
 
           <div className="space-y-2">
