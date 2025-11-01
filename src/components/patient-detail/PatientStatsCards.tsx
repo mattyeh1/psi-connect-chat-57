@@ -6,7 +6,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface PatientStats {
   totalAppointments: number;
   totalDocuments: number;
-  unreadMessages: number;
   lastAppointment?: string;
 }
 
@@ -32,13 +31,6 @@ export const PatientStatsCards = ({ stats, loading = false }: PatientStatsCardsP
       bgColor: "from-emerald-50 to-emerald-100",
     },
     {
-      title: "Mensajes Sin Leer",
-      value: stats.unreadMessages,
-      icon: MessageCircle,
-      color: "from-purple-500 to-purple-600",
-      bgColor: "from-purple-50 to-purple-100",
-    },
-    {
       title: "Última Cita",
       value: stats.lastAppointment 
         ? new Date(stats.lastAppointment).toLocaleDateString('es-ES')
@@ -52,8 +44,8 @@ export const PatientStatsCards = ({ stats, loading = false }: PatientStatsCardsP
 
   if (loading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {[...Array(4)].map((_, index) => (
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+        {[...Array(3)].map((_, index) => (
           <Card key={index} className="border-0 shadow-lg">
             <CardContent className="p-6">
               <div className="space-y-4">
@@ -69,7 +61,7 @@ export const PatientStatsCards = ({ stats, loading = false }: PatientStatsCardsP
   }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
       {statsCards.map((stat, index) => {
         const IconComponent = stat.icon;
         return (

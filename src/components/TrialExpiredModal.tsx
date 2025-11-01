@@ -1,13 +1,14 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, Sparkles, Zap, Star } from 'lucide-react';
+import { Clock, Sparkles, Zap, Star, X } from 'lucide-react';
 import { SubscriptionPlans } from './SubscriptionPlans';
 
 interface TrialExpiredModalProps {
   onUpgrade: () => void;
+  onClose?: () => void;
 }
 
-export const TrialExpiredModal = ({ onUpgrade }: TrialExpiredModalProps) => {
+export const TrialExpiredModal = ({ onUpgrade, onClose }: TrialExpiredModalProps) => {
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-slate-900/95 via-purple-900/85 to-blue-900/95 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 z-50 animate-fade-in">
       <div className="relative w-full">
@@ -15,8 +16,19 @@ export const TrialExpiredModal = ({ onUpgrade }: TrialExpiredModalProps) => {
         <div className="absolute -top-6 -left-6 w-20 h-20 bg-gradient-to-r from-purple-400/30 to-pink-400/30 rounded-full blur-xl animate-float hidden sm:block"></div>
         <div className="absolute -bottom-8 -right-8 w-28 h-28 bg-gradient-to-r from-blue-400/25 to-cyan-400/25 rounded-full blur-xl animate-float hidden sm:block" style={{animationDelay: '1.5s'}}></div>
         <div className="absolute top-1/2 -left-12 w-16 h-16 bg-gradient-to-r from-emerald-400/20 to-teal-400/20 rounded-full blur-lg animate-float hidden sm:block" style={{animationDelay: '0.8s'}}></div>
-        
+
         <Card className="w-full max-w-sm sm:max-w-lg md:max-w-3xl lg:max-w-5xl mx-auto border-0 shadow-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto bg-gradient-to-br from-white/95 via-slate-50/95 to-purple-50/90 backdrop-blur-xl animate-fade-in-scale">
+          {/* Close button */}
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="absolute top-4 right-4 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-white/80 hover:bg-white transition-colors shadow-lg hover:shadow-xl"
+              aria-label="Cerrar"
+            >
+              <X className="w-5 h-5 text-slate-600" />
+            </button>
+          )}
+
           <CardHeader className="text-center relative overflow-hidden pb-4 sm:pb-8">
             {/* Background decoration - simplified for mobile */}
             <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 via-blue-500/5 to-emerald-500/5"></div>

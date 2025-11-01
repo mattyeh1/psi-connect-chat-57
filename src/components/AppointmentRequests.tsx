@@ -3,6 +3,16 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { 
   Calendar, 
   Clock, 
@@ -56,6 +66,9 @@ export const AppointmentRequests = ({ isDashboardView = false }: AppointmentRequ
   const { user } = useAuth();
   const [requests, setRequests] = useState<AppointmentRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
 
   const fetchRequests = async () => {
     if (!user?.id) {
@@ -194,8 +207,9 @@ export const AppointmentRequests = ({ isDashboardView = false }: AppointmentRequ
   };
 
   const approveRequest = async (request: AppointmentRequest) => {
-    if (!user?.id) return;
+    if (!user?.id || approvingId) return;
 
+    setApprovingId(request.id);
     console.log('AppointmentRequests: Approving request:', request.id);
     console.log('AppointmentRequests: Creating appointment for request:', request);
 
@@ -251,6 +265,7 @@ export const AppointmentRequests = ({ isDashboardView = false }: AppointmentRequ
         description: "La cita ha sido programada exitosamente"
       });
 
+      setApprovingId(null);
       fetchRequests();
     } catch (error) {
       console.error('AppointmentRequests: Error approving request:', error);
@@ -259,6 +274,7 @@ export const AppointmentRequests = ({ isDashboardView = false }: AppointmentRequ
         description: "Error al aprobar la solicitud",
         variant: "destructive"
       });
+      setApprovingId(null);
     }
   };
 
@@ -299,12 +315,19 @@ export const AppointmentRequests = ({ isDashboardView = false }: AppointmentRequ
     }
   };
 
-  const rejectRequest = async (requestId: string) => {
+  const handleRejectClick = (requestId: string) => {
+    setRejectingId(requestId);
+    setShowRejectDialog(true);
+  };
+
+  const rejectRequest = async () => {
+    if (!rejectingId) return;
+
     try {
       const { error } = await supabase
         .from('appointment_requests')
         .update({ status: 'rejected' })
-        .eq('id', requestId);
+        .eq('id', rejectingId);
 
       if (error) throw error;
 
@@ -313,6 +336,8 @@ export const AppointmentRequests = ({ isDashboardView = false }: AppointmentRequ
         description: "La solicitud ha sido rechazada"
       });
 
+      setShowRejectDialog(false);
+      setRejectingId(null);
       fetchRequests();
     } catch (error) {
       console.error('Error rejecting request:', error);
@@ -379,11 +404,32 @@ export const AppointmentRequests = ({ isDashboardView = false }: AppointmentRequ
                     )}
                     {request.status === 'pending' && (
                       <>
-                        <Button variant="ghost" size="sm" onClick={() => approveRequest(request)}>
-                          <CheckCircle className="w-4 h-4 mr-1" />
-                          Aprobar
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => approveRequest(request)}
+                          disabled={approvingId !== null}
+                          aria-label={`Aprobar solicitud de ${request.patient?.first_name} ${request.patient?.last_name}`}
+                        >
+                          {approvingId === request.id ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-1"></div>
+                              Aprobando...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              Aprobar
+                            </>
+                          )}
                         </Button>
-                        <Button variant="destructive" size="sm" onClick={() => rejectRequest(request.id)}>
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          onClick={() => handleRejectClick(request.id)}
+                          disabled={approvingId !== null}
+                          aria-label={`Rechazar solicitud de ${request.patient?.first_name} ${request.patient?.last_name}`}
+                        >
                           <XCircle className="w-4 h-4 mr-1" />
                           Rechazar
                         </Button>
@@ -401,6 +447,27 @@ export const AppointmentRequests = ({ isDashboardView = false }: AppointmentRequ
           </div>
         )}
       </CardContent>
+
+      {/* Dialog de confirmación para rechazar */}
+      <AlertDialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Confirmar rechazo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de que deseas rechazar esta solicitud de cita? Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={rejectRequest}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Sí, rechazar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };

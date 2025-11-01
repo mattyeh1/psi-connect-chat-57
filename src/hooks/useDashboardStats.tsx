@@ -2,34 +2,34 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from './useProfile';
+import { useAuth } from './useAuth';
 import { useRealtimeChannel } from './useRealtimeChannel';
 
 interface DashboardStats {
   todayAppointments: number;
   activePatients: number;
-  unreadMessages: number;
   loading: boolean;
   error: string | null;
 }
 
 export const useDashboardStats = (): DashboardStats => {
   const { psychologist } = useProfile();
+  const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     todayAppointments: 0,
     activePatients: 0,
-    unreadMessages: 0,
     loading: true,
     error: null
   });
 
   // Usar realtime solo si está habilitado y no hay errores persistentes
   const { isDisabled } = useRealtimeChannel({
-    channelName: `dashboard-messages-${psychologist?.id}`,
+    channelName: `dashboard-stats-${psychologist?.id}`,
     enabled: !!psychologist?.id && !stats.error,
-    table: 'messages',
+    table: 'appointments',
     onUpdate: () => {
       if (psychologist?.id) {
-        fetchUnreadMessages();
+        fetchStats();
       }
     }
   });
@@ -52,40 +52,6 @@ export const useDashboardStats = (): DashboardStats => {
     }
   }, [psychologist?.id, isDisabled]);
 
-  const fetchUnreadMessages = async () => {
-    if (!psychologist?.id) return;
-
-    try {
-      const { data: unreadMessages, error } = await supabase
-        .from('messages')
-        .select(`
-          id,
-          conversation_id,
-          conversations!inner(
-            psychologist_id
-          )
-        `)
-        .eq('conversations.psychologist_id', psychologist.id)
-        .neq('sender_id', psychologist.id)
-        .is('read_at', null);
-
-      if (error) {
-        console.error('Error fetching unread messages:', error);
-        return;
-      }
-
-      const unreadCount = unreadMessages?.length || 0;
-
-      setStats(prev => ({
-        ...prev,
-        unreadMessages: unreadCount
-      }));
-
-    } catch (error) {
-      console.error('Error fetching unread messages:', error);
-    }
-  };
-
   const fetchStats = async () => {
     if (!psychologist?.id) return;
 
@@ -97,7 +63,7 @@ export const useDashboardStats = (): DashboardStats => {
       const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 
       // Usar Promise.allSettled para manejar errores individualmente
-      const [appointmentsResult, patientsResult, messagesResult] = await Promise.allSettled([
+      const [appointmentsResult, patientsResult] = await Promise.allSettled([
         supabase
           .from('appointments')
           .select('id')
@@ -109,20 +75,7 @@ export const useDashboardStats = (): DashboardStats => {
         supabase
           .from('patients')
           .select('id')
-          .eq('psychologist_id', psychologist.id),
-        
-        supabase
-          .from('messages')
-          .select(`
-            id,
-            conversation_id,
-            conversations!inner(
-              psychologist_id
-            )
-          `)
-          .eq('conversations.psychologist_id', psychologist.id)
-          .neq('sender_id', psychologist.id)
-          .is('read_at', null)
+          .eq('psychologist_id', psychologist.id)
       ]);
 
       const todayAppointments = appointmentsResult.status === 'fulfilled' 
@@ -133,14 +86,9 @@ export const useDashboardStats = (): DashboardStats => {
         ? (patientsResult.value.data?.length || 0) 
         : 0;
 
-      const unreadMessages = messagesResult.status === 'fulfilled' 
-        ? (messagesResult.value.data?.length || 0) 
-        : 0;
-
       setStats({
         todayAppointments,
         activePatients,
-        unreadMessages,
         loading: false,
         error: null
       });

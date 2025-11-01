@@ -16,6 +16,8 @@ import {
 import { useOptimizedPatients } from "@/hooks/useOptimizedPatients";
 import { useProfile } from "@/hooks/useProfile";
 import { useNavigate } from "react-router-dom";
+import { isValidArgentinePhoneNumber } from "@/utils/phoneValidation";
+import { toast } from "@/hooks/use-toast";
 
 interface Patient {
   id: string;
@@ -41,21 +43,58 @@ export const PatientManagement = () => {
     age: "",
     notes: ""
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const filteredPatients = patients.filter(patient =>
     `${patient.first_name} ${patient.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
     patient.phone?.includes(searchTerm)
   );
 
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!newPatient.first_name.trim()) {
+      newErrors.first_name = "El nombre es obligatorio";
+    }
+
+    if (!newPatient.last_name.trim()) {
+      newErrors.last_name = "El apellido es obligatorio";
+    }
+
+    if (newPatient.phone && !isValidArgentinePhoneNumber(newPatient.phone)) {
+      newErrors.phone = "Ingresa un número de teléfono válido (ej: +54 9 11 1234-5678)";
+    }
+
+    if (newPatient.age) {
+      const ageNum = parseInt(newPatient.age);
+      if (isNaN(ageNum) || ageNum < 0 || ageNum > 150) {
+        newErrors.age = "La edad debe ser un número entre 0 y 150";
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleAddPatient = async () => {
-    if (!newPatient.first_name || !newPatient.last_name) return;
+    if (!validateForm()) {
+      toast({
+        title: "Error de validación",
+        description: "Por favor, corrige los errores en el formulario",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
 
     const patientData = {
-      first_name: newPatient.first_name,
-      last_name: newPatient.last_name,
-      phone: newPatient.phone || undefined,
+      first_name: newPatient.first_name.trim(),
+      last_name: newPatient.last_name.trim(),
+      phone: newPatient.phone.trim() || undefined,
       age: newPatient.age ? parseInt(newPatient.age) : undefined,
-      notes: newPatient.notes || undefined
+      notes: newPatient.notes.trim() || undefined
     };
 
     const success = await addPatient(patientData);
@@ -68,8 +107,11 @@ export const PatientManagement = () => {
         age: "",
         notes: ""
       });
+      setErrors({});
       setIsAddingPatient(false);
     }
+
+    setIsSubmitting(false);
   };
 
   const handleViewPatient = (patientId: string) => {
@@ -141,38 +183,111 @@ export const PatientManagement = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <Input
-                placeholder="Nombre"
-                value={newPatient.first_name}
-                onChange={(e) => setNewPatient(prev => ({ ...prev, first_name: e.target.value }))}
-              />
-              <Input
-                placeholder="Apellido"
-                value={newPatient.last_name}
-                onChange={(e) => setNewPatient(prev => ({ ...prev, last_name: e.target.value }))}
-              />
+              <div className="space-y-1">
+                <Input
+                  placeholder="Nombre *"
+                  value={newPatient.first_name}
+                  onChange={(e) => {
+                    setNewPatient(prev => ({ ...prev, first_name: e.target.value }));
+                    if (errors.first_name) setErrors(prev => ({ ...prev, first_name: '' }));
+                  }}
+                  className={errors.first_name ? 'border-red-500' : ''}
+                  aria-label="Nombre del paciente"
+                  aria-invalid={!!errors.first_name}
+                />
+                {errors.first_name && (
+                  <p className="text-sm text-red-600">{errors.first_name}</p>
+                )}
+              </div>
+              <div className="space-y-1">
+                <Input
+                  placeholder="Apellido *"
+                  value={newPatient.last_name}
+                  onChange={(e) => {
+                    setNewPatient(prev => ({ ...prev, last_name: e.target.value }));
+                    if (errors.last_name) setErrors(prev => ({ ...prev, last_name: '' }));
+                  }}
+                  className={errors.last_name ? 'border-red-500' : ''}
+                  aria-label="Apellido del paciente"
+                  aria-invalid={!!errors.last_name}
+                />
+                {errors.last_name && (
+                  <p className="text-sm text-red-600">{errors.last_name}</p>
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <Input
-                placeholder="Teléfono"
-                value={newPatient.phone}
-                onChange={(e) => setNewPatient(prev => ({ ...prev, phone: e.target.value }))}
-              />
-              <Input
-                type="number"
-                placeholder="Edad"
-                value={newPatient.age}
-                onChange={(e) => setNewPatient(prev => ({ ...prev, age: e.target.value }))}
-              />
+              <div className="space-y-1">
+                <Input
+                  placeholder="Teléfono (ej: +54 9 11 1234-5678)"
+                  value={newPatient.phone}
+                  onChange={(e) => {
+                    setNewPatient(prev => ({ ...prev, phone: e.target.value }));
+                    if (errors.phone) setErrors(prev => ({ ...prev, phone: '' }));
+                  }}
+                  className={errors.phone ? 'border-red-500' : ''}
+                  aria-label="Teléfono del paciente"
+                  aria-invalid={!!errors.phone}
+                />
+                {errors.phone && (
+                  <p className="text-sm text-red-600">{errors.phone}</p>
+                )}
+                <p className="text-xs text-slate-500">Opcional</p>
+              </div>
+              <div className="space-y-1">
+                <Input
+                  type="number"
+                  placeholder="Edad"
+                  value={newPatient.age}
+                  onChange={(e) => {
+                    setNewPatient(prev => ({ ...prev, age: e.target.value }));
+                    if (errors.age) setErrors(prev => ({ ...prev, age: '' }));
+                  }}
+                  className={errors.age ? 'border-red-500' : ''}
+                  min="0"
+                  max="150"
+                  aria-label="Edad del paciente"
+                  aria-invalid={!!errors.age}
+                />
+                {errors.age && (
+                  <p className="text-sm text-red-600">{errors.age}</p>
+                )}
+                <p className="text-xs text-slate-500">Opcional</p>
+              </div>
             </div>
-            <Input
-              placeholder="Notas adicionales"
-              value={newPatient.notes}
-              onChange={(e) => setNewPatient(prev => ({ ...prev, notes: e.target.value }))}
-            />
+            <div className="space-y-1">
+              <Input
+                placeholder="Notas adicionales"
+                value={newPatient.notes}
+                onChange={(e) => setNewPatient(prev => ({ ...prev, notes: e.target.value }))}
+                aria-label="Notas sobre el paciente"
+              />
+              <p className="text-xs text-slate-500">Opcional</p>
+            </div>
             <div className="flex gap-2">
-              <Button onClick={handleAddPatient}>Agregar Paciente</Button>
-              <Button variant="outline" onClick={() => setIsAddingPatient(false)}>
+              <Button 
+                onClick={handleAddPatient}
+                disabled={isSubmitting}
+                aria-label="Agregar paciente"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    Agregando...
+                  </>
+                ) : (
+                  'Agregar Paciente'
+                )}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsAddingPatient(false);
+                  setErrors({});
+                }}
+                disabled={isSubmitting}
+                aria-label="Cancelar agregar paciente"
+              >
                 Cancelar
               </Button>
             </div>

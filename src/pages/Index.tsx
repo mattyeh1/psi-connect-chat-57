@@ -8,7 +8,6 @@ import { useNavigate } from "react-router-dom";
 import { Dashboard } from "@/components/Dashboard";
 import { PatientManagement } from "@/components/PatientManagement";
 import { Calendar } from "@/components/CalendarView";
-import { MessagingHub } from "@/components/MessagingHub";
 import { AffiliateSystem } from "@/components/AffiliateSystem";
 import { SeoProfileManager } from "@/components/SeoProfileManager";
 import { AdvancedReports } from "@/components/AdvancedReports";
@@ -16,7 +15,7 @@ import { PrioritySupport } from "@/components/PrioritySupport";
 import { EarlyAccess } from "@/components/EarlyAccess";
 import { VisibilityConsulting } from "@/components/VisibilityConsulting";
 import { TrialExpiredModal } from "@/components/TrialExpiredModal";
-import { PatientPortal } from "@/components/PatientPortal";
+import { PatientPortal } from "@/components/landing/PatientPortal";
 import { LandingPage } from "@/pages/LandingPage";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,10 +28,12 @@ import { ReminderSettingsManager } from "@/components/ReminderSettingsManager";
 import { AdvancedReminderSettings } from "@/components/AdvancedReminderSettings";
 import { NotificationDashboard } from "@/components/NotificationDashboard";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/AppSidebar";
+import { MinimalistSidebar } from "@/components/MinimalistSidebar";
+import { MobileNavigation } from "@/components/MobileNavigation";
 import { RealtimeProvider } from "@/contexts/RealtimeContext";
+import { activatePlusPlan } from "@/utils/activatePlusPlan";
 
-type ViewType = "dashboard" | "patients" | "calendar" | "messages" | "affiliates" | "seo" | "reports" | "support" | "early-access" | "visibility" | "rates" | "accounting" | "documents" | "appointment-requests" | "notifications" | "reminder-settings" | "advanced-reminder-settings" | "notification-dashboard";
+type ViewType = "dashboard" | "patients" | "calendar" | "affiliates" | "seo" | "reports" | "support" | "early-access" | "visibility" | "rates" | "accounting" | "documents" | "appointment-requests" | "notifications" | "reminder-settings" | "advanced-reminder-settings" | "notification-dashboard";
 
 export default function Index() {
   const { user, loading: authLoading } = useAuth();
@@ -96,7 +97,7 @@ export default function Index() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-stone-50 to-amber-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-slate-600">Verificando autenticación...</p>
@@ -111,7 +112,7 @@ export default function Index() {
 
   if (profileLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-stone-50 to-amber-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-slate-600">Cargando perfil...</p>
@@ -122,7 +123,7 @@ export default function Index() {
 
   if (profileError) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-stone-50 to-amber-50 flex items-center justify-center p-4">
         <div className="text-center max-w-md">
           <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-4">
             <h2 className="text-xl font-bold text-red-700 mb-2">
@@ -145,7 +146,7 @@ export default function Index() {
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-stone-50 to-amber-50 flex items-center justify-center p-4">
         <div className="text-center max-w-md">
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-4">
             <h2 className="text-xl font-bold text-yellow-700 mb-2">
@@ -168,6 +169,8 @@ export default function Index() {
   }
 
   if (profile.user_type === 'patient') {
+    console.log('=== REDIRECTING TO PATIENT PORTAL ===');
+    console.log('Profile:', profile);
     return <PatientPortal />;
   }
 
@@ -181,15 +184,13 @@ export default function Index() {
     const renderCurrentView = () => {
       switch (currentView) {
         case "dashboard":
-          return <Dashboard />;
+          return <Dashboard onNavigate={handleViewChange} />;
         case "patients":
           return <PatientManagement />;
         case "appointment-requests":
           return <AppointmentRequests />;
         case "calendar":
           return <Calendar />;
-        case "messages":
-          return <MessagingHub />;
         case "documents":
           return <DocumentsSection />;
         case "affiliates":
@@ -231,31 +232,63 @@ export default function Index() {
       setCurrentView(view);
     };
 
+    const handleActivatePlus = async () => {
+      try {
+        await activatePlusPlan();
+        await forceRefresh();
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } catch (error) {
+        console.error('Error activating Plus plan:', error);
+      }
+    };
+
     return (
       <SidebarProvider>
         <RealtimeProvider>
-          <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 to-blue-50">
-            <AppSidebar currentView={currentView} onViewChange={handleViewChange} />
-            <SidebarInset>
-              <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-                <SidebarTrigger className="-ml-1" />
-                <div className="ml-auto flex items-center space-x-4">
-                  <span className="text-sm text-muted-foreground">
+          <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+            {/* Desktop Sidebar */}
+            <div className="hidden lg:block">
+              <MinimalistSidebar currentView={currentView} onViewChange={handleViewChange} />
+            </div>
+            
+            {/* Mobile Navigation */}
+            <MobileNavigation currentView={currentView} onViewChange={handleViewChange} />
+            
+            <SidebarInset className="bg-gradient-to-br from-white to-slate-50">
+              <header className="flex h-16 shrink-0 items-center gap-2 border-b border-slate-200 bg-gradient-to-r from-white to-slate-50 px-6 shadow-sm">
+                <SidebarTrigger className="-ml-1 lg:hidden" />
+                <div className="ml-auto flex items-center space-x-3">
+                  <span className="text-sm text-slate-600 font-semibold hidden sm:block">
                     {displayName}
                   </span>
                   {(unifiedStats.planType || psychologist?.plan_type) && (
-                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                    <span className="text-xs bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 px-3 py-1 rounded-full font-semibold border border-blue-200">
                       {(unifiedStats.planType || psychologist?.plan_type)?.toUpperCase()}
                     </span>
                   )}
+                  {(!psychologist?.plan_type || !['plus', 'pro'].includes(psychologist.plan_type.toLowerCase())) && (
+                    <Button
+                      onClick={handleActivatePlus}
+                      size="sm"
+                      className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs px-3 py-1 h-7"
+                      aria-label="Activar plan Plus"
+                    >
+                      ⚡ Activar Plus
+                    </Button>
+                  )}
                 </div>
               </header>
-              <div className="flex flex-1 flex-col gap-4 p-4">
+              <div className="flex flex-1 flex-col gap-4 p-3 sm:p-4">
                 {renderCurrentView()}
               </div>
             </SidebarInset>
             {showTrialModal && (
-              <TrialExpiredModal onUpgrade={() => setShowTrialModal(false)} />
+              <TrialExpiredModal
+                onUpgrade={() => setShowTrialModal(false)}
+                onClose={() => setShowTrialModal(false)}
+              />
             )}
           </div>
         </RealtimeProvider>
@@ -270,7 +303,7 @@ export default function Index() {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-stone-50 to-amber-50 flex items-center justify-center p-4">
       <div className="text-center max-w-md">
         <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 mb-4">
           <h2 className="text-xl font-bold text-orange-700 mb-2">

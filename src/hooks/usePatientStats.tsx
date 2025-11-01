@@ -6,15 +6,13 @@ import { toast } from '@/hooks/use-toast';
 interface PatientStats {
   totalAppointments: number;
   totalDocuments: number;
-  unreadMessages: number;
   lastAppointment?: string;
 }
 
 export const usePatientStats = (patientId: string, psychologistId?: string) => {
   const [stats, setStats] = useState<PatientStats>({
     totalAppointments: 0,
-    totalDocuments: 0,
-    unreadMessages: 0
+    totalDocuments: 0
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,18 +53,6 @@ export const usePatientStats = (patientId: string, psychologistId?: string) => {
           .maybeSingle()
       ]);
 
-      let unreadCount = 0;
-      if (conversationResult.data) {
-        const { data: unreadMessages } = await supabase
-          .from('messages')
-          .select('id')
-          .eq('conversation_id', conversationResult.data.id)
-          .eq('sender_id', patientId)
-          .is('read_at', null);
-        
-        unreadCount = unreadMessages?.length || 0;
-      }
-
       const appointments = appointmentsResult.data || [];
       const documents = documentsResult.data || [];
       
@@ -77,7 +63,6 @@ export const usePatientStats = (patientId: string, psychologistId?: string) => {
       setStats({
         totalAppointments: appointments.length,
         totalDocuments: documents.length,
-        unreadMessages: unreadCount,
         lastAppointment: lastAppointment?.appointment_date
       });
 

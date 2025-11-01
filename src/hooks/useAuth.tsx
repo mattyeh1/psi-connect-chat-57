@@ -345,18 +345,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     console.log('=== SIGNING OUT ===');
+    const { error } = await supabase.auth.signOut();
     
-    try {
-      // Clear browser storage to prevent auth limbo states
-      Object.keys(localStorage).forEach((key) => {
-        if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-          localStorage.removeItem(key);
-        }
+    if (error) {
+      console.error('=== SIGN OUT ERROR ===', error);
+      toast({
+        title: "Error al cerrar sesión",
+        description: error.message,
+        variant: "destructive"
       });
-      
-      await supabase.auth.signOut({ scope: 'global' });
-    } catch (error) {
-      console.error('=== ERROR DURING SIGN OUT ===', error);
+    } else {
+      console.log('=== SIGN OUT SUCCESSFUL ===');
+      toast({
+        title: "Sesión cerrada",
+        description: "Has cerrado sesión exitosamente",
+      });
     }
   };
 

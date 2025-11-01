@@ -69,7 +69,7 @@ export const AuthPage = ({ affiliateCode, registrationOnly = false }: AuthPagePr
     email: "",
     password: "",
     confirmPassword: "",
-    userType: "patient" as "patient" | "psychologist",
+    userType: "psychologist" as "patient" | "psychologist",
     firstName: "",
     lastName: "",
     phone: "",
@@ -138,8 +138,33 @@ export const AuthPage = ({ affiliateCode, registrationOnly = false }: AuthPagePr
     setShowOtherInput(value === "Otros...");
   };
 
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validar email
+    if (!validateEmail(signUpData.email)) {
+      toast({
+        title: "Error",
+        description: "Por favor ingresa un email válido",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validar contraseña
+    if (signUpData.password.length < 6) {
+      toast({
+        title: "Error",
+        description: "La contraseña debe tener al menos 6 caracteres",
+        variant: "destructive"
+      });
+      return;
+    }
     
     if (signUpData.password !== signUpData.confirmPassword) {
       toast({
@@ -150,16 +175,7 @@ export const AuthPage = ({ affiliateCode, registrationOnly = false }: AuthPagePr
       return;
     }
 
-    if (signUpData.userType === 'patient' && !signUpData.professionalCode) {
-      toast({
-        title: "Error", 
-        description: "El código profesional es requerido para pacientes",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (signUpData.userType === 'psychologist' && !signUpData.professionalType) {
+    if (!signUpData.professionalType) {
       toast({
         title: "Error",
         description: "Por favor selecciona tu tipo de profesional",
@@ -181,20 +197,14 @@ export const AuthPage = ({ affiliateCode, registrationOnly = false }: AuthPagePr
       const finalProfessionalType = showOtherInput ? signUpData.otherProfessionalType : signUpData.professionalType;
       
       const metadata = {
-        user_type: signUpData.userType,
         first_name: signUpData.firstName,
         last_name: signUpData.lastName,
         phone: signUpData.phone,
         ...(affiliateCode && { affiliate_code: affiliateCode }),
-        ...(signUpData.userType === 'psychologist' && {
-          license_number: signUpData.licenseNumber,
-          specialization: signUpData.specialization,
-          professionalType: finalProfessionalType, // Cambiado de professional_type a professionalType
-          profession_type: finalProfessionalType   // Mantengo también esta clave para compatibilidad
-        }),
-        ...(signUpData.userType === 'patient' && {
-          professional_code: signUpData.professionalCode
-        })
+        license_number: signUpData.licenseNumber,
+        specialization: signUpData.specialization,
+        professionalType: finalProfessionalType, // Cambiado de professional_type a professionalType
+        profession_type: finalProfessionalType   // Mantengo también esta clave para compatibilidad
       };
 
       console.log('Attempting sign up with metadata:', metadata);
@@ -346,117 +356,82 @@ export const AuthPage = ({ affiliateCode, registrationOnly = false }: AuthPagePr
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="userType" className="text-slate-700 font-medium">¿Eres paciente o profesional?</Label>
-                <Select onValueChange={handleUserTypeChange} value={signUpData.userType}>
+                <Label htmlFor="professionalType" className="text-slate-700 font-medium">Tipo de Profesional</Label>
+                <Select onValueChange={handleProfessionalTypeChange} value={signUpData.professionalType}>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecciona una opción" />
+                    <SelectValue placeholder="Selecciona tu profesión" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border shadow-lg">
-                    <SelectItem value="patient">Paciente</SelectItem>
-                    <SelectItem value="psychologist">Profesional</SelectItem>
+                  <SelectContent className="bg-white border shadow-lg max-h-60 overflow-y-auto">
+                    <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase">Salud Mental</div>
+                    {PROFESSIONAL_CATEGORIES.mentalHealth.map(type => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
+                    
+                    <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase">Salud General</div>
+                    {PROFESSIONAL_CATEGORIES.generalHealth.map(type => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
+                    
+                    <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase">Bienestar y Belleza</div>
+                    {PROFESSIONAL_CATEGORIES.wellness.map(type => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
+                    
+                    <SelectItem value="Otros...">Otros...</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              {signUpData.userType === "psychologist" && (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="professionalType" className="text-slate-700 font-medium">Tipo de Profesional</Label>
-                    <Select onValueChange={handleProfessionalTypeChange} value={signUpData.professionalType}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Selecciona tu profesión" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white border shadow-lg max-h-60 overflow-y-auto">
-                        <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase">Salud Mental</div>
-                        {PROFESSIONAL_CATEGORIES.mentalHealth.map(type => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
-                        
-                        <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase">Salud General</div>
-                        {PROFESSIONAL_CATEGORIES.generalHealth.map(type => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
-                        
-                        <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase">Bienestar y Belleza</div>
-                        {PROFESSIONAL_CATEGORIES.wellness.map(type => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
-                        
-                        <SelectItem value="Otros...">Otros...</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {showOtherInput && (
-                    <div className="space-y-2">
-                      <Label htmlFor="otherProfessionalType" className="text-slate-700 font-medium">Especifica tu profesión</Label>
-                      <div className="relative">
-                        <Stethoscope className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
-                        <Input
-                          id="otherProfessionalType"
-                          type="text"
-                          name="otherProfessionalType"
-                          placeholder="Ej: Coach de vida, Contador, etc."
-                          className="pl-9 border-slate-200 focus:border-blue-400 focus:ring-blue-400"
-                          value={signUpData.otherProfessionalType}
-                          onChange={handleSignUpChange}
-                          required
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <Label htmlFor="licenseNumber" className="text-slate-700 font-medium">Número de Licencia</Label>
-                    <div className="relative">
-                      <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
-                      <Input
-                        id="licenseNumber"
-                        type="text"
-                        name="licenseNumber"
-                        placeholder="Ej: 123456"
-                        className="pl-9 border-slate-200 focus:border-blue-400 focus:ring-blue-400"
-                        value={signUpData.licenseNumber}
-                        onChange={handleSignUpChange}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="specialization" className="text-slate-700 font-medium">Especialización</Label>
-                    <div className="relative">
-                      <Stethoscope className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
-                      <Input
-                        id="specialization"
-                        type="text"
-                        name="specialization"
-                        placeholder="Ej: Psicología Clínica"
-                        className="pl-9 border-slate-200 focus:border-blue-400 focus:ring-blue-400"
-                        value={signUpData.specialization}
-                        onChange={handleSignUpChange}
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {signUpData.userType === "patient" && (
+              {showOtherInput && (
                 <div className="space-y-2">
-                  <Label htmlFor="professionalCode" className="text-slate-700 font-medium">Código Profesional</Label>
+                  <Label htmlFor="otherProfessionalType" className="text-slate-700 font-medium">Especifica tu profesión</Label>
                   <div className="relative">
                     <Stethoscope className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
                     <Input
-                      id="professionalCode"
+                      id="otherProfessionalType"
                       type="text"
-                      name="professionalCode"
-                      placeholder="Ingresa el código de tu profesional"
+                      name="otherProfessionalType"
+                      placeholder="Ej: Coach de vida, Contador, etc."
                       className="pl-9 border-slate-200 focus:border-blue-400 focus:ring-blue-400"
-                      value={signUpData.professionalCode}
+                      value={signUpData.otherProfessionalType}
                       onChange={handleSignUpChange}
                       required
                     />
                   </div>
                 </div>
               )}
+
+              <div className="space-y-2">
+                <Label htmlFor="licenseNumber" className="text-slate-700 font-medium">Número de Licencia</Label>
+                <div className="relative">
+                  <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
+                  <Input
+                    id="licenseNumber"
+                    type="text"
+                    name="licenseNumber"
+                    placeholder="Ej: 123456"
+                    className="pl-9 border-slate-200 focus:border-blue-400 focus:ring-blue-400"
+                    value={signUpData.licenseNumber}
+                    onChange={handleSignUpChange}
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="specialization" className="text-slate-700 font-medium">Especialización</Label>
+                <div className="relative">
+                  <Stethoscope className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
+                  <Input
+                    id="specialization"
+                    type="text"
+                    name="specialization"
+                    placeholder="Ej: Psicología Clínica"
+                    className="pl-9 border-slate-200 focus:border-blue-400 focus:ring-blue-400"
+                    value={signUpData.specialization}
+                    onChange={handleSignUpChange}
+                  />
+                </div>
+              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-slate-700 font-medium">Contraseña</Label>
@@ -597,6 +572,17 @@ export const AuthPage = ({ affiliateCode, registrationOnly = false }: AuthPagePr
                 {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
               </Button>
               
+              {/* Botón para ir a login de pacientes */}
+              <Button 
+                type="button"
+                onClick={() => navigate('/auth/patient')}
+                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-medium py-3 rounded-lg transition-all duration-200 shadow-lg mt-2"
+                disabled={loading}
+              >
+                💜 Soy Paciente
+              </Button>
+              
+              
               <div className="text-center pt-4">
                 <p className="text-sm text-slate-600">
                   ¿No tienes cuenta?{" "}
@@ -665,65 +651,98 @@ export const AuthPage = ({ affiliateCode, registrationOnly = false }: AuthPagePr
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="userType" className="text-slate-700 font-medium">¿Eres paciente o profesional?</Label>
-                <Select onValueChange={handleUserTypeChange} value={signUpData.userType}>
+                <Label htmlFor="phone" className="text-slate-700 font-medium">Teléfono</Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
+                  <Input
+                    id="phone"
+                    type="tel"
+                    name="phone"
+                    placeholder="+56912345678"
+                    className="pl-9 border-slate-200 focus:border-blue-400 focus:ring-blue-400"
+                    value={signUpData.phone}
+                    onChange={handleSignUpChange}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="professionalType" className="text-slate-700 font-medium">Tipo de Profesional</Label>
+                <Select onValueChange={handleProfessionalTypeChange} value={signUpData.professionalType}>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecciona una opción" />
+                    <SelectValue placeholder="Selecciona tu profesión" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border shadow-lg">
-                    <SelectItem value="patient">Paciente</SelectItem>
-                    <SelectItem value="psychologist">Profesional</SelectItem>
+                  <SelectContent className="bg-white border shadow-lg max-h-60 overflow-y-auto">
+                    <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase">Salud Mental</div>
+                    {PROFESSIONAL_CATEGORIES.mentalHealth.map(type => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
+                    
+                    <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase">Salud General</div>
+                    {PROFESSIONAL_CATEGORIES.generalHealth.map(type => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
+                    
+                    <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase">Bienestar y Belleza</div>
+                    {PROFESSIONAL_CATEGORIES.wellness.map(type => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
+                    
+                    <SelectItem value="Otros...">Otros...</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              {signUpData.userType === "psychologist" && (
+              {showOtherInput && (
                 <div className="space-y-2">
-                  <Label htmlFor="professionalType" className="text-slate-700 font-medium">Tipo de Profesional</Label>
-                  <Select onValueChange={handleProfessionalTypeChange} value={signUpData.professionalType}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Selecciona tu profesión" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white border shadow-lg max-h-60 overflow-y-auto">
-                      <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase">Salud Mental</div>
-                      {PROFESSIONAL_CATEGORIES.mentalHealth.map(type => (
-                        <SelectItem key={type} value={type}>{type}</SelectItem>
-                      ))}
-                      
-                      <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase">Salud General</div>
-                      {PROFESSIONAL_CATEGORIES.generalHealth.map(type => (
-                        <SelectItem key={type} value={type}>{type}</SelectItem>
-                      ))}
-                      
-                      <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase">Bienestar y Belleza</div>
-                      {PROFESSIONAL_CATEGORIES.wellness.map(type => (
-                        <SelectItem key={type} value={type}>{type}</SelectItem>
-                      ))}
-                      
-                      <SelectItem value="Otros...">Otros...</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {signUpData.userType === "patient" && (
-                <div className="space-y-2">
-                  <Label htmlFor="professionalCode" className="text-slate-700 font-medium">Código Profesional</Label>
+                  <Label htmlFor="otherProfessionalType" className="text-slate-700 font-medium">Especifica tu profesión</Label>
                   <div className="relative">
                     <Stethoscope className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
                     <Input
-                      id="professionalCode"
+                      id="otherProfessionalType"
                       type="text"
-                      name="professionalCode"
-                      placeholder="Código de tu profesional"
+                      name="otherProfessionalType"
+                      placeholder="Ej: Coach de vida, Contador, etc."
                       className="pl-9 border-slate-200 focus:border-blue-400 focus:ring-blue-400"
-                      value={signUpData.professionalCode}
+                      value={signUpData.otherProfessionalType}
                       onChange={handleSignUpChange}
                       required
                     />
                   </div>
                 </div>
               )}
+
+              <div className="space-y-2">
+                <Label htmlFor="licenseNumber" className="text-slate-700 font-medium">Número de Licencia</Label>
+                <div className="relative">
+                  <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
+                  <Input
+                    id="licenseNumber"
+                    type="text"
+                    name="licenseNumber"
+                    placeholder="Ej: 123456"
+                    className="pl-9 border-slate-200 focus:border-blue-400 focus:ring-blue-400"
+                    value={signUpData.licenseNumber}
+                    onChange={handleSignUpChange}
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="specialization" className="text-slate-700 font-medium">Especialización</Label>
+                <div className="relative">
+                  <Stethoscope className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
+                  <Input
+                    id="specialization"
+                    type="text"
+                    name="specialization"
+                    placeholder="Ej: Psicología Clínica"
+                    className="pl-9 border-slate-200 focus:border-blue-400 focus:ring-blue-400"
+                    value={signUpData.specialization}
+                    onChange={handleSignUpChange}
+                  />
+                </div>
+              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-slate-700 font-medium">Contraseña</Label>

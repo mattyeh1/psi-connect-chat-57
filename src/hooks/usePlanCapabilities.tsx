@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from './useProfile';
+import { useAuth } from './useAuth';
 
 interface PlanCapabilities {
   seo_profile: boolean;
@@ -14,6 +15,7 @@ interface PlanCapabilities {
 
 export const usePlanCapabilities = () => {
   const { psychologist, forceRefresh: refreshProfile } = useProfile();
+  const { user } = useAuth();
   const [capabilities, setCapabilities] = useState<PlanCapabilities | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,8 +83,22 @@ export const usePlanCapabilities = () => {
   }, [psychologist?.id]);
 
   useEffect(() => {
+    // Si es usuario demo, usar capacidades simuladas
+    if (user?.id === 'demo-user-123') {
+      setCapabilities({
+        seo_profile: true,
+        advanced_reports: true,
+        early_access: true,
+        priority_support: true,
+        visibility_consulting: true,
+        basic_features: true
+      });
+      setLoading(false);
+      return;
+    }
+
     fetchCapabilities();
-  }, [fetchCapabilities]);
+  }, [fetchCapabilities, user?.id]);
 
   // Escuchar cambios de plan con refresco INMEDIATO Y MÚLTIPLES INTENTOS
   useEffect(() => {

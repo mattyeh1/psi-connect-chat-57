@@ -1,8 +1,10 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './useAuth';
 
 export const usePendingAppointmentRequests = (psychologistId?: string) => {
+  const { user } = useAuth();
   const [pendingCount, setPendingCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -12,8 +14,17 @@ export const usePendingAppointmentRequests = (psychologistId?: string) => {
       return;
     }
 
+    // Si es usuario demo, usar datos simulados
+    if (user?.id === 'demo-user-123') {
+      setTimeout(() => {
+        setPendingCount(2);
+        setLoading(false);
+      }, 400);
+      return;
+    }
+
     fetchPendingCount();
-  }, [psychologistId]);
+  }, [psychologistId, user?.id]);
 
   const fetchPendingCount = async () => {
     if (!psychologistId) return;

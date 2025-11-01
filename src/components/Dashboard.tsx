@@ -1,6 +1,10 @@
 
-import { DashboardOverview } from "./DashboardOverview";
+import { MinimalistDashboard } from "./MinimalistDashboard";
 
-export const Dashboard = () => {
-  return <DashboardOverview />;
+interface DashboardProps {
+  onNavigate?: (view: string) => void;
+}
+
+export const Dashboard = ({ onNavigate }: DashboardProps) => {
+  return <MinimalistDashboard onNavigate={onNavigate} />;
 };

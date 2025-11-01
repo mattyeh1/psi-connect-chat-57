@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useRealtimeChannel } from './useRealtimeChannel';
+import { useAuth } from './useAuth';
 
 interface PaymentReceipt {
   id: string;
@@ -27,6 +28,7 @@ interface PaymentReceipt {
 }
 
 export const usePaymentReceipts = (psychologistId?: string) => {
+  const { user } = useAuth();
   const [receipts, setReceipts] = useState<PaymentReceipt[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -283,19 +285,79 @@ export const usePaymentReceipts = (psychologistId?: string) => {
   };
 
   useEffect(() => {
-    if (psychologistId) {
-      fetchReceipts();
-      
-      // Si realtime está deshabilitado, configurar polling
-      if (isDisabled) {
-        const interval = setInterval(() => {
-          fetchReceipts();
-        }, 60000); // Polling cada minuto para receipts
-
-        return () => clearInterval(interval);
-      }
+    if (!psychologistId) {
+      setLoading(false);
+      return;
     }
-  }, [psychologistId, isDisabled]);
+
+    // Si es usuario demo, usar datos simulados
+    if (user?.id === 'demo-user-123') {
+      const demoReceipts: PaymentReceipt[] = [
+        {
+          id: '1',
+          psychologist_id: psychologistId,
+          original_file_url: 'demo-receipt-1.pdf',
+          receipt_date: new Date().toISOString(),
+          amount: 150,
+          receipt_type: 'consultation',
+          payment_method: 'cash',
+          receipt_number: 'R-001',
+          extraction_status: 'completed',
+          validation_status: 'pending',
+          include_in_report: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          id: '2',
+          psychologist_id: psychologistId,
+          original_file_url: 'demo-receipt-2.pdf',
+          receipt_date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          amount: 200,
+          receipt_type: 'consultation',
+          payment_method: 'transfer',
+          receipt_number: 'R-002',
+          extraction_status: 'completed',
+          validation_status: 'approved',
+          include_in_report: true,
+          created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+        },
+        {
+          id: '3',
+          psychologist_id: psychologistId,
+          original_file_url: 'demo-receipt-3.pdf',
+          receipt_date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+          amount: 180,
+          receipt_type: 'consultation',
+          payment_method: 'cash',
+          receipt_number: 'R-003',
+          extraction_status: 'completed',
+          validation_status: 'approved',
+          include_in_report: true,
+          created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
+        }
+      ];
+
+      setTimeout(() => {
+        setReceipts(demoReceipts);
+        setLoading(false);
+      }, 300);
+      return;
+    }
+
+    fetchReceipts();
+    
+    // Si realtime está deshabilitado, configurar polling
+    if (isDisabled) {
+      const interval = setInterval(() => {
+        fetchReceipts();
+      }, 60000); // Polling cada minuto para receipts
+
+      return () => clearInterval(interval);
+    }
+  }, [psychologistId, isDisabled, user?.id]);
 
   return {
     receipts,

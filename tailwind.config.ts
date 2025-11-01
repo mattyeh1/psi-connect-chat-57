@@ -109,13 +109,25 @@ export default {
 						opacity: '1',
 						transform: 'scale(1)'
 					}
+				},
+				'shine': {
+					'0%': {
+						backgroundPosition: '0% 50%'
+					},
+					'50%': {
+						backgroundPosition: '100% 50%'
+					},
+					'100%': {
+						backgroundPosition: '0% 50%'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				'fade-in-up': 'fade-in-up 0.8s ease-out',
-				'fade-in-scale': 'fade-in-scale 0.6s ease-out'
+				'fade-in-scale': 'fade-in-scale 0.6s ease-out',
+				'shine': 'shine 3s ease-in-out infinite'
 			},
 			backgroundImage: {
 				'premium-gradient': 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',

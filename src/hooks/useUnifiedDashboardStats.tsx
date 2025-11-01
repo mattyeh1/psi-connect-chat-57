@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './useAuth';
 
 interface UnifiedStats {
   // Profile info
@@ -11,7 +12,6 @@ interface UnifiedStats {
   // Dashboard stats
   todayAppointments: number;
   activePatients: number;
-  unreadMessages: number;
   
   // Loading states
   profileLoading: boolean;
@@ -20,13 +20,13 @@ interface UnifiedStats {
 }
 
 export const useUnifiedDashboardStats = (psychologistId?: string) => {
+  const { user } = useAuth();
   const [stats, setStats] = useState<UnifiedStats>({
     psychologistName: '',
     planType: '',
     subscriptionStatus: '',
     todayAppointments: 0,
     activePatients: 0,
-    unreadMessages: 0,
     profileLoading: true,
     statsLoading: true,
     error: null
@@ -42,8 +42,34 @@ export const useUnifiedDashboardStats = (psychologistId?: string) => {
       return;
     }
 
+    // Si es usuario demo, usar datos simulados
+    if (user?.id === 'demo-user-123') {
+      // Simular carga rápida del perfil
+      setTimeout(() => {
+        setStats(prev => ({
+          ...prev,
+          psychologistName: 'Dr. María González',
+          planType: 'pro',
+          subscriptionStatus: 'active',
+          profileLoading: false
+        }));
+      }, 200);
+
+      // Simular carga de estadísticas
+      setTimeout(() => {
+        setStats(prev => ({
+          ...prev,
+          todayAppointments: 3,
+          activePatients: 12,
+          statsLoading: false,
+          error: null
+        }));
+      }, 800);
+      return;
+    }
+
     fetchUnifiedStats();
-  }, [psychologistId]);
+  }, [psychologistId, user?.id]);
 
   const fetchUnifiedStats = async () => {
     if (!psychologistId) return;
@@ -114,7 +140,6 @@ export const useUnifiedDashboardStats = (psychologistId?: string) => {
 
         let todayAppointments = 0;
         let activePatients = 0;
-        let unreadMessages = 0;
 
         if (!appointmentsResult?.error) {
           todayAppointments = appointmentsResult?.count || 0;
@@ -124,40 +149,10 @@ export const useUnifiedDashboardStats = (psychologistId?: string) => {
           activePatients = patientsResult?.count || 0;
         }
 
-        // For messages, use a simpler approach to avoid hanging
-        try {
-          const conversationsPromise = supabase
-            .from('conversations')
-            .select('id')
-            .eq('psychologist_id', psychologistId)
-            .limit(10);
-
-          const conversationsResult = await Promise.race([conversationsPromise, timeoutPromise]) as any;
-
-          if (conversationsResult?.data && conversationsResult.data.length > 0) {
-            const conversationIds = conversationsResult.data.map((c: any) => c.id);
-            
-            const messagesPromise = supabase
-              .from('messages')
-              .select('id', { count: 'exact', head: true })
-              .in('conversation_id', conversationIds)
-              .neq('sender_id', psychologistId)
-              .is('read_at', null);
-
-            const unreadData = await Promise.race([messagesPromise, timeoutPromise]) as any;
-
-            unreadMessages = unreadData?.count || 0;
-          }
-        } catch (error) {
-          console.log('Messages query timeout, setting to 0');
-          unreadMessages = 0;
-        }
-
         setStats(prev => ({
           ...prev,
           todayAppointments,
           activePatients,
-          unreadMessages,
           statsLoading: false,
           error: null
         }));
