@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, MessageCircle, FileText, CreditCard, Clock, Download, LogOut, User } from 'lucide-react';
+import { Calendar, MessageCircle, CreditCard, Clock, LogOut, User } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { PatientAppointmentRequestForm } from '@/components/PatientAppointmentRequestForm';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface Appointment {
   id: string;
@@ -20,14 +22,6 @@ interface Appointment {
   };
 }
 
-interface Document {
-  id: string;
-  title: string;
-  document_type: string;
-  created_at: string;
-  file_url?: string;
-}
-
 interface PaymentReceipt {
   id: string;
   amount: number;
@@ -39,11 +33,12 @@ interface PaymentReceipt {
 
 export const PatientPortal = () => {
   const { user, signOut } = useAuth();
-  const { profile } = useProfile();
+  const { profile, patient } = useProfile();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [documents, setDocuments] = useState<Document[]>([]);
   const [receipts, setReceipts] = useState<PaymentReceipt[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+  const [psychologistInfo, setPsychologistInfo] = useState<{ first_name: string; last_name: string } | null>(null);
 
   useEffect(() => {
     if (user && profile) {
@@ -52,6 +47,12 @@ export const PatientPortal = () => {
       setLoading(false);
     }
   }, [user, profile]);
+
+  useEffect(() => {
+    if (patient?.psychologist_id) {
+      fetchPsychologistInfo();
+    }
+  }, [patient]);
 
   const fetchPatientData = async () => {
     if (!user?.id) return;
@@ -75,20 +76,6 @@ export const PatientPortal = () => {
         console.error('Error fetching appointments:', appointmentsError);
       } else {
         setAppointments(appointmentsData || []);
-      }
-
-      // Fetch documents
-      const { data: documentsData, error: documentsError } = await supabase
-        .from('patient_documents')
-        .select('*')
-        .eq('patient_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (documentsError) {
-        console.error('Error fetching documents:', documentsError);
-      } else {
-        setDocuments(documentsData || []);
       }
 
       // Fetch payment receipts
@@ -117,6 +104,26 @@ export const PatientPortal = () => {
     }
   };
 
+  const fetchPsychologistInfo = async () => {
+    if (!patient?.psychologist_id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('psychologists')
+        .select('first_name, last_name')
+        .eq('id', patient.psychologist_id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching psychologist info:', error);
+      } else {
+        setPsychologistInfo(data);
+      }
+    } catch (error) {
+      console.error('Error fetching psychologist info:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -139,7 +146,9 @@ export const PatientPortal = () => {
     );
   }
 
-  const patientName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'Usuario';
+  const patientName = patient 
+    ? `${patient.first_name || ''} ${patient.last_name || ''}`.trim() 
+    : profile.email || 'Usuario';
   const pendingPayment = receipts.find(r => r.validation_status === 'pending');
 
   return (
@@ -187,8 +196,15 @@ export const PatientPortal = () => {
             Hola, {patientName.split(' ')[0]} 👋
           </h1>
           <p className="text-slate-600">
-            Aquí podés gestionar tus citas, documentos y pagos de forma segura
+            Aquí podés gestionar tus citas y pagos de forma segura
           </p>
+          {psychologistInfo && (
+            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>Tu profesional:</strong> {psychologistInfo.first_name} {psychologistInfo.last_name}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Dashboard Grid */}
@@ -274,59 +290,16 @@ export const PatientPortal = () => {
                 <div className="text-center py-8">
                   <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-4" />
                   <p className="text-slate-600 mb-4">No tenés citas programadas</p>
-                  <Button className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600">
+                  <Button 
+                    className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+                    onClick={() => setShowAppointmentModal(true)}
+                  >
                     Pedir turno
                   </Button>
                 </div>
               )}
             </CardContent>
           </Card>
-
-          {/* Documentos */}
-          <Card className="border-0 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-purple-500" />
-                Mis documentos
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {documents.length > 0 ? (
-                <div className="space-y-3">
-                  {documents.map((doc) => (
-                    <div key={doc.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <FileText className="w-5 h-5 text-slate-400" />
-                        <div>
-                          <div className="font-medium text-slate-800">{doc.title}</div>
-                          <div className="text-sm text-slate-500">
-                            {new Date(doc.created_at).toLocaleDateString('es-ES')} • {doc.document_type}
-                          </div>
-                        </div>
-                      </div>
-                      {doc.file_url && (
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => window.open(doc.file_url, '_blank')}
-                          aria-label={`Descargar ${doc.title}`}
-                        >
-                          <Download className="w-4 h-4 mr-2" />
-                          Descargar
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <FileText className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-600">No tenés documentos disponibles</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
 
           {/* Pagos */}
           <Card className="border-0 shadow-lg">
@@ -415,6 +388,25 @@ export const PatientPortal = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Modal para pedir turno */}
+      {patient?.psychologist_id && (
+        <Dialog open={showAppointmentModal} onOpenChange={setShowAppointmentModal}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Solicitar una nueva cita</DialogTitle>
+            </DialogHeader>
+            <PatientAppointmentRequestForm
+              psychologistId={patient.psychologist_id}
+              onClose={() => setShowAppointmentModal(false)}
+              onRequestCreated={() => {
+                fetchPatientData();
+                setShowAppointmentModal(false);
+              }}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };

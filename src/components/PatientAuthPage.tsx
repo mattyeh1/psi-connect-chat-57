@@ -83,6 +83,8 @@ export const PatientAuthPage = ({ registrationOnly = false }: PatientAuthPagePro
           title: "¡Bienvenido!",
           description: "Inicio de sesión exitoso",
         });
+        // Redirect to dashboard immediately
+        navigate("/dashboard", { replace: true });
       } else if (result.data?.user && !result.data.user.email_confirmed_at) {
         console.log('User email not confirmed');
       } else {
@@ -195,6 +197,9 @@ export const PatientAuthPage = ({ registrationOnly = false }: PatientAuthPagePro
         title: "¡Usuario de prueba creado!",
         description: `Email: ${result.email} | Password: ${result.password}`,
       });
+      
+      // Redirect to dashboard
+      navigate("/dashboard", { replace: true });
       
     } catch (error: any) {
       console.error('Error creating test patient:', error);
